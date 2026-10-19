@@ -97,7 +97,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/skills.sh" install "${TARGET}" baseline adop
 
 Add each detected form factor's tier too (`wear`, `tv`, `cars`, …). Report every result.
 
-**OpenSpec** (`USE_OPENSPEC=yes`): render `overlay/openspec` to scratch; with an existing `openspec/`, merge
+**OpenSpec** (`USE_OPENSPEC=yes`): render `${CLAUDE_PLUGIN_ROOT}/overlay/openspec` to scratch; with an existing `openspec/`, merge
 android-forge's `context`/`rules`/`operations` into its `config.yaml` by hand; else `openspec init --tools claude
 --no-animation "${TARGET}"` and copy the rendered `config.yaml` over the stub.
 
@@ -133,7 +133,7 @@ green only after the `build` and `tests` layers.
 
 ### 6. Phase B — audit
 
-Invoke **`android-reviewer`** over the whole codebase (every module) and aggregate its findings. Turn them into a
+Invoke **`android-forge:android-reviewer`** over the whole codebase (every module) and aggregate its findings. Turn them into a
 **dependency-ordered work-list** — the layer keys map 1:1 to the `android-migrator`'s `layer` input:
 
 1. `build` — AGP 9 + built-in Kotlin + KSP (via the `agp-9-upgrade` skill), `build-logic` conventions, the catalog
@@ -154,7 +154,7 @@ Invoke **`android-reviewer`** over the whole codebase (every module) and aggrega
 Present the plan (counts per layer) and refactor **one layer at a time** by delegating to the
 **`android-forge:android-migrator`** agent with `project_root`, `base_package`, `claude_plugin_root`, `layer` (and
 `target` for per-area / per-screen layers). The user confirms between layers; never fire them all at once. After each
-layer, re-run `android-reviewer` on the touched files.
+layer, re-run `android-forge:android-reviewer` on the touched files.
 
 ### 7. Verify
 

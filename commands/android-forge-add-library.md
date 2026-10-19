@@ -88,7 +88,7 @@ a feature — features see only `:core:domain`); Compose UI components → the f
 
 ### 6. Matching Android skill
 
-Install the capability tier when the library has one (`scripts/skills.sh tiers`):
+Install the capability tier when the library has one (`bash "${CLAUDE_PLUGIN_ROOT}/scripts/skills.sh" tiers`):
 
 | Library | Tier |
 |---|---|

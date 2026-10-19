@@ -31,14 +31,15 @@ Features (`:feature:<name>:api` + `:impl`) come later, from `/android-forge-add-
 
 Execute these steps **in order**. Stop and ask if anything is unclear. The Bash tool may run
 **zsh**: always brace variables in commands (`"${FEATURE_NAME}"`, never `"$FEATURE_NAME:api"` — zsh
-reads `:a` as a path modifier) and quote every path (the Personal projects folder has a space).
+reads `:a` as a path modifier) and quote every path (it may contain spaces).
 
 ### 1. Gather project parameters
 
 Use `AskUserQuestion` (at most 4 questions per call, 4 options per question — split as below).
 Skip anything the user already stated.
 
-1. **App name** — PascalCase, no spaces (e.g. `Framefit`, `Cadenza`).
+1. **App name** — PascalCase, no spaces (e.g. `Framefit`, `Cadenza`). The project lands in `<parent>/<APP_NAME>`;
+   the parent is the current directory unless the user named one (ask when the current directory is itself a project).
 2. **Application ID / base package** — reverse-domain, lowercase (e.g. `com.arthurnagy.framefit`).
    The same value is the `applicationId` and the Kotlin base package.
 3. **minSdk** — `26` (Recommended: `java.time` and adaptive icons without compat code), `24`, `28`, `29`.
@@ -91,7 +92,7 @@ or to continue with **Plain docs**. Never install without that answer.
 `source` it at the top of every later Bash block, so no step renders with an empty `BASE_PACKAGE`:
 
 ```bash
-export TARGET="$HOME/Development/Personal projects/<APP_NAME>"
+export TARGET="<parent folder from step 1, default ${PWD}>/<APP_NAME>"
 export APP_NAME="<PascalCase name>"
 export APP_TAGLINE='<one-liner or empty>'
 export BASE_PACKAGE="<reverse-domain>"
@@ -257,8 +258,9 @@ bash "${AO}" pin-toolchain "${TARGET}"
 
 For each extra device or surface from step 1 (in this order: desktop, XR, glasses, widgets, Wear,
 TV, Auto, AAOS, Cast), run the `/android-forge-add-form-factor` recipe — i.e. spawn the
-`android-forge:android-form-factor-builder` agent with the form factor, `TARGET`, `BASE_PACKAGE`
-and (cars) the chosen category. It adds the module or manifest pieces, the catalog entries and the
+`android-forge:android-form-factor-builder` agent with `form_factor`, `project_root` (= `${TARGET}`),
+`base_package` (= `${BASE_PACKAGE}`), `claude_plugin_root` (the absolute value of `${CLAUDE_PLUGIN_ROOT}` — the agent
+doesn't inherit it) and, for cars, `car_app_category`. It adds the module or manifest pieces, the catalog entries and the
 form factor's skill tier; it **asks before** creating an emulator. Run them one at a time — each
 edits `settings.gradle.kts` and the catalog.
 
@@ -303,7 +305,7 @@ mkdir -p .git/hooks
 cp .android-forge-pre-commit.sh .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 git add -A
-git commit -q -m "chore: scaffold project via android-forge"
+git commit -q -m "chore: scaffold project vian android-forge"
 ```
 
 Then ask via `AskUserQuestion` whether to **create the GitHub repo and push now** (default: yes,

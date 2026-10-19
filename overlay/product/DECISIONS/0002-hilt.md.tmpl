@@ -1,4 +1,4 @@
-# 2. Use Hilt for dependency injection
+# 0002. Use Hilt for dependency injection
 
 Date: ${SCAFFOLD_DATE}
 Status: Accepted
@@ -13,7 +13,7 @@ Alternatives considered:
 - **Metro** (Zac Sweers' compiler-plugin DI, Dagger-compatible) — fast builds with no KSP step, but outside
   Google's docs, samples and Android skills.
 - **Koin** — runtime DI with low ceremony; a missing binding fails at runtime, and it is the least
-  Android-specific choice. (kmp-forge uses it because Hilt can't live in `commonMain` — not a constraint here.)
+  Android-specific choice. It suits Kotlin Multiplatform, where Hilt can't run in shared code — not a constraint here.
 - **Manual DI** — fine for tiny apps; no multibinding, no ViewModel integration.
 
 ## Decision

@@ -1,6 +1,6 @@
 # Autonomous build loop
 
-Opt-in machinery that builds a android-forge project increment-by-increment with no handholding: each iteration takes the next `ready` GitHub issue, proposes it as an OpenSpec change (docs PR), gates the spec, implements it (code PR), gates the code, and auto-merges — or stops and escalates. Battle-tested on a real project before being promoted into the plugin.
+Opt-in machinery that builds an android-forge project increment-by-increment with no handholding: each iteration takes the next `ready` GitHub issue, proposes it as an OpenSpec change (docs PR), gates the spec, implements it (code PR), gates the code, and auto-merges — or stops and escalates. Battle-tested on a real project before being promoted into the plugin.
 
 ## The three tiers
 
@@ -108,7 +108,7 @@ Per increment the loop adds `in-progress` when it starts, the docs PR says `Refs
 
 ## Installing
 
-`/android-forge-add-autoloop` — checks preconditions (git, `gh` auth + a reachable GitHub `origin`, a PR CI workflow, `jq`, `python3`, `openspec` ≥ 1.14), runs `openspec init --tools claude` if needed (plus android-forge's `openspec/config.yaml` rules), seeds `openspec/AUTOLOOP.md`, creates the issue labels, files your first slices as issues (or migrates a legacy `openspec/backlog.md`), installs the merge guard + `.claude/settings.json` wiring (smoke-tested through the wired command), gitignores the audit log and the kill switch, and appends the CLAUDE.md section. The agents and the orchestrator command ship with the plugin — nothing per-project to copy, and plugin updates reach every project.
+`/android-forge-add-autoloop` — checks preconditions (git, `gh` auth + a reachable GitHub `origin`, a PR CI workflow, `jq`, `python3`, `openspec` ≥ 1.14), runs `openspec init --tools claude` if needed (plus android-forge's `openspec/config.yaml` rules), seeds `openspec/AUTOLOOP.md`, creates the issue labels, files your first slices as issues, installs the merge guard + `.claude/settings.json` wiring (smoke-tested through the wired command), gitignores the audit log and the kill switch, and appends the CLAUDE.md section. The agents and the orchestrator command ship with the plugin — nothing per-project to copy, and plugin updates reach every project.
 
 ## Coexistence with supervised work
 

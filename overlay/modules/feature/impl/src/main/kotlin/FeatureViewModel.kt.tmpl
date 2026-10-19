@@ -36,7 +36,7 @@ internal class ${FEATURE_NAME_PASCAL}ViewModel
         }
 
         /** Paired with `state.pendingMessage` — the screen calls this after showing the snackbar. */
-        fun onPendingMessageConsumed() = intent {
+        fun onMessageConsumed() = intent {
             reduce { state.copy(pendingMessage = null) }
         }
     }

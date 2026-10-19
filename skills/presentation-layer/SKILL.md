@@ -1,6 +1,6 @@
 ---
 name: presentation-layer
-description: Write or change UI code in an android-forge project — :feature:<name>:impl screens (stateful Screen with a hiltViewModel() default parameter + stateless internal Content), @HiltViewModel Orbit ViewModels with state-only events (consumable state slots, never postSideEffect) that start their work in the container's on-create block, State without defaults plus Initial, Nav 3 keys in :feature:<name>:api and entry builders contributed with Hilt @IntoSet, cross-feature navigation through other features' api keys, key arguments through @AssistedInject, adaptive layouts (list-detail scene metadata, window size), errors through :core:ui's DomainError.toMessage(), module-prefixed string resources, accessibility and RTL, :core:designsystem tokens, and tests (Orbit harness, Compose UI Test v2, Roborazzi phone + tablet goldens). Use in an android-forge project (its CLAUDE.md says "android-forge project rules") when building or changing a screen, ViewModel, UI state, navigation, a shared composable or design token, or when an OpenSpec task touches :feature:* or :core:ui / :core:designsystem.
+description: Write or change UI code in an android-forge project (its CLAUDE.md says "android-forge project rules") — :feature:<name>:api keys and :feature:<name>:impl screens, @HiltViewModel Orbit ViewModels with state-only consumable slots, Nav 3 entries contributed with Hilt @IntoSet, @AssistedInject key arguments, adaptive list-detail layouts, DomainError wording through :core:ui, prefixed strings, accessibility and RTL, :core:designsystem tokens, and Orbit / Compose UI Test / Roborazzi tests. Use when building or changing a Compose screen, ViewModel, UI state, navigation between features, a phone/tablet layout or screenshot golden, a shared composable or design token, or when an OpenSpec task touches :feature:*, :core:ui or :core:designsystem.
 ---
 
 # Presentation (`:feature:*` and `:core:ui` / `:core:designsystem`) — android-forge style
@@ -36,7 +36,8 @@ internal data class GalleryState(
     val loading: Boolean,
     val photos: List<Photo>,
     val error: DomainError?,
-    // Consumable slots: set by an intent, cleared by the paired onXConsumed() after the UI acts on them.
+    // Consumable slots: set by an intent, cleared by the paired onXConsumed() after the UI acts on them
+    // (pendingNavigation → onNavigationConsumed(), pendingMessage → onMessageConsumed()).
     val pendingNavigation: NavKey?,
     @StringRes val pendingMessage: Int?,
 ) {
@@ -63,6 +64,7 @@ internal class GalleryViewModel
     constructor(
         private val observePhotos: ObservePhotosUseCase,
         private val refreshPhotos: RefreshPhotosUseCase,
+        private val getPhoto: GetPhotoUseCase,
     ) : ViewModel(),
         OrbitContainerHost<GalleryState, GalleryState, Nothing> {
         override val container =
@@ -84,9 +86,17 @@ internal class GalleryViewModel
                     .onErr { error -> reduce { state.copy(loading = false, error = error) } }
             }
 
-        fun onPhotoClicked(id: PhotoId) = intent { reduce { state.copy(pendingNavigation = PhotoDetailKey(photoId = id.value)) } }
+        // Outcome-dependent navigation: the list may be stale, so open the photo only if it still exists.
+        fun onPhotoClicked(id: PhotoId) =
+            intent {
+                getPhoto(id)
+                    .onOk { reduce { state.copy(pendingNavigation = PhotoDetailKey(photoId = id.value)) } }
+                    .onErr { error -> reduce { state.copy(pendingMessage = error.messageRes()) } }
+            }
 
         fun onNavigationConsumed() = intent { reduce { state.copy(pendingNavigation = null) } }
+
+        fun onMessageConsumed() = intent { reduce { state.copy(pendingMessage = null) } }
     }
 ```
 
@@ -94,7 +104,8 @@ internal class GalleryViewModel
   `orbitContainer<S, Nothing>(S.Initial) { … }` (Orbit 12). No base class, no `AndroidViewModel`, no `Context`.
 - **Start work in the on-create block** — loads and long-lived observations. A `LaunchedEffect(Unit) { viewModel.load() }`
   would reload every time the user comes back.
-- **State-only events.** No `postSideEffect`; a one-shot event is a `pendingX` slot + `fun onXConsumed()`.
+- **State-only events.** No `postSideEffect`; a one-shot event is a `pendingX` slot + `fun onXConsumed()` — the
+  slot's name without `pending` (`pendingMessage` → `onMessageConsumed()`).
 - Every state change happens inside `intent { reduce { … } }`.
 - The constructor takes **use cases** (+ the key, below). Never a repository, `DispatcherProvider`, or `Navigator`.
 - Consume `Result` with `onOk` / `onErr`. No `try/catch` in an intent: use cases don't throw.
@@ -141,7 +152,7 @@ internal fun GalleryScreen(
     LaunchedEffect(state.pendingMessage) {
         val message = state.pendingMessage ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(resources.getString(message))
-        viewModel.onPendingMessageConsumed()
+        viewModel.onMessageConsumed()
     }
 
     GalleryContent(
@@ -156,13 +167,16 @@ internal fun GalleryScreen(
 ```
 
 - `XScreen` takes `viewModel: XViewModel = hiltViewModel()` as a **default parameter** (compose-rules' convention;
-  tests pass a ViewModel built outside composition) and `modifier: Modifier = Modifier`.
+  tests pass a ViewModel built outside composition) and `modifier: Modifier = Modifier`. An **assisted** ViewModel
+  (key arguments) has no usable default — `hiltViewModel()` without its `creationCallback` fails at runtime — so
+  its screen takes `viewModel: XViewModel` as a required parameter and the entry builds it (below).
 - One `LaunchedEffect` per consumable slot; **lambda parameters used inside an effect go through
   `rememberUpdatedState`** (compose-rules `lambda-param-in-effect` fails the gate otherwise).
 - `XContent` is `internal` and stateless (state + lambdas, no ViewModel, no Hilt) so screen and screenshot tests
   render it with any state. Host the `SnackbarHost` in its `Scaffold`, or `showSnackbar` never returns.
-- A tap that only navigates may call the lambda directly; navigation that depends on an outcome goes through
-  `pendingNavigation`.
+- **Which navigation path**: navigation that depends on an outcome (a save, a validation, a load) goes through
+  `pendingNavigation`, set by the intent that knows the outcome. A tap that only navigates calls the screen's
+  lambda directly (`onClick = { onNavigate(SettingsKey) }`) — no slot, no intent.
 - Edge-to-edge is on (`enableEdgeToEdge()`): use `Scaffold`'s `innerPadding` / `WindowInsets` — never hard-code
   status-bar heights (the `edge-to-edge` skill).
 
@@ -188,8 +202,9 @@ internal fun GalleryScreen(
   }
   ```
 - **Contribute** them with the generated `XEntryModule` (`@Provides @IntoSet fun provideXEntries(): EntryProviderInstaller = { navigator -> xEntries(navigator) }`).
-- **Navigating to another feature**: add `implementation(project(":feature:<other>:api"))` to this impl and set
-  `pendingNavigation = OtherKey(id)` (or call `navigator.navigate(OtherKey(id))` from the entry for a pure tap).
+- **Navigating to another feature**: add `implementation(project(":feature:<other>:api"))` to this impl, then use
+  the same rule as above — `pendingNavigation = OtherKey(id)` when it depends on an outcome, the screen's
+  `onNavigate(OtherKey(id))` lambda for a pure tap. The entry only wires `onNavigate = navigator::navigate`.
 - `onNavigateBack = navigator.backOrNull()` — `null` on the root entry, so the start destination shows no Back
   control. System and predictive back go through `NavDisplay`'s `onBack`; intercept back only with
   `NavigationBackHandler` (the `navigation-event` skill), never the legacy `BackHandler`.
@@ -211,7 +226,8 @@ internal fun GalleryScreen(
 ## Strings and errors
 
 - Every user-facing string, `contentDescription` included, comes from the module's
-  `src/main/res/values/strings.xml`, keys prefixed with its `resourcePrefix` (`gallery_…`). The shared Back label
+  `src/main/res/values/strings.xml`, keys prefixed with its `resourcePrefix` — the feature name in snake_case
+  (`gallery_…`; `photo_detail_…` for `photo-detail`). The shared Back label
   is `CoreUiR.string.core_ui_navigate_back` (`import <base>.core.ui.R as CoreUiR`).
 - **Errors**: `:core:ui`'s `DomainError.toMessage()` words the built-in cases once; never re-word them. The screen
   words the area's typed errors it reacts to, from its own table, and falls back to `toMessage()`:
@@ -223,10 +239,12 @@ internal fun GalleryScreen(
       else -> toMessage()
   }
   ```
-  Never show a `cause`.
+  Never show a `cause`. Outside composition — an intent filling `pendingMessage` for a snackbar — use the
+  `@StringRes` behind it: `:core:ui`'s `error.messageRes()` (the area's typed errors map to their own string IDs
+  the same way).
 - Plurals: `pluralStringResource(R.plurals.gallery_photo_count, count, count)`. Inside an effect, resolve with
   `LocalResources.current.getString(id)` captured outside the effect.
-- Remove the template's `<feature>_placeholder_content` string and its `// TODO(android-forge):` line once real
+- Remove the template's `<feature_snake>_placeholder_content` string and its `// TODO(android-forge):` line once real
   content exists (`android-reviewer` flags it).
 
 ## Composables, accessibility, RTL
@@ -249,9 +267,10 @@ internal fun GalleryScreen(
   ```kotlin
   @Test
   fun creatingTheViewModelShowsThePhotos() = runTest {
-      val photo = photo(id = "1", title = "a")
+      val photo = photo(id = "1", title = "a")         // :core:testing's entity builder
       val repository = FakePhotoRepository().apply { seed(photo) }
-      val viewModel = GalleryViewModel(ObservePhotosUseCase(repository), RefreshPhotosUseCase(repository))
+      val viewModel =
+          GalleryViewModel(ObservePhotosUseCase(repository), RefreshPhotosUseCase(repository), GetPhotoUseCase(repository))
 
       viewModel.testWithInternalState(this, GalleryState.Initial) {
           runOnCreate()
@@ -266,8 +285,10 @@ internal fun GalleryScreen(
   through `testTag`s; the stateful `XScreen` with a ViewModel built **outside** `setContent` (Lint's
   `ViewModelConstructorInComposable`).
 - **Screenshots** — Roborazzi, `@GraphicsMode(NATIVE)`, one test per device qualifier
-  (`RobolectricDeviceQualifiers.Pixel7`, `.MediumTablet`; add foldable/desktop when the layout branches there);
-  `./gradlew recordRoborazziDebug` after an intended change, review the PNGs, commit them.
+  (`RobolectricDeviceQualifiers.Pixel7`, `.MediumTablet`; add foldable/desktop when the layout branches there),
+  plus one RTL golden per screen whose layout is directional (`@Config(qualifiers = "ar")`,
+  [i18n-a11y.md](../../docs/i18n-a11y.md) § Testing RTL); `./gradlew recordRoborazziDebug` after an intended
+  change, review the PNGs, commit them.
 - Tag tests covering an OpenSpec scenario `// Scenario: <exact name>`; `android-qa` traces through the tag.
 - The generated `XViewModelTest` targets the template's no-arg ViewModel; rewrite it once the ViewModel takes use
   cases (it stops compiling — the cue).
@@ -278,6 +299,7 @@ internal fun GalleryScreen(
 - No `postSideEffect`, no `try/catch` in an intent, no `Dispatchers.*`, no repository or Navigator in a ViewModel;
   work starts in the on-create block.
 - `State` has no defaults; every `pendingX` slot has its `LaunchedEffect` and `onXConsumed()`.
+- An assisted ViewModel's screen takes it as a required parameter; outcome-dependent navigation goes through a slot.
 - Strings are prefixed and in `values/strings.xml`; the placeholder is gone; the accessibility checklist holds.
 - Phone + tablet goldens recorded and reviewed.
 - `./gradlew :feature:<name>:impl:testDebugUnitTest` while iterating; before pushing `./gradlew spotlessApply`, then

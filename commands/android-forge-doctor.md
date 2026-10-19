@@ -37,7 +37,7 @@ Expected: `platforms/android-37*` (compileSdk 37), recent `build-tools`, `emulat
 `bash "${CLAUDE_PLUGIN_ROOT}/scripts/android-new.sh" ensure-sdk 37`, `android sdk install cmdline-tools/latest`.
 
 **Per form factor** (from CLAUDE.md § Form factors): is the system image the QA emulator needs installed, and does
-the `af_<form-factor>` AVD exist?
+the AVD `bash "${CLAUDE_PLUGIN_ROOT}/scripts/avd.sh" name <form-factor>` prints exist? (`avd.sh status` answers both.)
 
 ```bash
 android emulator list
@@ -76,7 +76,8 @@ grep -q 'includeBuild("build-logic")' settings.gradle.kts && grep -q 'android-fo
 ```
 
 Expected: Gradle ≥ 9.8.1, AGP ≥ 9.4.1, Kotlin 2.4.x with a matching KSP 2.3.x and Hilt ≥ 2.59.2, compile/target SDK
-37, build-logic wired. Remediation: `apply-overlay.sh pin-toolchain .` (wrapper + heap) and `apply-overlay.sh patch-libs .
+37, build-logic wired. Remediation: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/apply-overlay.sh" pin-toolchain .` (wrapper + heap) and
+`bash "${CLAUDE_PLUGIN_ROOT}/scripts/apply-overlay.sh" patch-libs .
 "${CLAUDE_PLUGIN_ROOT}/overlay/gradle/libs.versions.toml.additions.tmpl"` (raises catalog floors, never lowers), or
 `/android-forge-bump-stack`. `kotlin-android` or `kapt` plugins present → ✗ (AGP 9 built-in Kotlin + KSP; the
 `agp-9-upgrade` skill migrates).
@@ -119,7 +120,7 @@ gh label list --limit 200 --json name --jq '[.[].name] | map(select(. == "ready"
 ```
 
 - `openspec/` present → `openspec` ≥ 1.14. Remediation: `brew upgrade openspec` / `npm install -g @fission-ai/openspec@latest`.
-- `openspec/config.yaml` without android-forge's rules → ⚠, merge `overlay/openspec/config.yaml.tmpl`.
+- `openspec/config.yaml` without android-forge's rules → ⚠, merge `${CLAUDE_PLUGIN_ROOT}/overlay/openspec/config.yaml.tmpl`.
 - Workflow labels missing on GitHub → ⚠, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/issues.sh" labels` (writes to GitHub).
 
 ### 11. Gradle smoke test (in a project)
@@ -138,7 +139,7 @@ Per section: ✓ OK / ⚠ Drift (expected vs actual + remediation) / ✗ Missing
 ✓ Android CLI 1.0.16625370 (sdk: ~/Library/Android/sdk)
 ✓ SDK: platforms/android-37.0, build-tools 37.0.0, emulator, cmdline-tools
 ⚠ Wear OS image missing (android-37.0/android-wear-signed) — bash <plugin>/scripts/avd.sh ensure wear  (~2 GB)
-✓ Devices: emulator-5554 (af_phone)
+✓ Devices: emulator-5554 (medium_phone)
 ✓ JDK toolchains: 17, 21
 ✓ Gradle 9.8.1 · AGP 9.4.1 · Kotlin 2.4.21 · KSP 2.3.12 · Hilt 2.60.1 · SDK 37/37/26 · build-logic wired
 ⚠ Android skills: wear-widgets missing — bash <plugin>/scripts/skills.sh install . wear

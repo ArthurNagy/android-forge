@@ -129,7 +129,8 @@ The application ID is the project CLAUDE.md's "Application ID" (all app modules 
 
 ### 6. One journey per user-visible scenario × form factor
 
-Write `build/qa/<slug>/journeys/<k>-<scenario-kebab>-<form-factor>.xml` in the Android CLI journey format:
+Write `build/qa/<slug>/journeys/<k>-<scenario-kebab>-<form-factor>.xml` with a Bash heredoc (you have no Write tool —
+by design, you never edit the project) in the Android CLI journey format:
 
 ```xml
 <journey name="<scenario name> (<form factor>)">

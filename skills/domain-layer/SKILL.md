@@ -1,6 +1,6 @@
 ---
 name: domain-layer
-description: Write or change code in an android-forge project's :core:model / :core:domain modules — entities and value types without default values, use cases with @Inject constructors returning kotlin-result's Result<T, DomainError>, one repository interface per domain type, the sealed DomainError (built-in cases plus an area's own DomainError.Typed errors), DispatcherProvider, shared fakes in :core:testing, and use-case tests. Use in an android-forge project (its CLAUDE.md says "android-forge project rules") when adding or changing a use case, entity, repository interface or error case, when an OpenSpec task touches :core:domain or :core:model, or when deciding whether logic belongs in the domain layer.
+description: Write or change domain code in an android-forge project (its CLAUDE.md says "android-forge project rules") — :core:model entities and value types without defaults, :core:domain use cases with @Inject constructors returning kotlin-result's Result<T, DomainError>, one repository interface per domain type, the sealed DomainError and an area's DomainError.Typed errors, DispatcherProvider, fakes and entity builders in :core:testing, and use-case tests. Use when adding a business rule or validation, a new model or data class, a use case, a repository interface or an error type, writing a use-case test, deciding whether logic belongs in the domain layer, or when an OpenSpec task touches :core:domain or :core:model.
 ---
 
 # :core:model + :core:domain — android-forge style
@@ -31,7 +31,7 @@ Package by area: `<base>.core.domain.photo`, `<base>.core.model` (small) or `<ba
 ## Adding a slice — in this order
 
 Entity (`:core:model`) → the area's typed errors (if it has failures of its own) → repository interface →
-use case → fake in `:core:testing` → tests. Each step compiles on its own; `:core:data` and feature work can
+use case → wiring (nothing to do — § 5) → fake and entity builder in `:core:testing` → tests. Each step compiles on its own; `:core:data` and feature work can
 start once the interface exists.
 
 ### 1. Entities and value types (`:core:model`)
@@ -100,7 +100,8 @@ sealed interface PhotoError : DomainError.Typed {
   payload, offer a different action. Name it after what the user must hear.
 - Screens word the typed errors they handle; anything else falls back to `toMessage()`'s generic message.
 - A new **built-in** case is rare (e.g. `Unauthorized` once the app has accounts): `DomainError` is sealed, so
-  it breaks `:core:ui`'s exhaustive `messageRes()` until it has a string there.
+  it breaks `:core:ui`'s exhaustive `messageRes()` — the `@StringRes` behind `toMessage()`, which ViewModels also use
+  for snackbar slots — until it has a string there.
 - Every error is a value, never a `Throwable`; every error type extends `DomainError`.
 
 ### 3. Repository interfaces
@@ -186,10 +187,11 @@ class ObservePhotosUseCase
 Nothing to register: Hilt constructs `@Inject` use cases on demand. The repository interface is bound to its
 implementation in `:core:data`'s `DataModule` (`@Binds`).
 
-### 6. Fake in `:core:testing`
+### 6. Fake and entity builder in `:core:testing`
 
-Fakes of `:core:domain` interfaces go in `core/testing/src/main/kotlin/<base>/core/testing/` — the domain's
-use-case tests **and** features' ViewModel tests both use them (every module's tests get `:core:testing`).
+Fakes of `:core:domain` interfaces **and** test entity builders go in
+`core/testing/src/main/kotlin/<base-path>/core/testing/` (`<base-path>` = the base package with `/`) — the
+domain's use-case tests **and** features' ViewModel tests both use them (every module's tests get `:core:testing`).
 
 ```kotlin
 package <base>.core.testing
@@ -213,8 +215,15 @@ class FakePhotoRepository : PhotoRepository {
 ```
 
 A fake behaves like the real thing (in-memory state, a stream that reflects writes) and exposes knobs
-(`seed`, `nextError`). Test knobs may have defaults; the no-defaults rule is for entities and `State`. No MockK
-for interfaces you own.
+(`seed`, `nextError`). No MockK for interfaces you own. Next to it, one builder per entity, so tests name only the
+fields they care about:
+
+```kotlin
+fun photo(id: String, title: String, description: String? = null, favorite: Boolean = false): Photo =
+    Photo(id = PhotoId(id), title = title, description = description, favorite = favorite)
+```
+
+Test knobs and builders may have defaults; the no-defaults rule is for entities and `State`.
 
 ### 7. Tests
 
@@ -244,7 +253,7 @@ class ToggleFavoriteUseCaseTest {
 
 A use case that takes `DispatcherProvider` gets `TestDispatcherProvider(testScheduler)` — the `runTest`
 scheduler; a dispatcher with its own scheduler hangs or fails with "Detected use of different schedulers".
-Build test entities with a small local builder (`photo(id, title)`) that passes every field explicitly.
+Build test entities with `:core:testing`'s builders (`photo(id = "1", title = "a")`, § 6).
 
 ## Before you hand it on
 

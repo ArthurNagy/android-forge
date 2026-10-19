@@ -5,7 +5,7 @@ argument-hint: "<idea text> | #12 #15 | --gaps"
 
 # /android-forge-refine
 
-Backlog refinement for a android-forge project (the backlog is GitHub issues; `ready` = approved — see the plugin's [docs/product-workflow.md](https://github.com/arthurnagy/android-forge/blob/main/docs/product-workflow.md)). The `android-product-owner` agent does the reading and drafting in its own context; when an epic is in play, the `android-architect` agent then designs how it fits the codebase. You present their drafts, file the ones the user picks, and hand the approval back to the user.
+Backlog refinement for an android-forge project (the backlog is GitHub issues; `ready` = approved — see the plugin's [docs/product-workflow.md](https://github.com/arthurnagy/android-forge/blob/main/docs/product-workflow.md)). The `android-product-owner` agent does the reading and drafting in its own context; when an epic is in play, the `android-architect` agent then designs how it fits the codebase. You present their drafts, file the ones the user picks, and hand the approval back to the user.
 
 **You never apply the `ready` label** — not even if the user asks you to in passing. Print the command for them to run (`! gh issue edit … --add-label ready` runs it from this prompt). With the autonomous loop installed, the merge guard denies it anyway.
 

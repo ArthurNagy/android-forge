@@ -23,7 +23,7 @@ class ${FEATURE_NAME_PASCAL}ViewModelTest {
         val viewModel = ${FEATURE_NAME_PASCAL}ViewModel()
 
         viewModel.testWithInternalState(this, ${FEATURE_NAME_PASCAL}State.Initial.copy(pendingMessage = R.string.${FEATURE_NAME_SNAKE}_placeholder_content)) {
-            containerHost.onPendingMessageConsumed()
+            containerHost.onMessageConsumed()
             expectInternalState { copy(pendingMessage = null) }
         }
     }

@@ -1,11 +1,11 @@
 ---
 name: mvp-spec-authoring
-description: Author docs/MVP_SPEC.md for a android-forge project — interactive interview structure, section templates, and what makes a spec good vs vague. Used by the /android-forge-spec command.
+description: Author docs/MVP_SPEC.md for an android-forge project — interactive interview structure, section templates, and what makes a spec good vs vague. Use in an android-forge project (its CLAUDE.md says "android-forge project rules") when writing or revising the MVP spec, turning a product idea or brain dump into one, or when /android-forge-spec runs.
 ---
 
 # MVP Spec authoring
 
-`docs/MVP_SPEC.md` is the single source of truth for product scope in a android-forge project. Claude reads it on every session for context. It should be short enough to scan in 60 seconds, specific enough that someone could ship v1 from it alone.
+`docs/MVP_SPEC.md` is the single source of truth for product scope in an android-forge project. Claude reads it on every session for context. It should be short enough to scan in 60 seconds, specific enough that someone could ship v1 from it alone.
 
 ## Structure (in this order)
 
@@ -126,7 +126,7 @@ The `/android-forge-spec` command supports:
 - **Default (interview)**: walk section-by-section, asking each via `AskUserQuestion`. Push back briefly on vague answers.
 - **`--from-dump`**: user pastes a free-form product idea; the command extracts what maps to spec sections and asks follow-ups only on gaps.
 
-Both modes write to `docs/MVP_SPEC.md` using the template at `overlay/product/MVP_SPEC.md.tmpl`.
+Both modes write to `docs/MVP_SPEC.md` using the template at [`overlay/product/MVP_SPEC.md.tmpl`](../../overlay/product/MVP_SPEC.md.tmpl).
 
 ## Maintaining the spec
 

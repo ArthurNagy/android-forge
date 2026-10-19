@@ -10,7 +10,7 @@ Everything lands on a branch; the loop itself runs from `main` after you merge. 
 
 ## Conventions
 
-- **Always quote paths** (`"$TARGET"`) — the user's Personal projects directory contains a space.
+- **Always quote paths** (`"$TARGET"`) — they may contain spaces.
 - **Never blind-overwrite** an existing file. If a target exists, render to scratch, `git diff --no-index`, and merge with the Edit tool after showing the user.
 - The plugin does NOT push to GitHub or enable branch protection. The user opts into both manually.
 
@@ -18,7 +18,7 @@ Everything lands on a branch; the loop itself runs from `main` after you merge. 
 
 ### 0. Preconditions
 
-The user must run this from the **root of a android-forge project**. All of these are hard requirements — if one fails, stop, tell the user the remediation, and go no further:
+The user must run this from the **root of an android-forge project**. All of these are hard requirements — if one fails, stop, tell the user the remediation, and go no further:
 
 ```bash
 TARGET="$PWD"
@@ -36,12 +36,6 @@ command -v python3 >/dev/null || echo "✗ python3 missing — the issue queue (
 v="$(openspec --version 2>/dev/null || true)"
 [[ -n "$v" && "$(printf '%s\n' 1.14.0 "$v" | sort -V | head -1)" == 1.14.0 ]] \
   || echo "✗ openspec >= 1.14 needed (found: ${v:-none}) — brew install openspec / brew upgrade openspec, or npm install -g @fission-ai/openspec@latest"
-# A legacy backlog file is migrated to issues in step 3 — but not mid-increment: its in-flight
-# branches (spec/<slug>, feat/<slug>) would not match the issue-numbered names.
-if [[ -f "$TARGET/openspec/backlog.md" ]]; then
-    gh pr list --state open --json number,headRefName \
-      --jq '.[] | select(.headRefName | test("^(spec|feat)/")) | "✗ loop PR #\(.number) (\(.headRefName)) still open — finish or close it before migrating the backlog"'
-fi
 ```
 
 **No `pr.yml`?** `/android-forge-init` ships it. For an adopted or hand-built project, render the plugin's PR gate and commit it (merge by hand if a differently-named workflow already runs the same gate — the loop only needs *some* required checks on every PR):
@@ -83,7 +77,7 @@ Use `AskUserQuestion` to collect the following (it takes up to 4 questions per c
 2. **Queue-empty handoff** — what the loop should print when no `ready` issue is left: the generic default ("Queue empty. Approve the drafted issues (or run /android-forge-refine) by labeling them `ready`, or stop here.") or a project-specific checkpoint the user dictates (e.g. "review the eval output and decide go/no-go before Phase 1"). This becomes `AUTOLOOP_HANDOFF`.
 3. **Ready approvers** — whose issues and `ready` labels the loop trusts besides its own account: **just me** (default — empty) or a comma-separated list of GitHub logins (collaborators who triage). This becomes `READY_APPROVERS`.
 4. **QA in the code gate** — `device` (recommended when `android emulator list` shows an AVD or a phone is connected: the `android-qa` reviewer runs each user-visible scenario as a journey on every form factor the change touches — a running emulator, a connected physical device, or an AVD it boots; form-factor AVDs must exist (`scripts/avd.sh ensure <ff>`) — pin the phone device later with `qa-device:` in the runbook), `tests-only` (it only checks every scenario has a `// Scenario:`-tagged test), or `off`. This becomes `AUTOLOOP_QA`.
-5. **First work** — skip, or dictate the first slices now (filed as issues in step 3; the user labels them `ready`). If `openspec/backlog.md` exists, this question is instead: migrate its unchecked items to issues (recommended), or keep the file for reference and start fresh.
+5. **First work** — skip, or dictate the first slices now (filed as issues in step 3; the user labels them `ready`).
 
 ### 3. Render and install the overlay
 
@@ -112,8 +106,6 @@ TARGET="$PWD"
 if [[ -f "$TARGET/openspec/AUTOLOOP.md" ]]; then
     git --no-pager diff --no-index "$TARGET/openspec/AUTOLOOP.md" /tmp/aforge-autoloop/AUTOLOOP.md || true
     # merge with the Edit tool — the ## Loop configuration section must end up present verbatim.
-    # A pre-0.5 runbook has `- backlog: …`: replace that line with `- ready-approvers: …`.
-    # A 0.5.0 runbook says `queue-empty-groom`: rename the key (and its comment) to `queue-empty-refine`, keeping its value.
 else
     cp /tmp/aforge-autoloop/AUTOLOOP.md "$TARGET/openspec/AUTOLOOP.md" && echo "added: openspec/AUTOLOOP.md"
 fi
@@ -162,12 +154,7 @@ preserve it), and **without** the `ready` label:
 gh issue create --title "<what the slice delivers>" --label enhancement --body-file <body.md>
 ```
 
-Migrating a legacy `openspec/backlog.md`: one issue per **unchecked** item, top to bottom —
-`goal:` → Problem (and the acceptance criteria you derive from it), `boundaries:` → Out of scope,
-`needs-human:` → Needs a human first, `slug:` → Change name, `carried-over:` → Notes. Checked
-items stay in git history only. Then `git rm "$TARGET/openspec/backlog.md"`.
-
-Either way, finish by printing the one command that queues them — the user runs it; you never
+Finish by printing the one command that queues them — the user runs it; you never
 apply `ready`:
 
 ```
@@ -240,7 +227,7 @@ Expect `exit=0` twice, no output from (1), and two new log lines (`caller=main`,
 ✓ openspec/AUTOLOOP.md: loop configuration + queue-empty handoff + ready-approvers
 ✓ openspec/config.yaml: android-forge project rules <added | merged | already present>
 ✓ Issue labels: ready, in-progress, epic, priority:high|low, no-spec, chore, adr
-✓ Work queue: <N issues filed | N backlog items migrated, backlog.md removed | none yet>
+✓ Work queue: <N issues filed | none yet>
 ✓ Merge guard: .claude/hooks/merge-guard.sh, mode=<mode>, audit line verified
 ✓ Hook wiring: .claude/settings.json <created | merged> (jq-valid)
 ✓ CLAUDE.md: Autonomous build loop section

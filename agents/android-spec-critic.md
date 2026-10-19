@@ -1,6 +1,6 @@
 ---
 description: |
-  Use this agent to adversarially review an OpenSpec change proposal (proposal.md + design.md + tasks.md + delta specs) in a android-forge-scaffolded project BEFORE it becomes code. Vets scope, layer placement, locked project invariants, dependency safety, spec quality, and task executability. Returns a structured PASS / REVISE / BLOCK verdict. Works standalone in supervised OpenSpec workflows and as the Phase-2 spec gate of the autonomous build loop.
+  Use this agent to adversarially review an OpenSpec change proposal (proposal.md + design.md + tasks.md + delta specs) in an android-forge-scaffolded project BEFORE it becomes code. Vets scope, layer placement, locked project invariants, dependency safety, spec quality, and task executability. Returns a structured PASS / REVISE / BLOCK verdict. Works standalone in supervised OpenSpec workflows and as the Phase-2 spec gate of the autonomous build loop.
 
   <example>
   Context: Developer drafted an OpenSpec change and wants it vetted before implementing.

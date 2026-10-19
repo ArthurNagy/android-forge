@@ -72,7 +72,7 @@ Configure on `main`:
 - (Solo project): no review requirement; CI is the gate
 - (Multi-contributor): require 1 approving review
 
-See [ci.md § Branch protection setup](ci.md#branch-protection-setup).
+See [ci.md § Branch protection setup](ci.md#branch-protection).
 
 ## .gitignore
 

@@ -1,6 +1,6 @@
 ---
 name: adr-authoring
-description: Author Architecture Decision Records (ADRs) for android-forge projects following the Michael Nygard format. Use when documenting a stack or architecture decision, adopting an opt-in library, superseding a prior decision, or when /android-forge-init asks about adding a non-default lib.
+description: Author or supersede an Architecture Decision Record in an android-forge project (its CLAUDE.md says "android-forge project rules") — Nygard format in docs/DECISIONS/NNNN-kebab-title.md, next free number, Context with alternatives considered, Decision, Consequences. Use when recording why a stack, module or architecture choice was made, adopting an opt-in library (Room, Retrofit, WorkManager, Crashlytics/Sentry, gradle-play-publisher), adding a form factor with real alternatives, changing distribution or observability tier, superseding an earlier ADR, or when /android-forge-add-library, /android-forge-refine or the android-architect agent calls for an ADR.
 ---
 
 # ADR authoring — android-forge style
@@ -13,7 +13,7 @@ ADRs live in `docs/DECISIONS/NNNN-kebab-case-title.md`. They capture *why* a non
 # NNNN. <title>
 
 Date: YYYY-MM-DD
-Status: Accepted | Superseded by [NNNN](NNNN-...)
+Status: Accepted | Accepted (supersedes [NNNN](NNNN-...)) | Superseded by [NNNN](NNNN-...) | Deprecated
 
 ## Context
 <what's driving this decision? what's the problem or the constraint?>
@@ -23,7 +23,7 @@ Alternatives considered:
 - **<option>** — <why it loses here>
 
 ## Decision
-<what we will do — concrete, action-oriented>
+<imperative, starting with the verb: "Use …", "Adopt …" — concrete, action-oriented>
 
 ## Consequences
 <what becomes easier, what becomes harder, what reviewer must enforce going forward>
@@ -33,7 +33,7 @@ Alternatives considered:
 
 `NNNN-kebab-case-title.md` where:
 
-- `NNNN` is sequential (0001, 0002, ...), never reused, never reordered
+- `NNNN` is the highest number in `docs/DECISIONS/` plus one, four digits — never reused, never reordered
 - title is kebab-case, brief (3–6 words)
 
 Examples:
@@ -44,8 +44,9 @@ Examples:
 ## Status
 
 - **Accepted** — current decision
+- **Accepted (supersedes [NNNN](NNNN-...))** — current decision that replaces an earlier ADR (§ Updating decisions)
 - **Superseded by [NNNN](NNNN-...)** — replaced by a later ADR; this ADR is read-only history
-- **Deprecated** — no longer relevant; left for context
+- **Deprecated** — no longer relevant (the thing it governed is gone); left for context
 
 Never edit an Accepted ADR's substance. Write a new ADR that supersedes it.
 
@@ -58,6 +59,7 @@ Never edit an Accepted ADR's substance. Write a new ADR that supersedes it.
 ✓ Distribution tier change (graduating from GitHub Releases to Play Store)
 ✓ Observability tier change (opting into Sentry)
 ✓ Per-project decisions that diverge from android-forge defaults
+✓ A leaked secret — `NNNN-secret-rotation.md`: date, secret type, scope, remediation ([secrets.md](../../docs/secrets.md))
 
 ✗ Library version bumps (no ADR; just commit)
 ✗ Internal refactors with no architectural impact
@@ -78,7 +80,9 @@ Every scaffolded project ships with these 9, documenting the locked-stack ration
 - `0008-jacoco.md` — why JaCoCo through AGP over Kover (AGP 9)
 - `0009-app-module-per-form-factor.md` — why Wear / TV / AAOS get their own app modules
 
-The project's first author-written ADR starts at `0010`.
+A new ADR takes the highest number in `docs/DECISIONS/` plus one — `0010` in a fresh scaffold, later in an adopted
+project that already had ADRs. Commit ADRs on their own as `docs(adr): <title>` (what `/android-forge-refine`
+tells the user to do).
 
 ## Writing tips
 
@@ -92,7 +96,7 @@ State the *forcing function* — what made this decision necessary? Not "we shou
 
 ### Decision section
 
-Imperative: "We will adopt X."
+Imperative, starting with the verb — "Use X", "Adopt X" — like the seeded ADRs.
 
 Include the specific shape of the adoption — version, library, idiomatic snippet. Reviewer should be able to enforce it.
 
@@ -105,16 +109,18 @@ Include the specific shape of the adoption — version, library, idiomatic snipp
 Three pillars:
 - **Easier** — what does this unlock or simplify?
 - **Harder** — what new ongoing cost does it create?
-- **Enforced** — what does android-reviewer (or you) now enforce on every PR?
+- **Enforced** — what must every PR now respect? `android-reviewer` enforces the rules in the project's CLAUDE.md
+  § Project-specific overrides, not the ADRs themselves — so copy each enforceable rule there as one line
+  (`- <rule> (ADR NNNN)`), in the same commit as the ADR.
 
 ✓
 > - Easier: tester and store crashes in one dashboard (and in Studio's App Quality Insights); breadcrumbs from Timber attached.
 > - Harder: `GOOGLE_SERVICES_JSON` secret to manage; another SDK and Gradle plugin to bump on `/android-forge-bump-stack`.
-> - Reviewer enforces: don't log raw user input (PII); add `Timber.w`/`Timber.e` calls at semantic boundaries.
+> - Enforced (copied to CLAUDE.md § Project-specific overrides): don't log raw user input (PII); add `Timber.w`/`Timber.e` calls at semantic boundaries.
 
 ### Length
 
-100–250 lines max. ADRs are not specs; they're decision logs. If you find yourself writing implementation detail, link to code or a doc instead.
+Usually under ~60 lines — the seeded ADRs are 20–35. ADRs are not specs; they're decision logs. If you find yourself writing implementation detail, link to code or a doc instead.
 
 ## Updating decisions
 
@@ -147,7 +153,7 @@ Then update `0005-result-domain-error.md`:
 Use relative paths within the project:
 
 ```markdown
-See [0003 — Hybrid architecture](0003-hybrid-architecture.md) for module-layout rationale.
+See [0003 — Module shape](0003-modules.md) for module-layout rationale.
 ```
 
 For cross-project plugin docs, use the full GitHub URL:

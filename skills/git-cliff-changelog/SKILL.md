@@ -1,6 +1,6 @@
 ---
 name: git-cliff-changelog
-description: Configure and run git-cliff to generate CHANGELOG.md and GitHub Release bodies from Conventional Commits in android-forge-scaffolded projects. Use when setting up changelog automation, releasing a new version, or troubleshooting changelog output.
+description: Configure and run git-cliff to generate CHANGELOG.md and GitHub Release bodies from Conventional Commits in android-forge-scaffolded projects. Use in an android-forge project (its CLAUDE.md says "android-forge project rules") when setting up changelog automation, releasing a new version, or troubleshooting changelog output.
 ---
 
 # git-cliff — android-forge changelog
@@ -38,7 +38,7 @@ commit_parsers = [
 ]
 ```
 
-Full template: see `overlay/root/cliff.toml`.
+Full template: [`overlay/root/cliff.toml`](../../overlay/root/cliff.toml).
 
 ## Use cases
 

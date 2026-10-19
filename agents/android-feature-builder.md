@@ -61,10 +61,13 @@ Surface a clear error and stop if a request conflicts with them:
 2. State: one `internal data class` with **no constructor defaults** and `companion object { val Initial }` — or an
    `internal sealed interface` whose initial state is an explicit object. Mutations only via `intent { reduce { … } }`.
 3. One-shot events are consumable slots (`pendingNavigation: NavKey?`, `@StringRes pendingMessage: Int?`), `null` in
-   `Initial`, consumed by `LaunchedEffect(state.pendingX) { …; viewModel.onXConsumed() }`; lambda parameters used in an
-   effect go through `rememberUpdatedState`.
+   `Initial`, consumed by `LaunchedEffect(state.pendingX) { …; viewModel.onXConsumed() }` — the slot's name without
+   `pending` (`onNavigationConsumed()`, `onMessageConsumed()`); lambda parameters used in an effect go through
+   `rememberUpdatedState`. Navigation that depends on an outcome goes through `pendingNavigation`; a tap that only
+   navigates calls the screen's `onNavigate(Key)` lambda directly.
 4. Screen: `internal`, `viewModel: <Name>ViewModel = hiltViewModel()` as a default parameter and
-   `modifier: Modifier = Modifier`; hoists state into the stateless `internal <Name>Content`.
+   `modifier: Modifier = Modifier`; hoists state into the stateless `internal <Name>Content`. An assisted ViewModel
+   (key argument) is a **required** `viewModel` parameter instead — the entry builds it (rule 5).
 5. Keys live only in `:api`, are `@Serializable` and carry IDs. Entries go in `<camel>Entries(navigator)`, contributed by
    the `@IntoSet` entry module; screens receive lambdas (`navigator::navigate`, `navigator.backOrNull()`), never the
    `Navigator`. A key argument reaches the ViewModel through `@AssistedInject` + `@AssistedFactory` and

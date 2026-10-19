@@ -15,7 +15,8 @@ import ${BASE_PACKAGE}.core.domain.DomainError
  * entry module (see ${FEATURE_NAME_PASCAL}EntryModule.kt), and its keys live in :feature:${FEATURE_NAME}:api.
  *
  * One-shot events (navigation, snackbars) are **consumable state slots** here — not Orbit side
- * effects. The screen observes a slot, acts on it, then calls the paired `onXxxConsumed()` intent.
+ * effects. The screen observes a slot, acts on it, then calls the paired `onXConsumed()` intent
+ * (`pendingMessage` → `onMessageConsumed()`).
  * A message slot holds WHICH message (a string resource ID), never resolved text.
  *
  * When a flat data class stops fitting (mutually exclusive Loading | Loaded | Error page states),

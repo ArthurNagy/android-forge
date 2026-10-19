@@ -14,24 +14,26 @@ repositories never do — every failure leaves as a `DomainError`.** Canonical r
 
 ## Shape
 
+`<base-path>` is the base package with `/`:
+
 ```
-core/data/src/main/kotlin/<base>/core/data/
+core/data/src/main/kotlin/<base-path>/core/data/
   DataModule.kt                 internal interface — @Binds every repository (+ DispatcherProvider)
   CatchStorage.kt               the storage boundary: exceptions → DomainError.Unknown (with tests)
-  RealDispatcherProvider.kt     the only Dispatchers.* in the app
+  RealDispatcherProvider.kt     the only Dispatchers.* in the app, besides Room's setQueryCoroutineContext
   photo/
     OfflineFirstPhotoRepository.kt   internal class … : PhotoRepository
     PhotoMappers.kt             internal PhotoDto.toEntity(), PhotoEntity.toModel()
-core/network/src/main/kotlin/<base>/core/network/          (opt-in)
+core/network/src/main/kotlin/<base-path>/core/network/     (opt-in; "First API call" below)
   NetworkModule.kt              OkHttpClient, Json, Retrofit (+ @Provides for each service)
   CatchNetwork.kt               the network boundary: IOException / HttpException / other → DomainError
   photo/
     PhotoApi.kt                 internal Retrofit service interface
     PhotoDto.kt                 @Serializable wire shape (public: the data source returns it)
     PhotoRemoteDataSource.kt    public interface + internal Retrofit implementation (@Binds in a module)
-core/database/src/main/kotlin/<base>/core/database/        (created by "First table" below)
+core/database/src/main/kotlin/<base-path>/core/database/   (created by "First table" below)
   AppDatabase.kt · DatabaseModule.kt · photo/PhotoEntity.kt · photo/PhotoDao.kt
-core/datastore/src/main/kotlin/<base>/core/datastore/
+core/datastore/src/main/kotlin/<base-path>/core/datastore/
   UserPreferencesDataSource.kt · DataStoreModule.kt
 ```
 
@@ -40,11 +42,31 @@ core/datastore/src/main/kotlin/<base>/core/datastore/
 - The storage/network modules expose their data sources, DTOs, entities and DAOs **only because `:core:data`
   uses them** — nothing else may depend on them (the reviewer checks). Their implementations and Hilt modules
   stay `internal`.
-- One repository **and one data source** per domain type.
+- **One repository per domain type**, and at most one data source per domain type **per technology** (one remote
+  data source, one DAO, one preferences source) — an offline-first repository combines its DAO and its remote
+  data source.
+- **Repository names say where the truth lives**: `OfflineFirst<Type>Repository` when local storage is the source
+  of truth and the network refreshes it; `Offline<Type>Repository` when the data is local only (the template's
+  `OfflineUserPreferencesRepository`); `Remote<Type>Repository` when nothing is stored locally.
 
 ## Recipe: implement a repository
 
 ### 1. Remote data source (`:core:network`)
+
+**First API call** — when `:core:network` doesn't exist yet (the network opt-in wasn't picked at init), create it
+once; the Retrofit/OkHttp catalog entries are already there:
+
+```bash
+AO="${CLAUDE_PLUGIN_ROOT}/scripts/apply-overlay.sh"
+BASE_PACKAGE="<base package>" bash "${AO}" render-module core.network "${CLAUDE_PLUGIN_ROOT}/overlay/optional/network" core/network "<base-path>"
+bash "${AO}" patch-settings . "core:network"
+```
+
+Then `implementation(project(":core:network"))` in `core/data/build.gradle.kts` above the
+`// android-forge:core-data-deps` marker, `<uses-permission android:name="android.permission.INTERNET" />` above
+`<application` in `app/src/main/AndroidManifest.xml`, and the real base URL in `core/network/build.gradle.kts`
+(`API_BASE_URL`). The module ships `NetworkModule` (one `OkHttpClient`, `Json`, `Retrofit`) and `catchNetwork` with
+its tests.
 
 ```kotlin
 @Serializable
@@ -86,7 +108,8 @@ internal interface PhotoNetworkModule {
 }
 ```
 
-- A DTO mirrors the wire format; it is the one place default values are fine.
+- A DTO mirrors the wire format; it is the one **model type** that may have default values (for fields the API
+  omits).
 - A Retrofit `suspend` function returning a body **throws `HttpException` on non-2xx**. When a status means
   something (404 = "doesn't exist"), declare `Response<PhotoDto>` and decide in the data source:
   `if (response.code() == 404) return null`, else `response.body() ?: throw HttpException(response)`.
@@ -182,19 +205,14 @@ never `EncryptedSharedPreferences`.
 
 ### 4. The repository: where exceptions become `DomainError`
 
-`:core:network` ships `catchNetwork { }`; `:core:data` ships `catchStorage { }` — same shape:
+Both boundaries already ship — call them, don't re-implement them:
 
-```kotlin
-suspend fun <T> catchNetwork(block: suspend () -> T): Result<T, DomainError> = runCatching { block() }.mapError { e ->
-    if (e is CancellationException) throw e                       // cancellation must propagate, always first
-    Timber.w(e, "network call failed")
-    when (e) {
-        is HttpException -> DomainError.Network.Http(status = e.code(), code = null)
-        is IOException -> DomainError.Network.Connectivity            // offline, DNS, timeouts
-        else -> DomainError.Unknown(e.message)                        // e.g. a body that doesn't parse
-    }
-}
-```
+- `:core:network`'s `suspend fun <T> catchNetwork(block: suspend () -> T): Result<T, DomainError>` —
+  `CancellationException` rethrown first; `HttpException` → `Network.Http(status, code = null)`; `IOException`
+  → `Network.Connectivity` (offline, DNS, timeouts); anything else → `Unknown(message)` (e.g. a body that
+  doesn't parse). Logged with `Timber.w`.
+- `:core:data`'s `catchStorage { }` — the same shape for Room, DataStore and file I/O: `CancellationException`
+  rethrown first, everything else → `Unknown(message)`.
 
 An offline-first repository — Room is the single source of truth, the network refreshes it:
 
@@ -273,6 +291,8 @@ and its binding in `DataModule`: `@Binds fun bindsPhotoRepository(impl: OfflineF
 - **DataStore** (`core/datastore/src/test`): a real store on a temp file —
   `PreferenceDataStoreFactory.create(scope = backgroundScope) { tmpFolder.newFolder().resolve("x.preferences_pb") }`.
 - Never the real network; never mocks of interfaces you own.
+- Tag a test that covers an OpenSpec scenario (offline data shown, a failed refresh keeps the cache, …) with
+  `// Scenario: <exact name>` — `android-qa` traces coverage through the tag.
 
 ## Before you hand it on
 
@@ -282,5 +302,6 @@ and its binding in `DataModule`: `@Binds fun bindsPhotoRepository(impl: OfflineF
   (or a commented value-`try`) that rethrows `CancellationException` first.
 - No `Dispatchers.*` outside `RealDispatcherProvider` (and Room's `setQueryCoroutineContext`).
 - Each repository is `@Binds`-bound in `DataModule`; its tests cover every error it can return plus cancellation.
-- `./gradlew :core:data:testDebugUnitTest` while iterating; before pushing `./gradlew spotlessApply`, then
+- While iterating, the module you touched: `./gradlew :core:data:testDebugUnitTest` (also `:core:network:`,
+  `:core:database:`, `:core:datastore:testDebugUnitTest`); before pushing `./gradlew spotlessApply`, then
   `./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true`.

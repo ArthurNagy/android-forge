@@ -52,6 +52,10 @@ git diff --name-only origin/main...HEAD                 # which modules a change
 Read module build files (`*/build.gradle.kts`) for dependency findings — a forbidden dependency shows up there
 before any import does.
 
+Read the project's `CLAUDE.md` § Project-specific overrides first: each line there (usually citing an ADR) is a
+rule you enforce like the ones below — 🔴 when it says so, else 🟡 — and an override that relaxes a rule below wins
+over it.
+
 ## What you enforce
 
 ### Modules & architecture (blocking)
@@ -77,7 +81,8 @@ before any import does.
 
 - 🔴 State mutation outside `intent { reduce { … } }`.
 - 🔴 `postSideEffect(...)` anywhere, or an Orbit host typed with anything but `Nothing` as side effect. Convert to a
-  consumable state slot (`pendingX` set inside an intent, cleared by a paired `onXConsumed()`).
+  consumable state slot (`pendingX` set inside an intent, cleared by a paired `onXConsumed()` — the slot's name
+  without `pending`).
 - 🔴 A ViewModel that isn't `@HiltViewModel` + `ViewModel()` + `OrbitContainerHost<S, S, Nothing>`; an
   `AndroidViewModel`; a `Context`, repository, `DispatcherProvider` or `Navigator` in a ViewModel constructor.
 - 🟡 Deprecated Orbit API: `ContainerHost<S, E>` / `container(...)`. Use `OrbitContainerHost` + `orbitContainer`.
@@ -125,6 +130,8 @@ before any import does.
   entries via `@IntoSet` `EntryProviderInstaller`s.
 - 🟡 Back-stack mutation outside the `Navigator`; a `Navigator` passed into a screen or ViewModel instead of lambdas.
 - 🟡 A root entry wired with a non-null `onNavigateBack` (use `navigator.backOrNull()`).
+- 🟡 An assisted ViewModel given a `= hiltViewModel()` default in its screen (no `creationCallback` → runtime crash);
+  it must be a required parameter built in the entry.
 - 🟡 Legacy `BackHandler` on new code — use `NavigationBackHandler` (navigation-event).
 - 🟡 `ListDetailPaneScaffold` / `SupportingPaneScaffold` — use Nav 3 scene strategies with entry metadata.
 

@@ -38,11 +38,12 @@ parked). Templated categories render `:car`; media and parked follow the recipes
    inherit it) and, for cars, `car_app_category`. It renders the templates from `overlay/form-factors/<ff>/`, patches
    the catalog and settings, edits `:app` where needed, installs the form factor's Android skill tier, updates
    `CLAUDE.md` § Form factors, runs the gate, and reports.
-3. **Emulator** — ask via `AskUserQuestion` whether to create the form factor's emulator now (it downloads a system
-   image, often 1–4 GB). On yes:
+3. **Emulator** — the `avd.sh` form factor is the argument itself, except `widgets` → `phone`; skip this step for
+   `auto` (Desktop Head Unit, manual — print the steps from `docs/form-factors/cars.md`) and `cast` (real hardware).
+   Ask via `AskUserQuestion` whether to create the emulator now (it downloads a system image, often 1–4 GB). On yes:
    ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/scripts/avd.sh" ensure <form-factor>
-   android emulator start "$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/avd.sh" name <form-factor>)"
+   bash "${CLAUDE_PLUGIN_ROOT}/scripts/avd.sh" ensure <avd-form-factor>
+   android emulator start "$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/avd.sh" name <avd-form-factor>)"
    ```
    then install and launch the module's debug APK (`android describe` lists it) and show the user a screenshot.
 4. **Report**:

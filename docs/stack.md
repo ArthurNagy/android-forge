@@ -39,7 +39,7 @@ wherever one exists** — Google's docs, samples and Android skills then apply d
 - **Where**: every ViewModel — `@HiltViewModel internal class FooViewModel @Inject constructor(...) : ViewModel(), OrbitContainerHost<FooState, FooState, Nothing>`
   with `override val container = orbitContainer<FooState, Nothing>(FooState.Initial) { load() }`.
 - **Idiom**: `intent { reduce { state.copy(...) } }`; screens collect with `viewModel.collectAsState()`
-  (`orbit-compose`); one-shot events are consumable state slots cleared by `onXxxConsumed()` intents.
+  (`orbit-compose`); one-shot events are consumable state slots (`pendingX`) cleared by `onXConsumed()` intents.
 - **Anti-patterns**: `postSideEffect` (the effect type is `Nothing`); mutating state outside `intent {}`;
   `LaunchedEffect(Unit) { viewModel.load() }` (load in the on-create block).
 
@@ -69,7 +69,8 @@ wherever one exists** — Google's docs, samples and Android skills then apply d
 ### Kotlin coroutines + Flow
 - **Why**: Google rates them "strongly recommended" for Android async work.
 - **Idiom**: `suspend` one-shots, `Flow` streams (`observe…` / `…Stream` names), `DispatcherProvider`
-  injected wherever a dispatcher is needed. Only `RealDispatcherProvider` touches `Dispatchers.*`.
+  injected wherever a dispatcher is needed. Only `RealDispatcherProvider` touches `Dispatchers.*`
+  (and Room's `setQueryCoroutineContext` in `:core:database`).
 
 ### kotlinx-serialization
 - **Why**: Nav 3 keys are saved through it; Retrofit's converter and typed DataStore use it too.

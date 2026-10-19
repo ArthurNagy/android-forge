@@ -81,9 +81,9 @@ For each: read the doc, **detect**, **transform**, **verify** (residual grep emp
 - **Detect:** AGP < 9 / Kotlin < 2.4 in the catalog; `org.jetbrains.kotlin.android` / `kotlin-kapt` plugins; modules
   configuring `compileSdk`, Lint, test options by hand; no `build-logic/`.
 - **Transform:** AGP 9 upgrade first through the **`agp-9-upgrade`** skill (built-in Kotlin, KAPT → KSP — Hilt and Room
-  need KSP). Then copy `overlay/build-logic` into the project, `includeBuild("build-logic")` in `pluginManagement`,
+  need KSP). Then copy `<claude_plugin_root>/overlay/build-logic` into the project, `includeBuild("build-logic")` in `pluginManagement`,
   root `plugins { id("android-forge.root") }` (removing root `alias(...) apply false` lines for plugins build-logic
-  provides), `patch-libs` with `overlay/gradle/libs.versions.toml.additions.tmpl` (MIN_SDK = the app's minSdk), and
+  provides), `patch-libs` with `<claude_plugin_root>/overlay/gradle/libs.versions.toml.additions.tmpl` (MIN_SDK = the app's minSdk), and
   replace each module's hand-written Android config with the matching convention
   (`android-forge.android.application` / `.android.library[.compose]` / `.jvm.library` + `.hilt` once Hilt is in).
   Keep module-specific config (namespace, `applicationId`, flavors, signing).
@@ -96,7 +96,7 @@ For each: read the doc, **detect**, **transform**, **verify** (residual grep emp
 - **Transform:** move code into its module, one area at a time: entities → `:core:model`; repository interfaces + use
   cases → `:core:domain`; repository implementations → `:core:data` (internal); Retrofit/Room/DataStore code →
   `:core:network` / `:core:database` / `:core:datastore`; each user-facing area → `:feature:<name>:api` + `:impl`
-  (render empty modules from `overlay/modules/feature/{api,impl}` and move the screens in). Room 2 stays Room 2 here —
+  (render empty modules from `<claude_plugin_root>/overlay/modules/feature/{api,impl}` and move the screens in). Room 2 stays Room 2 here —
   moving to Room 3 is a separate, opt-in change. Update package names and imports; build after each area.
 - **Verify:** module dependencies follow the rules (features never reach `:core:data`); build.
 
@@ -148,8 +148,8 @@ For each: read the doc, **detect**, **transform**, **verify** (residual grep emp
   screen (report each as its own step; that is a product-visible change, not a mechanical one).
 - **Transform:** routes → `@Serializable` keys in each feature's `:api`; destinations → `entry<Key> { … }` in the
   feature's `xEntries(navigator)` contributed by an `@IntoSet` entry module; the app's `NavHost` → `:app`'s
-  `AppNavigation` (render `overlay/app/src/main/kotlin/AppNavigation.kt.tmpl` and `:core:navigation` from the
-  overlay); arguments → key properties + assisted injection; deep links per the `navigation-3` skill.
+  `AppNavigation` (render `<claude_plugin_root>/overlay/app/src/main/kotlin/AppNavigation.kt.tmpl` and `:core:navigation` from
+  the overlay); arguments → key properties + assisted injection; deep links per the `navigation-3` skill.
 - **Verify:** no `NavHost`/`navController` left in migrated features; build; on an emulator, navigate, rotate,
   background-kill-relaunch (`android run`).
 

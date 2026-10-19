@@ -1,11 +1,11 @@
 ---
 name: backlog-issue-authoring
-description: Write or refine a GitHub issue for a android-forge project so it can enter the backlog — Problem, WHEN/THEN acceptance criteria, Out of scope, Depends on, Needs a human first, Change name; slicing epics into one-PR issues; priority labels. Use when filing a feature, bug or chore issue, turning an idea or a vague issue into a workable one, splitting an epic, or when /android-forge-refine or the android-product-owner agent drafts issues. Never applies the `ready` label.
+description: Write or refine a GitHub issue for an android-forge project so it can enter the backlog — Problem, WHEN/THEN acceptance criteria, Out of scope, Depends on, Needs a human first, Change name; slicing epics into one-PR issues; priority labels. Use in an android-forge project (its CLAUDE.md says "android-forge project rules") when filing a feature, bug or chore issue, turning an idea or a vague issue into a workable one, splitting an epic, or when /android-forge-refine or the android-product-owner agent drafts issues. Never applies the `ready` label.
 ---
 
 # Backlog issue authoring — android-forge style
 
-In a android-forge project, GitHub issues are the single source of work: open issues labeled `ready` are the backlog that people and the autonomous build loop work from. An issue is **workable** when someone who has never seen the conversation could propose its OpenSpec change without asking a question. Canonical rules: the plugin's `docs/product-workflow.md`.
+In an android-forge project, GitHub issues are the single source of work: open issues labeled `ready` are the backlog that people and the autonomous build loop work from. An issue is **workable** when someone who has never seen the conversation could propose its OpenSpec change without asking a question. Canonical rules: the plugin's `docs/product-workflow.md`.
 
 ## The one rule about `ready`
 

@@ -1,6 +1,6 @@
 ---
 name: github-release-artifacts
-description: Configure and ship release artifacts for an android-forge project — signed AABs/APKs for every app module (:app, :wear, :tv, :automotive) attached to a GitHub Release on a v* tag, R8 mappings, the pre-release checks (play-policy-insights, r8-analyzer, Baseline Profile), and graduating to Firebase App Distribution or per-form-factor Play tracks via gradle-play-publisher. Use in an android-forge project (its CLAUDE.md says "android-forge project rules") when setting up release CI, debugging release uploads, cutting a release, or planning distribution.
+description: Ship signed release artifacts for an android-forge project (its CLAUDE.md says "android-forge project rules") — the v* tag workflow that attaches every app module's AAB/APK (:app, :wear, :tv, :automotive) to a GitHub Release, upload-key signing secrets, per-module versionCode offsets, R8 mappings, pre-release checks (play-policy-insights, r8-analyzer, Baseline Profile), and graduating to Firebase App Distribution or per-form-factor Play tracks via gradle-play-publisher. Use when setting up or debugging release CI or signing, bumping versions and cutting a release, or planning distribution.
 ---
 
 # Release artifacts — android-forge default distribution
@@ -45,22 +45,30 @@ Use Play App Signing: this is the **upload** key.
 | `:app` | `app/build/outputs/bundle/release/app-release.aab` | `app/build/outputs/apk/release/app-release.apk` |
 | `:wear` · `:tv` · `:automotive` | `<module>/build/outputs/bundle/release/<module>-release.aab` | `<module>/build/outputs/apk/release/<module>-release.apk` |
 
-R8 `mapping.txt` per module rides in the workflow artifact (needed to read release stack traces; Crashlytics/Sentry
-plugins upload it themselves). Locally, `android describe --project_dir=.` lists every module's output paths.
+R8 `mapping.txt` per module rides in the workflow artifact — needed to retrace release stack traces, but workflow
+artifacts expire (90 days by default). Keep each release's mappings as long as that release is in users' hands:
+attach them to the GitHub Release renamed per module (`app-mapping.txt`, `wear-mapping.txt`, … — add them to the
+release step's `files:`), or set `retention-days` on the upload and document it. Crashlytics/Sentry plugins upload
+mappings themselves. Locally, `android describe --project_dir=.` lists every module's output paths.
 
 ## Before tagging
 
-1. `./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true` green on `main`.
-2. `./gradlew assembleRelease` locally once per release cycle — R8 problems only show in release builds; the
+1. Bump `versionCode`/`versionName` in each app module, in a commit that goes through the normal PR gate. The
+   version follows [release.md](../../docs/release.md) § Versioning (`git cliff --bumped-version` computes it from the
+   commits). Version codes must be unique across the listing: `:app` counts from 1, `:wear` from `100_000_001`,
+   `:tv` from `200_000_001`, `:automotive` from `300_000_001`.
+2. `./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true` green on `main`, bump
+   included.
+3. `./gradlew assembleRelease` locally once per release cycle — R8 problems only show in release builds; the
    `r8-analyzer` skill audits keep rules when something is stripped or the APK grew.
-3. `play-policy-insights` skill — permissions, data collection and declarations vs Play policy (before any store release).
-4. Baseline Profile regenerated when startup paths changed (`./gradlew :app:generateReleaseBaselineProfile` on a
+4. `play-policy-insights` skill — permissions, data collection and declarations vs Play policy (before any store release).
+5. Baseline Profile regenerated when startup paths changed (`./gradlew :app:generateReleaseBaselineProfile` on a
    device, `:benchmarks` opt-in) and committed.
-5. The `android-qa` agent passed on every form factor the release touches.
-6. Bump `versionCode`/`versionName` in each app module. Version codes must be unique across the listing: `:app` counts
-   from 1, `:wear` from `100_000_001`, `:tv` from `200_000_001`, `:automotive` from `300_000_001` (release.md).
+6. The `android-qa` agent passed on every form factor the release touches.
 
-Then `git tag -a v0.3.0 -m "Release v0.3.0" && git push origin v0.3.0` (the user pushes; agents never do).
+Then tag: `git tag -a v<version> -m "Release v<version>"`. An agent may create the annotated tag locally; **pushing
+it publishes the release, so `git push origin v<version>` is the user's** (or an agent's only after the user's
+explicit yes in that session).
 
 ## Body of the Release
 
@@ -81,12 +89,23 @@ git-cliff (`cliff.toml`) from Conventional Commits — see the `git-cliff-change
 - **Signing fails in CI but works locally**: an empty decoded keystore (bad base64) or a missing secret.
 - **Release crashes but debug works**: R8 stripped something reflective — add a targeted keep rule (or the library's
   consumer rules are missing); `r8-analyzer` helps; read the mapping-retraced stack trace.
-- **Release body empty**: no Conventional Commits since the last tag.
+- **Release body empty**: no commits between this tag and the previous one (the same commit tagged twice), or only
+  merge commits (`cliff.toml` skips them on purpose). Unconventional commits still appear, under **Other**.
 
-## Manual release (no CI)
+## Manual release (no CI) — user-run
+
+`gh release create` pushes the tag and publishes the Release, so this block is run by the user (or by an agent only
+after the user's explicit yes in that session). Sign with the same injected properties CI uses — the app modules
+have no `signingConfig` (or first add the `signing.properties` block from [release.md](../../docs/release.md)
+§ Keystore policy); without one of the two the build produces unsigned artifacts:
 
 ```bash
-./gradlew bundleRelease assembleRelease   # with signing.properties for local signing
-gh release create v0.3.0 --title "v0.3.0" --notes "$(git cliff --latest --strip header)" \
-  */build/outputs/bundle/release/*.aab */build/outputs/apk/release/*.apk
+./gradlew bundleRelease assembleRelease \
+  -Pandroid.injected.signing.store.file="$HOME/.android-keystores/<project>.keystore" \
+  -Pandroid.injected.signing.store.password="…" \
+  -Pandroid.injected.signing.key.alias="release" \
+  -Pandroid.injected.signing.key.password="…"
+ls */build/outputs/apk/release/   # *-release.apk, never *-release-unsigned.apk
+gh release create v<version> --title "v<version>" --notes "$(git cliff --latest --strip header)" \
+  */build/outputs/bundle/release/*.aab */build/outputs/apk/release/*-release.apk
 ```

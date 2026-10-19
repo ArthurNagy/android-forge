@@ -89,7 +89,7 @@ Entities and value types shared by domain, data and UI: `data class Photo(val id
 construct explicitly, so every call site states its intent and a new field surfaces everywhere.
 
 ### `:core:data` (+ `:core:datastore`, `:core:database`, `:core:network`)
-- Repository **implementations** — `internal class OfflinePhotoRepository @Inject constructor(...)` —
+- Repository **implementations** — `internal class OfflineFirstPhotoRepository @Inject constructor(...)` —
   bound to the `:core:domain` interface in the module's `internal interface DataModule { @Binds … }`.
 - Data sources live in the module of their technology: DataStore sources in `:core:datastore`, DAOs in
   `:core:database`, Retrofit services + remote data sources in `:core:network`. They are public only
@@ -99,8 +99,12 @@ construct explicitly, so every call site states its intent and a new field surfa
 - **The exception boundary.** Data sources may throw; repositories never do. Network calls run through
   `catchNetwork { … }` (`:core:network`: kotlin-result `runCatching` + `mapError`, `CancellationException`
   rethrown; `IOException` → `Network.Connectivity`, Retrofit `HttpException` → `Network.Http`, anything
-  else → `Unknown`); storage writes use the same `runCatching { }.mapError { }` shape.
-- **One repository per domain type** — never an `AppRepository` god object.
+  else → `Unknown`); storage calls run through `catchStorage { … }` (`:core:data`, same shape, every failure →
+  `Unknown`).
+- **One repository per domain type** — never an `AppRepository` god object. Its name says where the truth lives:
+  `OfflineFirst<Type>Repository` (local storage is the source of truth, the network refreshes it),
+  `Offline<Type>Repository` (local only, like `OfflineUserPreferencesRepository`), `Remote<Type>Repository` (no
+  local copy).
 - **Offline-first** = Room as the single source of truth: the repository exposes the DAO's `Flow`,
   refreshes from the network into Room, and (with the WorkManager opt-in) syncs in the background.
 
@@ -118,7 +122,7 @@ construct explicitly, so every call site states its intent and a new field surfa
 - `NavigationModule` — `@Multibinds` declares the (possibly empty) `Set<EntryProviderInstaller>`.
 
 ### `:feature:<name>:api`
-Only `@Serializable` Nav 3 keys: `data object GalleryKey : NavKey`, `data class PhotoDetailKey(val id: String) : NavKey`.
+Only `@Serializable` Nav 3 keys: `data object GalleryKey : NavKey`, `data class PhotoDetailKey(val photoId: String) : NavKey`.
 Keys carry IDs, never objects (the destination loads what it needs from the data layer).
 
 ### `:feature:<name>:impl`
@@ -171,7 +175,8 @@ internal data class GalleryState(
     val loading: Boolean,
     val photos: List<Photo>,
     val error: DomainError?,
-    // Consumable event slots — set inside intent {}, cleared by the paired onXxxConsumed().
+    // Consumable event slots — set inside intent {}, cleared by the paired onXConsumed()
+    // (pendingNavigation → onNavigationConsumed(), pendingMessage → onMessageConsumed()).
     val pendingNavigation: NavKey?,
     @StringRes val pendingMessage: Int?, // which message; the screen resolves the text
 ) {
@@ -183,6 +188,7 @@ internal data class GalleryState(
 @HiltViewModel
 internal class GalleryViewModel @Inject constructor(
     private val getPhotos: GetPhotosUseCase,
+    private val getPhoto: GetPhotoUseCase,
 ) : ViewModel(), OrbitContainerHost<GalleryState, GalleryState, Nothing> {
     override val container = orbitContainer<GalleryState, Nothing>(GalleryState.Initial) { load() }
 
@@ -193,7 +199,12 @@ internal class GalleryViewModel @Inject constructor(
             .onErr { error -> reduce { state.copy(loading = false, error = error) } }
     }
 
-    fun openPhoto(id: PhotoId) = intent { reduce { state.copy(pendingNavigation = PhotoDetailKey(id.value)) } }
+    // Outcome-dependent navigation goes through the slot; a tap that only navigates calls the screen's lambda.
+    fun openPhoto(id: PhotoId) = intent {
+        getPhoto(id)
+            .onOk { reduce { state.copy(pendingNavigation = PhotoDetailKey(photoId = id.value)) } }
+            .onErr { error -> reduce { state.copy(pendingMessage = error.messageRes()) } }
+    }
 
     fun onNavigationConsumed() = intent { reduce { state.copy(pendingNavigation = null) } }
 }
@@ -211,11 +222,15 @@ LaunchedEffect(state.pendingNavigation) {
 Rules:
 - **No `postSideEffect`.** The side-effect type is `Nothing`. One-shot events are consumable state slots
   (`pendingNavigation: NavKey?`, `@StringRes pendingMessage: Int?` — never resolved text), observed with
-  `LaunchedEffect`, consumed, then cleared by an `onXxxConsumed()` intent. Google's UI-layer guidance says
+  `LaunchedEffect`, consumed, then cleared by the paired `onXConsumed()` intent — the slot's name without
+  `pending`. Google's UI-layer guidance says
   the same: handle events in the ViewModel and expose them as state.
 - Loading and long-lived observation start in the container's on-create block
   (`orbitContainer(Initial) { load() }`) — once per ViewModel, i.e. once per back-stack entry — never in a
   `LaunchedEffect(Unit)`. Tests run it with `runOnCreate()`.
+- **Navigation**: when it depends on an outcome (a save, a validation, a lookup), the intent sets
+  `pendingNavigation`; a tap that only navigates calls the screen's `onNavigate(Key)` lambda directly. Entries
+  only wire `onNavigate = navigator::navigate`.
 - No dispatchers in ViewModels; use cases/repositories take `DispatcherProvider`.
 - No `AndroidViewModel`, no `Context` in a ViewModel.
 - **Route arguments** come from the key through assisted injection:
