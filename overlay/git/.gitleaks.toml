@@ -1,0 +1,20 @@
+title = "android-forge default gitleaks config"
+
+# Inherits gitleaks default rules. See https://github.com/gitleaks/gitleaks for full ruleset.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Common false-positive locations for Android projects"
+paths = [
+    '''.*/src/[^/]+/res/.*''',                     # Android resources (strings, drawables, screenshots)
+    '''.*/src/test/screenshots/.*''',              # Roborazzi goldens
+    '''.*build/.*''',                              # Build outputs
+    '''gradle/wrapper/.*''',                       # Gradle wrapper
+    '''.*\.lock''',                                # Lock files
+]
+regexes = [
+    '''ANDROID_KEYSTORE_PASSWORD''',               # variable names in workflows/build files
+    '''SENTRY_DSN''',                              # variable names
+    '''GOOGLE_PLAY_SERVICE_ACCOUNT_JSON''',
+]

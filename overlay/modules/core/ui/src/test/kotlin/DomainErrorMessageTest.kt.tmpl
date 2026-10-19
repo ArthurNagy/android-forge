@@ -1,0 +1,35 @@
+package ${BASE_PACKAGE}.core.ui
+
+import androidx.compose.material3.Text
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import ${BASE_PACKAGE}.core.domain.DomainError
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import kotlin.test.assertEquals
+
+@RunWith(AndroidJUnit4::class)
+class DomainErrorMessageTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    private object SomeTypedError : DomainError.Typed
+
+    @Test
+    fun everyBuiltInCaseHasItsOwnMessage() {
+        assertEquals(R.string.core_ui_error_connectivity, DomainError.Network.Connectivity.messageRes())
+        assertEquals(R.string.core_ui_error_server, DomainError.Network.Http(status = 503, code = null).messageRes())
+        assertEquals(R.string.core_ui_error_not_found, DomainError.NotFound.messageRes())
+        assertEquals(R.string.core_ui_error_unknown, DomainError.Unknown(cause = "boom").messageRes())
+        assertEquals(R.string.core_ui_error_unknown, SomeTypedError.messageRes())
+    }
+
+    @Test
+    fun toMessageResolvesTheString() {
+        composeRule.setContent { Text(DomainError.NotFound.toMessage()) }
+
+        composeRule.onNodeWithText("That item is no longer available.").assertExists()
+    }
+}

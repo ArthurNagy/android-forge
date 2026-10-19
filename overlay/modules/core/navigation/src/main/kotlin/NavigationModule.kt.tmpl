@@ -1,0 +1,17 @@
+package ${BASE_PACKAGE}.core.navigation
+
+import dagger.Module
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.Multibinds
+
+/**
+ * Declares the app's `Set<EntryProviderInstaller>` so it exists — empty — before any feature
+ * contributes to it (Dagger rejects an undeclared, empty multibinding).
+ */
+@Module
+@InstallIn(SingletonComponent::class)
+internal interface NavigationModule {
+    @Multibinds
+    fun entryProviderInstallers(): Set<EntryProviderInstaller>
+}

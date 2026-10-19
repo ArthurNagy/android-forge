@@ -1,0 +1,17 @@
+package ${BASE_PACKAGE}.feature.${FEATURE_NAME_PKG}.impl
+
+import androidx.navigation3.runtime.EntryProviderScope
+import androidx.navigation3.runtime.NavKey
+import ${BASE_PACKAGE}.core.navigation.Navigator
+import ${BASE_PACKAGE}.feature.${FEATURE_NAME_PKG}.api.${FEATURE_NAME_PASCAL}Key
+
+/**
+ * This feature's Navigation 3 entries — one `entry<Key> { Screen(...) }` per screen (see
+ * /android-forge-add-screen). Outgoing navigation goes through [navigator] with other features' keys
+ * from their `:api` modules; the screens get plain lambdas, never the Navigator.
+ */
+internal fun EntryProviderScope<NavKey>.${FEATURE_NAME_CAMEL}Entries(navigator: Navigator) {
+    entry<${FEATURE_NAME_PASCAL}Key> {
+        ${FEATURE_NAME_PASCAL}Screen(onNavigateBack = navigator.backOrNull())
+    }
+}

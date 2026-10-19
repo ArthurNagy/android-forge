@@ -1,0 +1,27 @@
+package ${BASE_PACKAGE}.core.datastore
+
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import ${BASE_PACKAGE}.core.model.ThemeMode
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class UserPreferencesDataSourceTest {
+    @get:Rule
+    val tmpFolder: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
+
+    @Test
+    fun themeModeIsSystemUntilSetThenTheStoredValue() = runTest {
+        val dataStore = PreferenceDataStoreFactory.create(scope = backgroundScope) {
+            tmpFolder.newFolder().resolve("prefs.preferences_pb")
+        }
+        val dataSource = UserPreferencesDataSource(dataStore)
+
+        assertEquals(ThemeMode.SYSTEM, dataSource.themeMode.first())
+        dataSource.setThemeMode(ThemeMode.DARK)
+        assertEquals(ThemeMode.DARK, dataSource.themeMode.first())
+    }
+}

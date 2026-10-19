@@ -1,0 +1,50 @@
+# 5. Use kotlin-result (Result<V, E>) + sealed DomainError for error handling
+
+Date: ${SCAFFOLD_DATE}
+Status: Accepted
+
+## Context
+
+We need an error-handling philosophy that:
+- Makes the failure modes of each use case explicit in its type signature
+- Doesn't pull in a heavy functional-programming library or a new paradigm
+- Lets the UI exhaustively match on error types without try/catch ceremony
+
+Alternatives considered:
+- **Kotlin stdlib `Result<T>`** — single type parameter; the failure is always a `Throwable`. Cannot carry a typed `DomainError` without making `DomainError` extend `Throwable` (category error + stack-trace cost) and casting in every `onFailure`. The error type is also erased from the signature (`Result<User>` hides the failure mode) — which defeats the first requirement. Rejected.
+- **Arrow Either / Raise** — `Either<E, A>` with the `Raise` DSL. Excellent, but adds the `arrow-kt` dependency and a non-trivial learning curve (effect scopes, context receivers). Heavier than this project needs by default.
+- **Exceptions caught at ViewModel** — throw freely across layers; `intent {}` wraps in try/catch. Less type-system ceremony; failure modes invisible until tested or hit at runtime. Rejected.
+
+## Decision
+
+Use [`kotlin-result`](https://github.com/michaelbull/kotlin-result) — a tiny, pure-Kotlin two-parameter `Result<V, E>` (`Ok`/`Err`) — plus a **`sealed interface DomainError`** in `:core:domain`. Every use case signature reads:
+
+```kotlin
+suspend operator fun invoke(...): Result<Data, DomainError>
+```
+
+`DomainError` has two parts:
+
+- **Built-in cases** every app hits — `Network.Connectivity` (no connection, a drop, a timeout), `Network.Http(status, code)` (the server answered with an error), `NotFound`, `Unknown(cause)` — worded once for the whole app by `:core:ui`'s exhaustive `DomainError.toMessage()`. A `cause` is diagnostic detail for logs, never shown.
+- **`DomainError.Typed`**, an open extension point: a domain area declares its own failures as a sealed interface extending it (`sealed interface PhotoError : DomainError.Typed { data class AlbumFull(val limit: Int) : PhotoError }`), carrying the payload a screen needs to react. Screens handle the typed errors they can react to and let `toMessage()` word the rest.
+
+The data layer is where exceptions stop: `catchNetwork { … }` (`:core:network`) runs a network call, rethrows `CancellationException` and classifies every other failure into a built-in case; storage writes use the same `runCatching { }.mapError { }` shape.
+
+We considered a flat app-wide sealed type (every failure a case of `DomainError`): one exhaustive mapping, but it grows a case for every area's rule and has nowhere to put a payload a single screen cares about. We also considered unrelated per-use-case error types: precise, but every feature re-maps the same transport failures. Built-in cases plus a typed extension keep the common failures worded once and the specific ones typed.
+
+```kotlin
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Result
+
+suspend operator fun invoke(id: UserId): Result<User, DomainError> =
+    repo.find(id)?.let { Ok(it) } ?: Err(DomainError.NotFound)
+```
+
+## Consequences
+
+- Easier: failure modes visible in signatures; the common failures worded once for the whole app, area failures typed with their payload; no surprise exceptions; rich combinators out of the box; `coroutineBinding` covers multi-step workflows without Arrow.
+- Harder: one small dependency. The type is named `Result`, which **shadows `kotlin.Result`** — import `com.github.michaelbull.result.Result` consistently, and never the stdlib's `runCatching` (it returns `kotlin.Result`); kotlin-result's own `runCatching` + `mapError` is the data-layer boundary, always rethrowing `CancellationException`. A typed error a screen doesn't handle falls back to the generic message, so each screen must handle the typed errors it can explain.
+- Reviewer enforces: use cases return `Result<T, DomainError>` — never throw; ViewModels use `onOk`/`onErr` and `reduce { state.copy(error = ...) }` rather than `try/catch` inside `intent {}`; `:core:domain` never throws checked or unchecked business errors; built-in cases reach the screen through `toMessage()`, typed errors through the screen's own handling; no careless `.get()!!` / `unwrap()`.
+
+If a project grows to need a full effect system (typed errors across many composed steps, context receivers), supersede this ADR with one adopting Arrow Either + Raise.

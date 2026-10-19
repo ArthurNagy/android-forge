@@ -1,0 +1,78 @@
+# CLAUDE.md
+
+Scaffolded with the [**android-forge**](https://github.com/arthurnagy/android-forge) Claude Code plugin. Plugin docs are the source of truth for architecture, stack, CI, git, product, release, observability, testing, secrets, i18n/a11y and form factors. This file holds only project-specific facts.
+
+android-forge project rules apply here (the plugin's agents and skills check for this line).
+
+## Product
+- **Name:** ${APP_NAME}
+- **Application ID / base package:** ${BASE_PACKAGE}
+- **minSdk:** ${MIN_SDK} · compileSdk / targetSdk 37
+- **One-liner:** ${APP_TAGLINE}
+- **Spec:** [docs/MVP_SPEC.md](docs/MVP_SPEC.md)
+- **Figma:** ${FIGMA_URL}
+
+## Form factors
+${FORM_FACTORS}
+
+## Build & Run
+${BUILD_COMMANDS}
+
+## Modules
+${MODULE_LIST}
+
+Features: ${FEATURE_LIST}
+
+## Stack (locked — see plugin [docs/stack.md](https://github.com/arthurnagy/android-forge/blob/main/docs/stack.md))
+Jetpack Compose + Material 3 (adaptive) · Hilt · Orbit MVI (state-only) · Navigation 3 (api/impl features, Hilt `@IntoSet` entries) · kotlin-result `Result<T, DomainError>` · DataStore · Coil 3 · Timber · java.time · kotlinx-serialization · Android resources · JUnit 4 + Robolectric + Roborazzi · JaCoCo · Lint + Spotless/ktlint + compose-rules.
+
+Optional in this project: ${OPTIONAL_LIBS}.
+
+## Work & spec workflow
+${SPEC_WORKFLOW}
+
+## Project conventions (linked to plugin docs)
+- Architecture: https://github.com/arthurnagy/android-forge/blob/main/docs/architecture.md
+- Stack: https://github.com/arthurnagy/android-forge/blob/main/docs/stack.md
+- Form factors: https://github.com/arthurnagy/android-forge/blob/main/docs/form-factors/
+- Android CLI & skills: https://github.com/arthurnagy/android-forge/blob/main/docs/android-cli.md
+- Quality tiers: https://github.com/arthurnagy/android-forge/blob/main/docs/quality.md
+- Testing: https://github.com/arthurnagy/android-forge/blob/main/docs/testing.md
+- Product workflow (issues, OpenSpec, ADRs): https://github.com/arthurnagy/android-forge/blob/main/docs/product-workflow.md
+- Git & PRs: https://github.com/arthurnagy/android-forge/blob/main/docs/git-conventions.md
+- CI: https://github.com/arthurnagy/android-forge/blob/main/docs/ci.md
+- Release: https://github.com/arthurnagy/android-forge/blob/main/docs/release.md
+- Observability: https://github.com/arthurnagy/android-forge/blob/main/docs/observability.md
+- Secrets: https://github.com/arthurnagy/android-forge/blob/main/docs/secrets.md
+- i18n & a11y: https://github.com/arthurnagy/android-forge/blob/main/docs/i18n-a11y.md
+- Autonomous build loop (opt-in): https://github.com/arthurnagy/android-forge/blob/main/docs/autoloop.md
+
+## Android CLI and Android skills
+
+Devices go through Google's Android CLI, not adb: `android emulator list|start|stop`,
+`android describe` (where each module's APK is), `android install`, `android run [--type TILE|…]`,
+`android layout`, `android screen capture`, `android input tap|swipe|text|key|scroll` — adb only
+lists devices (`adb devices -l`). Use an emulator for ad-hoc runs; never install to a physical device
+without asking first. Before using an unfamiliar or pre-stable Jetpack API, look it up:
+`android docs search "<keywords>"` then `android docs fetch kb://…`.
+
+Google's Android skills live in `.claude/skills/` (installed per tier by android-forge — baseline plus
+this project's form factors and capabilities): `adaptive`, `navigation-3`, `edge-to-edge`,
+`navigation-event`, `testing-setup`, `jetpack-compose-performance`, `android-profiler`, the two security
+auditors, `r8-analyzer`, `play-policy-insights`, … They load when the work matches — use them.
+
+To check a change against its acceptance scenarios on a device (journeys + screenshots on each form
+factor it touches), ask for the `android-qa` agent after `/opsx:apply`.
+
+Prefer android-forge slash commands over hand-rolled scaffolding:
+`/android-forge-add-feature`, `/android-forge-add-screen`, `/android-forge-add-form-factor`, `/android-forge-add-library`, `/android-forge-bump-stack`, `/android-forge-spec`, `/android-forge-refine`, `/android-forge-doctor`, `/android-forge-add-autoloop`.
+
+Writing code inside a layer follows the plugin's `domain-layer`, `data-layer` and `presentation-layer` skills
+(use cases and errors · repositories and the exception boundary · ViewModels, screens and navigation, each with
+the tests the gates expect) — they load when you work in that layer.
+
+## Project-specific overrides
+${PROJECT_OVERRIDES}
+
+## Timeline
+${TIMELINE}

@@ -1,0 +1,43 @@
+name: Bug report
+description: Something is broken or behaving unexpectedly
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Concrete steps + expected vs actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Optional. How we'll know it's fixed, one per line, so each becomes a regression test.
+      placeholder: "- WHEN the device is offline THEN the gallery shows the cached photos instead of an error"
+  - type: input
+    id: depends-on
+    attributes:
+      label: Depends on
+      description: Issues that must be closed before this one starts.
+      placeholder: "#12"
+  - type: input
+    id: change-name
+    attributes:
+      label: Change name
+      description: Optional. Kebab-case, verb first (fix-offline-gallery). Prefixed with the issue number for the change and branch names.
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      placeholder: "Pixel 8 (phone) · Android 16 / Pixel Tablet · Android 15 / Galaxy Watch 7 · Wear OS 6 / emulator"
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      placeholder: "v0.3.2"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      render: shell

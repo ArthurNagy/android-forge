@@ -1,0 +1,14 @@
+package ${BASE_PACKAGE}.core.domain
+
+import com.github.michaelbull.result.Result
+import ${BASE_PACKAGE}.core.model.ThemeMode
+import javax.inject.Inject
+
+/** Stores the user's theme choice. */
+class SetThemeModeUseCase
+    @Inject
+    constructor(
+        private val repository: UserPreferencesRepository,
+    ) : UseCase {
+        suspend operator fun invoke(mode: ThemeMode): Result<Unit, DomainError> = repository.setThemeMode(mode)
+    }

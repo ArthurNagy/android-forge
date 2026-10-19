@@ -1,0 +1,27 @@
+# 8. Coverage: JaCoCo through AGP, aggregated at the root, 75% gate
+
+Date: ${SCAFFOLD_DATE}
+Status: Accepted
+
+## Context
+
+The gate needs one aggregated coverage number across Android and JVM modules, including Compose code
+exercised by Robolectric screen tests.
+
+Alternatives considered:
+- **Kover** — nicer DSL and annotation-based exclusions, but open AGP 9 issues (removed variant APIs,
+  built-in Kotlin projects routed into the pre-9 path) at the time of this decision.
+
+## Decision
+
+AGP's built-in JaCoCo (`enableUnitTestCoverage` on debug) in every Android module, the `jacoco` plugin on
+JVM modules, and the root convention `android-forge.root` aggregating both: `./gradlew coverageVerify`
+fails below **75% line coverage**, `./gradlew coverageReport` writes HTML/XML. Robolectric-loaded classes
+are counted (`includeNoLocationClasses`). Exclusions are class-file patterns: generated code and wiring
+(Compose singletons, serializers, Hilt modules, entry points, `api` modules, entry builders, design tokens).
+
+## Consequences
+
+- Easier: works on AGP 9 with built-in Kotlin today; screens covered by screen tests count.
+- Harder: exclusions are path patterns, not annotations — a new kind of generated class may need a pattern;
+  revisit Kover when its AGP 9 support is complete.

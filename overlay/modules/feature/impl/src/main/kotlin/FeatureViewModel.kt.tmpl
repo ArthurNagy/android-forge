@@ -1,0 +1,42 @@
+package ${BASE_PACKAGE}.feature.${FEATURE_NAME_PKG}.impl
+
+import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import org.orbitmvi.orbit.OrbitContainerHost
+import org.orbitmvi.orbit.viewmodel.orbitContainer
+import javax.inject.Inject
+
+/**
+ * State-only Orbit host: the side-effect type is always `Nothing` (one-shot events are consumable
+ * slots on [${FEATURE_NAME_PASCAL}State], never `postSideEffect`). Hilt injects use cases from :core:domain into
+ * the constructor.
+ *
+ * The on-create block runs once per ViewModel — once per back-stack entry — so the screen loads when
+ * it is first shown, not again every time the user comes back to it. Tests run it with `runOnCreate()`.
+ */
+@HiltViewModel
+internal class ${FEATURE_NAME_PASCAL}ViewModel
+    @Inject
+    constructor() :
+    ViewModel(),
+        OrbitContainerHost<${FEATURE_NAME_PASCAL}State, ${FEATURE_NAME_PASCAL}State, Nothing> {
+        override val container =
+            orbitContainer<${FEATURE_NAME_PASCAL}State, Nothing>(${FEATURE_NAME_PASCAL}State.Initial) {
+                load()
+            }
+
+        fun load() = intent {
+            reduce { state.copy(loading = true, error = null) }
+            // Replace with a use case injected through the constructor, consuming its
+            // Result<T, DomainError> with kotlin-result (onOk / onErr):
+            //     getPhotos()
+            //         .onOk { photos -> reduce { state.copy(loading = false, photos = photos) } }
+            //         .onErr { error -> reduce { state.copy(loading = false, error = error) } }
+            reduce { state.copy(loading = false) }
+        }
+
+        /** Paired with `state.pendingMessage` — the screen calls this after showing the snackbar. */
+        fun onPendingMessageConsumed() = intent {
+            reduce { state.copy(pendingMessage = null) }
+        }
+    }

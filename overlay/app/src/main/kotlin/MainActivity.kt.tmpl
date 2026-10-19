@@ -1,0 +1,37 @@
+package ${BASE_PACKAGE}
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import ${BASE_PACKAGE}.core.designsystem.AppTheme
+import ${BASE_PACKAGE}.core.navigation.EntryProviderInstaller
+import dagger.hilt.android.AndroidEntryPoint
+import org.orbitmvi.orbit.compose.collectAsState
+import javax.inject.Inject
+
+/**
+ * The single activity. Field injection is allowed only here and in other framework entry points
+ * (@AndroidEntryPoint); everything else uses constructor injection.
+ */
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+    /** Every feature's Nav 3 entries, contributed by its impl module's `@IntoSet` entry module. */
+    @Inject
+    lateinit var entryProviderInstallers: Set<@JvmSuppressWildcards EntryProviderInstaller>
+
+    private val viewModel: MainActivityViewModel by viewModels()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            val state by viewModel.collectAsState()
+            AppTheme(themeMode = state.themeMode) {
+                AppNavigation(entryProviderInstallers = entryProviderInstallers)
+            }
+        }
+    }
+}

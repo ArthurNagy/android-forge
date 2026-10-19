@@ -1,0 +1,26 @@
+plugins {
+    id("android-forge.android.library")
+    id("android-forge.hilt")
+    id("org.jetbrains.kotlin.plugin.serialization")
+}
+
+android {
+    namespace = "${BASE_PACKAGE}.core.network"
+    buildFeatures {
+        buildConfig = true
+    }
+    defaultConfig {
+        // The API every remote data source talks to. Per-flavor or per-build-type values go here too.
+        buildConfigField("String", "API_BASE_URL", "\"https://api.example.com/\"")
+    }
+}
+
+dependencies {
+    api(project(":core:domain")) // DomainError, returned by catchNetwork
+    api(libs.kotlinx.serialization.json) // DTOs are @Serializable
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.kotlinx.serialization)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.timber)
+}

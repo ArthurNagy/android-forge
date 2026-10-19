@@ -1,0 +1,28 @@
+package ${BASE_PACKAGE}.core.data
+
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import ${BASE_PACKAGE}.core.domain.DomainError
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.test.runTest
+import java.io.IOException
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+
+class CatchStorageTest {
+    @Test
+    fun aSuccessfulOperationPassesItsValueThrough() = runTest {
+        assertEquals(Ok(42), catchStorage { 42 })
+    }
+
+    @Test
+    fun aFailureBecomesUnknownWithItsMessage() = runTest {
+        assertEquals(Err(DomainError.Unknown("disk full")), catchStorage { throw IOException("disk full") })
+    }
+
+    @Test
+    fun cancellationPropagates() = runTest {
+        assertFailsWith<CancellationException> { catchStorage { throw CancellationException("cancelled") } }
+    }
+}

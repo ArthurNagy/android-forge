@@ -1,0 +1,27 @@
+package ${BASE_PACKAGE}.core.network
+
+import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.mapError
+import com.github.michaelbull.result.runCatching
+import ${BASE_PACKAGE}.core.domain.DomainError
+import kotlinx.coroutines.CancellationException
+import retrofit2.HttpException
+import timber.log.Timber
+import java.io.IOException
+
+/**
+ * The network exception boundary: remote data sources may throw, repositories in :core:data run every
+ * call through this and never do. No connection, a drop or a timeout → [DomainError.Network.Connectivity];
+ * an error status (Retrofit's [HttpException]) → [DomainError.Network.Http]; anything else (a body that
+ * doesn't parse) → [DomainError.Unknown]. Rethrows [CancellationException] so coroutine cancellation
+ * propagates (kotlin-result's `runCatching` would otherwise swallow it).
+ */
+suspend fun <T> catchNetwork(block: suspend () -> T): Result<T, DomainError> = runCatching { block() }.mapError { e ->
+    if (e is CancellationException) throw e
+    Timber.w(e, "network call failed")
+    when (e) {
+        is HttpException -> DomainError.Network.Http(status = e.code(), code = null)
+        is IOException -> DomainError.Network.Connectivity
+        else -> DomainError.Unknown(e.message)
+    }
+}

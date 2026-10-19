@@ -1,0 +1,39 @@
+package ${BASE_PACKAGE}.feature.${FEATURE_NAME_PKG}.impl
+
+import androidx.annotation.StringRes
+import ${BASE_PACKAGE}.core.domain.DomainError
+
+/**
+ * UI state for [${FEATURE_NAME_PASCAL}Screen]. Immutable; changed only inside [${FEATURE_NAME_PASCAL}ViewModel]'s
+ * `intent { reduce { ... } }` blocks.
+ *
+ * **No default values.** Every property is explicit so the call site states its full intent and
+ * adding a field forces every constructor to be revisited. The starting state is [Initial] (used by
+ * the ViewModel's `orbitContainer(...)` and by tests) — not constructor defaults.
+ *
+ * **`internal`.** State never leaves the feature module: the impl's only public surface is its Hilt
+ * entry module (see ${FEATURE_NAME_PASCAL}EntryModule.kt), and its keys live in :feature:${FEATURE_NAME}:api.
+ *
+ * One-shot events (navigation, snackbars) are **consumable state slots** here — not Orbit side
+ * effects. The screen observes a slot, acts on it, then calls the paired `onXxxConsumed()` intent.
+ * A message slot holds WHICH message (a string resource ID), never resolved text.
+ *
+ * When a flat data class stops fitting (mutually exclusive Loading | Loaded | Error page states),
+ * switch to a `sealed interface ${FEATURE_NAME_PASCAL}State` with `data object` / `data class` children.
+ */
+internal data class ${FEATURE_NAME_PASCAL}State(
+    val loading: Boolean,
+    // DomainError carried as-is; the screen renders it with :core:ui's toMessage().
+    val error: DomainError?,
+    @StringRes val pendingMessage: Int?,
+) {
+    companion object {
+        /** Starting state. Used by the ViewModel's `orbitContainer(...)` and by tests. */
+        val Initial =
+            ${FEATURE_NAME_PASCAL}State(
+                loading = false,
+                error = null,
+                pendingMessage = null,
+            )
+    }
+}

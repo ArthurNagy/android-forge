@@ -1,0 +1,11 @@
+plugins {
+    id("android-forge.android.library.compose")
+}
+
+android {
+    namespace = "${BASE_PACKAGE}.core.designsystem"
+}
+
+dependencies {
+    api(project(":core:model"))
+}

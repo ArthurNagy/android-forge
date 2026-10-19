@@ -1,0 +1,48 @@
+name: PR
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # JDK 17 compiles the JVM modules (java toolchain 17), JDK 21 runs Gradle and the local tests
+      # (Robolectric's SDK 35+ runtimes need 21). Installing both avoids a toolchain download per run;
+      # the last one listed becomes JAVA_HOME.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      # setup-gradle v6: its caching is the proprietary `gradle-actions-caching` component — using it
+      # accepts Gradle's Terms of Use (https://gradle.com/legal/terms-of-use/). Pin `@v5` (MIT) instead
+      # if your project can't accept them. https://blog.gradle.org/github-actions-for-gradle-v6
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Spotless (ktlint + compose-rules)
+        run: ./gradlew spotlessCheck
+      - name: Android Lint
+        run: ./gradlew lint
+      - name: Unit tests + screenshot verification + coverage gate (JaCoCo, 75%)
+        run: ./gradlew coverageVerify -Proborazzi.test.verify=true
+      - name: Assemble debug (every app module)
+        run: ./gradlew assembleDebug
+      - name: Coverage report
+        if: success() || failure()
+        run: ./gradlew coverageReport
+      - uses: actions/upload-artifact@v7
+        if: success() || failure()
+        with:
+          name: reports
+          path: |
+            build/reports/jacoco/coverageReport/
+            **/build/reports/lint-results-*.html
+            **/build/reports/tests/
+            **/build/outputs/roborazzi/
+          if-no-files-found: ignore

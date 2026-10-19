@@ -1,0 +1,39 @@
+package ${BASE_PACKAGE}.core.datastore
+
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringPreferencesKey
+import ${BASE_PACKAGE}.core.model.ThemeMode
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import java.io.IOException
+import javax.inject.Inject
+
+/**
+ * The user-preferences DataStore. Public because :core:data's repository wraps it; nothing else
+ * may depend on :core:datastore. Reads never throw (a corrupt or unreadable file reads as empty);
+ * writes may throw — the repository turns that into a `DomainError`.
+ */
+class UserPreferencesDataSource
+    @Inject
+    constructor(
+        private val dataStore: DataStore<Preferences>,
+    ) {
+        val themeMode: Flow<ThemeMode> =
+            dataStore.data
+                .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+                .map { preferences ->
+                    preferences[THEME_MODE]?.let { stored -> ThemeMode.entries.firstOrNull { it.name == stored } } ?: ThemeMode.SYSTEM
+                }
+
+        suspend fun setThemeMode(mode: ThemeMode) {
+            dataStore.edit { it[THEME_MODE] = mode.name }
+        }
+
+        private companion object {
+            val THEME_MODE = stringPreferencesKey("theme_mode")
+        }
+    }

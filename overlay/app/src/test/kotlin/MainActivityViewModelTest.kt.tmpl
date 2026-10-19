@@ -1,0 +1,24 @@
+package ${BASE_PACKAGE}
+
+import ${BASE_PACKAGE}.core.domain.ObserveThemeModeUseCase
+import ${BASE_PACKAGE}.core.model.ThemeMode
+import ${BASE_PACKAGE}.core.testing.FakeUserPreferencesRepository
+import kotlinx.coroutines.test.runTest
+import org.orbitmvi.orbit.test.testWithInternalState
+import kotlin.test.Test
+
+class MainActivityViewModelTest {
+    @Test
+    fun followsTheStoredThemeMode() = runTest {
+        val repository = FakeUserPreferencesRepository(ThemeMode.DARK)
+        val viewModel = MainActivityViewModel(ObserveThemeModeUseCase(repository))
+
+        viewModel.testWithInternalState(this, MainActivityState.Initial) {
+            runOnCreate()
+            expectInternalState { copy(themeMode = ThemeMode.DARK) }
+            repository.setThemeMode(ThemeMode.LIGHT)
+            expectInternalState { copy(themeMode = ThemeMode.LIGHT) }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+}

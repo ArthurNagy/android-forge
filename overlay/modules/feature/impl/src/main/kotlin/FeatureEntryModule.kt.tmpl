@@ -1,0 +1,20 @@
+package ${BASE_PACKAGE}.feature.${FEATURE_NAME_PKG}.impl
+
+import ${BASE_PACKAGE}.core.navigation.EntryProviderInstaller
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoSet
+
+/**
+ * Contributes this feature's entries to the app's `Set<EntryProviderInstaller>` (Hilt multibinding).
+ * :app picks it up just by depending on :feature:${FEATURE_NAME}:impl — no app code lists features.
+ */
+@Module
+@InstallIn(SingletonComponent::class)
+internal object ${FEATURE_NAME_PASCAL}EntryModule {
+    @Provides
+    @IntoSet
+    fun provide${FEATURE_NAME_PASCAL}Entries(): EntryProviderInstaller = { navigator -> ${FEATURE_NAME_CAMEL}Entries(navigator) }
+}

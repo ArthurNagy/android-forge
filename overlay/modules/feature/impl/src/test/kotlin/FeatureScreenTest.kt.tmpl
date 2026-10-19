@@ -1,0 +1,73 @@
+package ${BASE_PACKAGE}.feature.${FEATURE_NAME_PKG}.impl
+
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
+import com.github.takahirom.roborazzi.captureRoboImage
+import ${BASE_PACKAGE}.core.designsystem.AppTheme
+import ${BASE_PACKAGE}.core.domain.DomainError
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import kotlin.test.assertTrue
+
+/**
+ * Screen tests on the JVM (Robolectric): behaviour through Compose UI Test, layout through Roborazzi
+ * screenshots on a phone and a tablet. Record goldens with `./gradlew recordRoborazziDebug`; CI
+ * verifies them (`-Proborazzi.test.verify=true`).
+ */
+@RunWith(AndroidJUnit4::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class ${FEATURE_NAME_PASCAL}ScreenTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    @Test
+    fun theScreenRendersTheViewModelState() {
+        val viewModel = ${FEATURE_NAME_PASCAL}ViewModel()
+        composeRule.setContent { AppTheme { ${FEATURE_NAME_PASCAL}Screen(onNavigateBack = null, viewModel = viewModel) } }
+
+        composeRule.onNodeWithText("${FEATURE_NAME_PASCAL}: replace this placeholder with the real screen content").assertExists()
+    }
+
+    @Test
+    fun theBackControlCallsOnNavigateBack() {
+        var wentBack = false
+        composeRule.setContent {
+            AppTheme { ${FEATURE_NAME_PASCAL}Content(${FEATURE_NAME_PASCAL}State.Initial, SnackbarHostState(), onNavigateBack = { wentBack = true }) }
+        }
+
+        composeRule.onNodeWithText("Back").performClick()
+
+        assertTrue(wentBack)
+    }
+
+    @Test
+    fun anErrorIsWordedByToMessage() {
+        composeRule.setContent {
+            AppTheme { ${FEATURE_NAME_PASCAL}Content(${FEATURE_NAME_PASCAL}State.Initial.copy(error = DomainError.NotFound), SnackbarHostState(), onNavigateBack = null) }
+        }
+
+        composeRule.onNodeWithText("That item is no longer available.").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun phone() {
+        composeRule.setContent { AppTheme { ${FEATURE_NAME_PASCAL}Content(${FEATURE_NAME_PASCAL}State.Initial, SnackbarHostState(), onNavigateBack = {}) } }
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun tablet() {
+        composeRule.setContent { AppTheme { ${FEATURE_NAME_PASCAL}Content(${FEATURE_NAME_PASCAL}State.Initial, SnackbarHostState(), onNavigateBack = {}) } }
+        composeRule.onRoot().captureRoboImage()
+    }
+}

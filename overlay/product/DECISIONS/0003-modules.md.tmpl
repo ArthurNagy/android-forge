@@ -1,0 +1,43 @@
+# 3. Use Google's module shape: `:core:*` + `:feature:*:{api,impl}`, features see only `:core:domain`
+
+Date: ${SCAFFOLD_DATE}
+Status: Accepted
+
+## Context
+
+The project needs a module layout that keeps features independent, builds incrementally, serves several
+form factors from shared code, and matches the guidance the team (and Claude's Android skills) read.
+
+References: Android's [modularization patterns](https://developer.android.com/topic/modularization/patterns)
+(app, feature, data, common and test modules; one app module per device type), the
+[Navigation 3 modularization guide](https://developer.android.com/guide/navigation/navigation-3/modularize)
+(each feature split into `api` keys and `impl` content, entries contributed with Hilt `@IntoSet`), and Now in
+Android (`:core:*` naming).
+
+Alternatives considered:
+- **Flat hybrid** (`:ui :domain :data :testing` + one module per feature, outgoing navigation as callbacks the
+  app wires) — fewer modules, but the app must know every navigation edge and Google's material doesn't
+  map onto it.
+- **Feature-first verticals** (each feature owning presentation + domain + data) — module sprawl in small apps,
+  and shared data has no home.
+
+## Decision
+
+- `:core:model` and `:core:domain` are JVM modules (entities; use cases, repository interfaces, `DomainError`,
+  `DispatcherProvider`). `:core:data` implements the interfaces over `:core:datastore` / `:core:database` /
+  `:core:network`. `:core:designsystem`, `:core:ui`, `:core:navigation`, `:core:testing` are shared.
+- Each feature is `:feature:<name>:api` (Nav 3 keys only) + `:feature:<name>:impl` (internal screens,
+  ViewModels, state, strings, an `@IntoSet` entry builder). An impl may depend on other features' `api`.
+- **Stricter than Google:** a feature impl depends on `:core:domain`, never on `:core:data` (or the storage/
+  network modules). Only app modules depend on `:core:data`.
+- One app module per device type (`:app`, `:wear`, `:tv`, `:automotive`) — see ADR 0009.
+
+## Consequences
+
+- Easier: Google's docs, samples and skills apply directly; features navigate to each other without the app
+  changing; every feature has the same shape, testable against fakes of domain interfaces; JVM modules
+  build fast and can't touch Android APIs.
+- Harder: more modules (two per feature) and a use case even where a ViewModel could read a repository
+  directly.
+- Reviewer enforces: the dependency rules in docs/architecture.md, `internal` screens/ViewModels/state,
+  keys only in `api` modules, `resourcePrefix` on every Android module.

@@ -1,0 +1,32 @@
+package ${BASE_PACKAGE}.benchmarks
+
+import androidx.benchmark.macro.BaselineProfileMode
+import androidx.benchmark.macro.CompilationMode
+import androidx.benchmark.macro.StartupMode
+import androidx.benchmark.macro.StartupTimingMetric
+import androidx.benchmark.macro.junit4.MacrobenchmarkRule
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+
+internal const val TARGET_PACKAGE = "${BASE_PACKAGE}"
+
+/** Cold startup with the Baseline Profile applied — compare against CompilationMode.None() to see its gain. */
+@RunWith(AndroidJUnit4::class)
+class StartupBenchmark {
+    @get:Rule
+    val rule = MacrobenchmarkRule()
+
+    @Test
+    fun coldStartupWithBaselineProfile() = rule.measureRepeated(
+        packageName = TARGET_PACKAGE,
+        metrics = listOf(StartupTimingMetric()),
+        compilationMode = CompilationMode.Partial(BaselineProfileMode.Require),
+        iterations = 5,
+        startupMode = StartupMode.COLD,
+    ) {
+        pressHome()
+        startActivityAndWait()
+    }
+}

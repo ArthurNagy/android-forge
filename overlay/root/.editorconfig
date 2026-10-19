@@ -1,0 +1,37 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+max_line_length = 140
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+# Hilt modules and entry builders live in files named after what they hold (DataModule.kt,
+# GalleryEntries.kt) — fine for ktlint's filename rule; it stays off so a file may hold a top-level
+# function plus its helpers without being renamed after one of them.
+ktlint_standard_filename = disabled
+# These two wrapping rules fight idiomatic Kotlin/Gradle: multiline-expression-wrapping forces
+# `val x =` onto its own line before a builder block, and chain-method-continuation breaks
+# `libs.versions.x.get().toInt()` across lines even when it fits. Disabled; all other rules stay on.
+ktlint_standard_multiline-expression-wrapping = disabled
+ktlint_standard_chain-method-continuation = disabled
+# Keep Orbit's `fun load() = intent { … }` and `fun x() = runTest { … }` on one line
+# (ktlint_official's default `multiline` would push the body onto the next line).
+ktlint_function_signature_body_expression_wrapping = default
+# @Composable functions are PascalCase by convention — exempt them from function-naming
+# (keeps the rule active for ordinary functions).
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+[*.{yml,yaml,json,md}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = off
+
+[Makefile]
+indent_style = tab

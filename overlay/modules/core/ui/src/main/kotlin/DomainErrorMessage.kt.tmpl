@@ -1,0 +1,24 @@
+package ${BASE_PACKAGE}.core.ui
+
+import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import ${BASE_PACKAGE}.core.domain.DomainError
+
+/**
+ * The words for every built-in [DomainError] case, once for the whole app; features render
+ * `state.error` through [toMessage]. Exhaustive on purpose: a new built-in case doesn't compile until
+ * it has a message here (and a string in :core:ui's res/values/strings.xml). A [DomainError.Typed]
+ * error that reaches here — one the screen didn't handle itself — gets the generic message. A
+ * `cause` is for logs and is never shown.
+ */
+@StringRes
+fun DomainError.messageRes(): Int = when (this) {
+    DomainError.Network.Connectivity -> R.string.core_ui_error_connectivity
+    is DomainError.Network.Http -> R.string.core_ui_error_server
+    DomainError.NotFound -> R.string.core_ui_error_not_found
+    is DomainError.Unknown, is DomainError.Typed -> R.string.core_ui_error_unknown
+}
+
+@Composable
+fun DomainError.toMessage(): String = stringResource(messageRes())

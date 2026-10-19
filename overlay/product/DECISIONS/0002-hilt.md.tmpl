@@ -1,0 +1,39 @@
+# 2. Use Hilt for dependency injection
+
+Date: ${SCAFFOLD_DATE}
+Status: Accepted
+
+## Context
+
+Every layer needs dependency injection: repositories behind domain interfaces, use cases in ViewModels,
+DataStore/Room/Retrofit singletons, and each feature's Navigation 3 entry builders reaching the app without
+the app listing features by hand.
+
+Alternatives considered:
+- **Metro** (Zac Sweers' compiler-plugin DI, Dagger-compatible) — fast builds with no KSP step, but outside
+  Google's docs, samples and Android skills.
+- **Koin** — runtime DI with low ceremony; a missing binding fails at runtime, and it is the least
+  Android-specific choice. (kmp-forge uses it because Hilt can't live in `commonMain` — not a constraint here.)
+- **Manual DI** — fine for tiny apps; no multibinding, no ViewModel integration.
+
+## Decision
+
+Use **Hilt** (Dagger on KSP2): `@HiltAndroidApp` on `MainApplication`; `@AndroidEntryPoint` only on framework
+entry points (activities, services, receivers); `@HiltViewModel` ViewModels resolved with `hiltViewModel()`
+inside Nav 3 entries (scoped per entry by `rememberViewModelStoreNavEntryDecorator()`); route arguments via
+`@AssistedInject` + `hiltViewModel<VM, VM.Factory>(creationCallback = …)`; `@Binds` of `internal`
+implementations to public interfaces in each module's `internal` Hilt module; each feature contributes its
+entries with `@Provides @IntoSet` (declared once with `@Multibinds` in `:core:navigation`).
+
+`:core:domain` stays a JVM module: use cases carry `javax.inject.Inject` constructors and need no Hilt plugin.
+
+## Consequences
+
+- Easier: the graph is checked at compile time (a missing binding fails the build); Google's Nav 3
+  modularization guide, the `navigation-3` and `testing-setup` skills and Now in Android all assume Hilt;
+  features join the app by a single Gradle dependency.
+- Harder: KSP processing time in every Hilt module; annotation-heavy modules; Hilt's generated Java sits
+  outside coverage (excluded by design).
+- Reviewer enforces: constructor injection everywhere; no field injection outside `@AndroidEntryPoint`
+  classes; no `EntryPointAccessors` used as a service locator; no `AndroidViewModel`; a Hilt module lives
+  beside what it binds and is `internal`.

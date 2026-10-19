@@ -1,0 +1,12 @@
+package ${BASE_PACKAGE}.core.navigation
+
+import androidx.navigation3.runtime.EntryProviderScope
+import androidx.navigation3.runtime.NavKey
+
+/**
+ * One feature's Navigation 3 entries. Each `:feature:<name>:impl` contributes one with Hilt
+ * multibinding (`@Provides @IntoSet`, in its `<Name>EntryModule`); :app's MainActivity injects the
+ * whole `Set<EntryProviderInstaller>` and installs every one into its `NavDisplay`'s
+ * `entryProvider { }` — the app never lists features by hand (Nav 3 modularization guide).
+ */
+typealias EntryProviderInstaller = EntryProviderScope<NavKey>.(navigator: Navigator) -> Unit
