@@ -67,5 +67,8 @@ modules, templates, build logic, QA and review rebuilt for Android.
 - On emulators: Wear OS (`wearos_large_round`); TV (`tv_1080p`, D-pad focus move + select read back through
   `android layout`); AAOS (`automotive_1408p_landscape_with_play`: `CarAppActivity` renders the ListTemplate, Hilt on
   `CarAppService`); desktop windowing (`desktop_medium`: free-form window, two panes when maximized).
+- Merge guard: the add-autoloop smoke check through the wired `settings.json` command (audit lines for the main
+  conversation and a subagent), and in `enforce` mode it denies a merge without a gate PASS, applying `ready`, a
+  force-push to main, and a subagent writing `.claude/settings.json`.
 - Not run on a device: Android Auto (Desktop Head Unit), XR headset, display glasses, placing the widget on a home
   screen (no long-press in the CLI), the caption-bar tint (needs an API 35+ desktop image), Cast.
