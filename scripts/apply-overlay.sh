@@ -37,7 +37,8 @@
 #   BUILD_COMMANDS, MODULE_LIST, FEATURE_LIST, OPTIONAL_LIBS, FIGMA_URL, PROJECT_OVERRIDES,
 #   TIMELINE, SCAFFOLD_DATE, SPEC_WORKFLOW. For feature templates: FEATURE_NAME (kebab),
 #   FEATURE_NAME_PKG, FEATURE_NAME_CAMEL, FEATURE_NAME_PASCAL, FEATURE_NAME_SNAKE.
-#   For form-factor templates: CAR_APP_CATEGORY (Car App Library category: poi, iot, weather, navigation, messaging).
+#   For form-factor templates: CAR_APP_CATEGORY — the Car App Library category suffix in UPPERCASE (POI, IOT, WEATHER,
+#   NAVIGATION, MESSAGING; envsubst can't change case, the add-form-factor export block uppercases it).
 #   For autoloop: AUTOLOOP_HANDOFF, READY_APPROVERS, AUTOLOOP_QA.
 #   Unset variables substitute as empty strings (envsubst default).
 

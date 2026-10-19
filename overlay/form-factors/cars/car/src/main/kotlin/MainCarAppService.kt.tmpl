@@ -1,0 +1,40 @@
+package ${BASE_PACKAGE}.car
+
+import android.content.Context
+import android.content.pm.ApplicationInfo
+import androidx.car.app.CarAppService
+import androidx.car.app.Session
+import androidx.car.app.SessionInfo
+import androidx.car.app.validation.HostValidator
+
+/**
+ * The car app's entry point: the Android Auto host (phone) or the AAOS templates host binds to it,
+ * passes [createHostValidator], and gets one [MainCarSession] per connection.
+ *
+ * Public only because the manifest names it. To show domain data on a car screen, make this an
+ * `@AndroidEntryPoint` (Hilt supports any `Service`; apply `android-forge.hilt` to :car), inject the
+ * use cases here and hand them to the session — Session and Screen aren't Hilt entry points.
+ */
+class MainCarAppService : CarAppService() {
+    override fun createHostValidator(): HostValidator =
+        hostValidator(this, isDebuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0)
+
+    override fun onCreateSession(sessionInfo: SessionInfo): Session = MainCarSession()
+}
+
+/**
+ * Debug builds accept every host (the Desktop Head Unit, emulator hosts); release builds only the
+ * Android Auto and Android Automotive OS template hosts signed by Google (`R.array.car_hosts_allowlist`,
+ * a copy of the Car App Library's own allowlist).
+ */
+internal fun hostValidator(
+    context: Context,
+    isDebuggable: Boolean,
+): HostValidator = if (isDebuggable) {
+    HostValidator.ALLOW_ALL_HOSTS_VALIDATOR
+} else {
+    HostValidator
+        .Builder(context)
+        .addAllowedHosts(R.array.car_hosts_allowlist)
+        .build()
+}

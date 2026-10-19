@@ -1,0 +1,11 @@
+package ${BASE_PACKAGE}.wear
+
+import ${BASE_PACKAGE}.core.model.ThemeMode
+
+internal data class WearHomeState(
+    val themeMode: ThemeMode,
+) {
+    companion object {
+        val Initial = WearHomeState(themeMode = ThemeMode.SYSTEM)
+    }
+}

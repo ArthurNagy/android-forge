@@ -1,0 +1,18 @@
+# android-forge catalog additions for home-screen widgets (Jetpack Glance) — merged into the project's
+# gradle/libs.versions.toml by `apply-overlay.sh patch-libs` (missing keys appended, a lower [versions]
+# value raised to this floor, never lowered). Latest STABLE Glance (Google Maven androidx.glance).
+# Snap scrolling (VerticalScrollMode) needs Glance 1.3.0-alpha02+ — raise this key only for that.
+
+[versions]
+androidxGlance = "1.2.0"
+
+[libraries]
+androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "androidxGlance" }
+# Studio previews of Glance composables (@androidx.glance.preview.Preview)
+androidx-glance-preview = { module = "androidx.glance:glance-preview", version.ref = "androidxGlance" }
+androidx-glance-appwidget-preview = { module = "androidx.glance:glance-appwidget-preview", version.ref = "androidxGlance" }
+# Glance's own Material 3 colors (GlanceTheme(colors = ColorProviders(light, dark))) — add when the widget
+# uses the app's color scheme instead of the default dynamic one.
+androidx-glance-material3 = { module = "androidx.glance:glance-material3", version.ref = "androidxGlance" }
+# Unit tests without inflating views: runGlanceAppWidgetUnitTest { provideComposable { … }; onNode(…) }
+androidx-glance-appwidget-testing = { module = "androidx.glance:glance-appwidget-testing", version.ref = "androidxGlance" }

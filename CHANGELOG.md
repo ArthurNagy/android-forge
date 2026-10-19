@@ -61,3 +61,11 @@ modules, templates, build logic, QA and review rebuilt for Android.
 - On emulators through the Android CLI: launch, navigation through `@IntoSet` entries, rotation and process-death
   restore of the Nav 3 back stack (phone); the Hilt graph with Room + Retrofit + DataStore and the list-detail scene
   (unfolded foldable).
+- Form-factor templates rendered per their recipes, gate green: `:wear` + `:tv` (55 tests, 89.6% coverage);
+  `:car` + `:automotive` + `:widget` + `:glasses` + the XR and desktop manifest lines in one project (56 tests, 82.95%;
+  `:app` and `:automotive` release builds pass R8).
+- On emulators: Wear OS (`wearos_large_round`); TV (`tv_1080p`, D-pad focus move + select read back through
+  `android layout`); AAOS (`automotive_1408p_landscape_with_play`: `CarAppActivity` renders the ListTemplate, Hilt on
+  `CarAppService`); desktop windowing (`desktop_medium`: free-form window, two panes when maximized).
+- Not run on a device: Android Auto (Desktop Head Unit), XR headset, display glasses, placing the widget on a home
+  screen (no long-press in the CLI), the caption-bar tint (needs an API 35+ desktop image), Cast.

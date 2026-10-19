@@ -1,0 +1,43 @@
+package ${BASE_PACKAGE}.car
+
+import android.content.Context
+import androidx.car.app.SessionInfo
+import androidx.car.app.validation.HostValidator
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotSame
+import kotlin.test.assertSame
+
+@RunWith(AndroidJUnit4::class)
+class MainCarAppServiceTest {
+    private val context: Context = ApplicationProvider.getApplicationContext()
+
+    @Test
+    fun debugBuildsAcceptEveryHost() {
+        assertSame(HostValidator.ALLOW_ALL_HOSTS_VALIDATOR, hostValidator(context, isDebuggable = true))
+    }
+
+    @Test
+    fun releaseBuildsAcceptOnlyGooglesAutoAndAutomotiveHosts() {
+        val validator = hostValidator(context, isDebuggable = false)
+
+        assertNotSame(HostValidator.ALLOW_ALL_HOSTS_VALIDATOR, validator)
+        assertEquals(
+            setOf("com.google.android.projection.gearhead", "com.google.android.apps.automotive.templates.host"),
+            validator.allowedHosts.keys,
+        )
+    }
+
+    @Test
+    fun theServiceOpensAHomeSession() {
+        val service = Robolectric.setupService(MainCarAppService::class.java)
+
+        assertIs<MainCarSession>(service.onCreateSession(SessionInfo.DEFAULT_SESSION_INFO))
+        assertIs<HostValidator>(service.createHostValidator())
+    }
+}

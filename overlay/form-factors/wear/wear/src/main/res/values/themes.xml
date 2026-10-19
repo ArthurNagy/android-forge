@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The window behind Compose: Wear's device-default (black) theme. Colors and type come from Wear Material 3's
+         MaterialTheme in WearApp. -->
+    <style name="Wear.Theme" parent="@android:style/Theme.DeviceDefault" />
+</resources>

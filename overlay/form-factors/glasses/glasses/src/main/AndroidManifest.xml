@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Merged into :app's manifest. The projected activity runs on the phone and renders on the glasses. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <!-- requiredDisplayCategory XR_PROJECTED: the system only shows it on a projected (glasses)
+             display. XR_PROJECTED_LAUNCHER: Gemini opens it on the glasses for "Open <label>"
+             (with several, Gemini picks the first in the manifest). The attribute is API 34+;
+             older phones can't project, hence tools:targetApi. -->
+        <activity
+            android:name=".GlassesActivity"
+            android:exported="true"
+            android:label="@string/glasses_app_name"
+            android:requiredDisplayCategory="android.hardware.display.category.XR_PROJECTED"
+            tools:targetApi="34">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.XR_PROJECTED_LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

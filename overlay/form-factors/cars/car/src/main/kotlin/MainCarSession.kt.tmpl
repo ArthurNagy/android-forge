@@ -1,0 +1,14 @@
+package ${BASE_PACKAGE}.car
+
+import android.content.Intent
+import androidx.car.app.Screen
+import androidx.car.app.Session
+
+/**
+ * One connection to a host. [onCreateScreen] returns the first screen; push more with
+ * `screenManager.push(...)` before returning to pre-seed a back stack for a deep link (the intent
+ * also arrives in [onNewIntent] while the session is running).
+ */
+internal class MainCarSession : Session() {
+    override fun onCreateScreen(intent: Intent): Screen = CarHomeScreen(carContext)
+}

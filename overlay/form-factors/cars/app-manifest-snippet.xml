@@ -1,0 +1,9 @@
+<!--
+  Android Auto support in the PHONE app — paste inside <application> of app/src/main/AndroidManifest.xml
+  (and add `implementation(project(":car"))` to app/build.gradle.kts). :car's merged manifest brings
+  the CarAppService; this meta-data tells the Android Auto host the phone app is a templated car app.
+  Only :app carries it — :automotive declares com.android.automotive instead.
+-->
+<meta-data
+    android:name="com.google.android.gms.car.application"
+    android:resource="@xml/automotive_app_desc" />

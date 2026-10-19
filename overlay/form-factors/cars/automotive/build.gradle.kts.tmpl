@@ -1,0 +1,29 @@
+/*
+ * :automotive — the Android Automotive OS app: CarAppActivity (from car-app-automotive) hosts :car's
+ * Car App Library screens. A separate APK with the SAME applicationId as :app (one Play listing),
+ * published on Play's dedicated Android Automotive OS track (a templated app can't share the phone APK).
+ *
+ * It shares :core:model/:core:domain/:core:data with :app when car screens show app data, never the
+ * phone UI modules. minSdk 29: every car that runs Car App Library apps on AAOS is Android 10+.
+ */
+plugins {
+    id("android-forge.android.application")
+    id("android-forge.hilt")
+}
+
+android {
+    namespace = "${BASE_PACKAGE}.automotive"
+    resourcePrefix = "automotive_"
+    defaultConfig {
+        applicationId = "${BASE_PACKAGE}"
+        minSdk = 29
+        versionCode = 300_000_001 // offset from :app's — one Play listing, unique codes (docs/release.md)
+        versionName = "0.1.0"
+    }
+}
+
+dependencies {
+    implementation(project(":car"))
+    implementation(libs.androidx.car.app.automotive)
+    implementation(libs.timber)
+}

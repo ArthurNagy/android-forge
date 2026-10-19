@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Provider metadata of HomeWidgetReceiver. initialLayout is Glance's loading layout; previewLayout is
+     what the widget picker shows on Android 12+ (older versions show the app icon). The Android 12+
+     attributes (targetCell*, maxResize*, previewLayout, description) are ignored below 12, which then
+     size the widget from minWidth/minHeight — hence tools:targetApi. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:description="@string/widget_home_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:maxResizeHeight="@dimen/widget_home_max_resize_height"
+    android:maxResizeWidth="@dimen/widget_home_max_resize_width"
+    android:minHeight="@dimen/widget_home_min_height"
+    android:minResizeHeight="@dimen/widget_home_min_resize_height"
+    android:minResizeWidth="@dimen/widget_home_min_resize_width"
+    android:minWidth="@dimen/widget_home_min_width"
+    android:previewLayout="@layout/widget_home_preview"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="@integer/widget_home_target_cell_height"
+    android:targetCellWidth="@integer/widget_home_target_cell_width"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    tools:targetApi="s" />

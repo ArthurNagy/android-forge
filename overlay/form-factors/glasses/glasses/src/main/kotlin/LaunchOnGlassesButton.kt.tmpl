@@ -1,0 +1,67 @@
+package ${BASE_PACKAGE}.glasses
+
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.xr.projected.ProjectedContext
+import androidx.xr.projected.experimental.ExperimentalProjectedApi
+import kotlinx.coroutines.CoroutineScope
+import timber.log.Timber
+
+/**
+ * The phone-side entry to the glasses experience, for :app to place in a top app bar, as a FAB or on
+ * its start screen (display-glasses skill). Enabled only while display glasses are connected, and
+ * absent below Android 16: watching for a projected device needs API 36. It starts [GlassesActivity]
+ * on the glasses' display — never on the phone.
+ */
+@Composable
+fun LaunchOnGlassesButton(modifier: Modifier = Modifier) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) return
+    val context = LocalContext.current
+    // The composition's main-thread dispatcher runs the connection listener: no Dispatchers.* here.
+    val scope = rememberCoroutineScope()
+    val connected by remember(context) { projectedDeviceConnected(context, scope) }.collectAsStateWithLifecycle(initialValue = false)
+    LaunchOnGlassesButtonContent(connected = connected, onClick = { context.startGlassesActivity() }, modifier = modifier)
+}
+
+/** Stateless button: what the tests render with each connection state. */
+@Composable
+internal fun LaunchOnGlassesButtonContent(
+    connected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Button(onClick = onClick, enabled = connected, modifier = modifier) {
+        Text(stringResource(R.string.glasses_launch))
+    }
+}
+
+@OptIn(ExperimentalProjectedApi::class)
+@RequiresApi(Build.VERSION_CODES.BAKLAVA)
+private fun projectedDeviceConnected(
+    context: Context,
+    scope: CoroutineScope,
+) = ProjectedContext.isProjectedDeviceConnected(context, scope.coroutineContext)
+
+@OptIn(ExperimentalProjectedApi::class)
+@RequiresApi(Build.VERSION_CODES.BAKLAVA)
+private fun Context.startGlassesActivity() {
+    try {
+        val options = ProjectedContext.createProjectedActivityOptions(this)
+        startActivity(Intent(this, GlassesActivity::class.java), options.toBundle())
+    } catch (e: IllegalStateException) {
+        // The glasses disconnected between the last connection update and the tap.
+        Timber.w(e, "no projected display to start the glasses activity on")
+    }
+}

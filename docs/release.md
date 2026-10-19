@@ -77,6 +77,12 @@ track (Play Console ▸ Release ▸ Advanced settings ▸ Form factors) and thei
 the same `applicationId`. Android Auto, XR (same-APK) and desktop ship inside the phone APK; XR glasses
 apps have no Play distribution yet. See each [form-factors/](form-factors/) page.
 
+### Version codes across form factors
+
+Every APK/AAB of one Play listing needs a unique `versionCode`. android-forge offsets the form-factor apps:
+`:app` counts from 1, `:wear` from `100_000_001`, `:tv` from `200_000_001`, `:automotive` from `300_000_001` — bump
+each module's own code per release (the form-factor templates start there).
+
 ### Before a store release
 
 - `play-policy-insights` skill — audit permissions, data collection and declarations against Play policy.

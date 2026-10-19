@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PLACEHOLDER home-screen banner: 16:9, 160x90dp (= 320x180 px at xhdpi). Play's TV quality bar (TV-BN) wants
+     the app's NAME in the banner, per language — replace this with the designed banner (the TV icon guidelines'
+     Figma template) before publishing. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp"
+    android:height="90dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:fillColor="#FF3D5AFE"
+        android:pathData="M0,0h320v180h-320z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M118,50h84a8,8 0,0 1,8 8v52a8,8 0,0 1,-8 8h-84a8,8 0,0 1,-8 -8v-52a8,8 0,0 1,8 -8z M120,60v48h80v-48z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M140,126h40v6h-40z" />
+</vector>

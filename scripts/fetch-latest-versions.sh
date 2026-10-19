@@ -76,15 +76,15 @@ declare -a coords=(
     "androidx.car.app:app:androidxCarApp:google-maven:stable"
     "androidx.tv:tv-material:androidxTvMaterial:google-maven:stable"
     "androidx.wear.compose:compose-material3:wearCompose:google-maven:stable"
-    "androidx.wear.tiles:tiles:wearTiles:google-maven:stable"
-    "androidx.wear.protolayout:protolayout:wearProtolayout:google-maven:stable"
     "com.google.android.gms:play-services-wearable:playServicesWearable:google-maven:stable"
     "androidx.glance:glance-appwidget:androidxGlance:google-maven:stable"
     "androidx.media3:media3-exoplayer:media3:google-maven:stable"
-    "androidx.xr.compose:compose:xrCompose:google-maven:pre"
-    "androidx.xr.scenecore:scenecore:xrScenecore:google-maven:pre"
-    "androidx.xr.glimmer:glimmer:xrGlimmer:google-maven:pre"
-    "androidx.xr.projected:projected:xrProjected:google-maven:pre"
+    # XR glasses: the official glasses docs pin exact pre-release versions ("use these even if newer") —
+    # bump-stack reports these but only proposes what the current docs pin (android docs search "glimmer setup").
+    "androidx.xr.runtime:runtime:androidxXrRuntime:google-maven:pre"
+    "androidx.xr.glimmer:glimmer:androidxXrGlimmer:google-maven:pre"
+    "androidx.xr.projected:projected:androidxXrProjected:google-maven:pre"
+    "androidx.xr.arcore:arcore:androidxXrArcore:google-maven:pre"
     # --- quality gates ---
     "com.diffplug.spotless:spotless-plugin-gradle:spotless:maven-central:stable"
     "com.pinterest.ktlint:ktlint-cli:ktlint:maven-central:stable"

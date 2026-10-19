@@ -30,6 +30,11 @@ install, launch, input, screenshots — goes through `android`.
 Gotchas:
 - The Bash tool may run **zsh**: brace variables (`"${SERIAL}"`) — `"$SERIAL:x"` is a zsh modifier.
 - `android describe` writes `.gradle/init.gradle.kts` into the project (git-ignored).
+- An app whose only launcher category is `LEANBACK_LAUNCHER` (`:tv`) needs `android run --activity=MainActivity`
+  (otherwise "Component check failed").
+- TV system images ship Play Protect, which blocks the CLI's on-device instrumentation server ("Unsafe app blocked …
+  built for an older version of Android"): `android layout` fails and `android input` hangs. `avd.sh ensure tv` boots
+  the new AVD once and turns app verification off inside that emulator; on another TV AVD do it in its Settings.
 - On a device with several displays (foldables, some Automotive images) `android screen capture` prepends
   screencap's "Multiple displays were found" warning to the PNG file; strip everything before the `\x89PNG`
   signature before viewing it (the `android-qa` agent does).
@@ -48,10 +53,10 @@ boots any AVD.
 |---|---|---|---|
 | Phone | `medium_phone` | CLI `medium_phone` | CLI default |
 | Tablet | `medium_tablet` | CLI `medium_tablet` | CLI default |
-| Desktop / Googlebook | `medium_desktop` | CLI `medium_desktop` | CLI default |
+| Desktop / Googlebook | `desktop_medium` | CLI `medium_desktop` | CLI default |
 | Foldable | `pixel_10_pro_fold` | `pixel_10_pro_fold` | `system-images/android-37.0/google_apis_playstore_ps16k/<abi>` |
 | Wear OS | `wearos_large_round` | `wearos_large_round` | `system-images/android-37.0/android-wear-signed/<abi>` |
-| TV / Google TV | `tv_1080p` | `tv_1080p` | `system-images/android-36/google-tv/<abi>` |
+| TV | `tv_1080p` | `tv_1080p` | `system-images/android-36/android-tv/<abi>` (`ensure` turns Play Protect app verification off inside it — see gotchas) |
 | Android Automotive OS | `automotive_1408p_landscape_with_play` | same | `system-images/android-35-ext15/android-automotive-playstore/<abi>` |
 | XR headset | `xr_headset_device` | `xr_headset_device` | `system-images/android-34/google-xr/<abi>` |
 | XR display glasses | `ai_glasses_device` (+ a paired phone) | `ai_glasses_device` | `system-images/android-36/ai-glasses/<abi>` |

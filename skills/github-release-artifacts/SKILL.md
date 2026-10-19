@@ -57,8 +57,8 @@ plugins upload it themselves). Locally, `android describe --project_dir=.` lists
 4. Baseline Profile regenerated when startup paths changed (`./gradlew :app:generateReleaseBaselineProfile` on a
    device, `:benchmarks` opt-in) and committed.
 5. The `android-qa` agent passed on every form factor the release touches.
-6. Bump `versionCode`/`versionName` in each app module (keep `:wear`/`:tv`/`:automotive` versionCodes distinct from
-   `:app`'s when they share a Play listing — Play requires unique version codes per track/APK).
+6. Bump `versionCode`/`versionName` in each app module. Version codes must be unique across the listing: `:app` counts
+   from 1, `:wear` from `100_000_001`, `:tv` from `200_000_001`, `:automotive` from `300_000_001` (release.md).
 
 Then `git tag -a v0.3.0 -m "Release v0.3.0" && git push origin v0.3.0` (the user pushes; agents never do).
 

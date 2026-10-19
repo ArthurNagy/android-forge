@@ -1,0 +1,25 @@
+/*
+ * :car — the Car App Library app: MainCarAppService, its Session and Screens, and the
+ * automotive_app_desc.xml capability file. Shared by :app (Android Auto: the phone app's merged
+ * manifest carries the service) and :automotive (Android Automotive OS: CarAppActivity hosts it).
+ *
+ * Car screens are templates (ListTemplate, PaneTemplate, …) the host renders — not Compose — so this
+ * is a plain Android library. It never depends on phone UI modules (:core:designsystem, :core:ui, features).
+ */
+plugins {
+    id("android-forge.android.library")
+}
+
+android {
+    namespace = "${BASE_PACKAGE}.car"
+    resourcePrefix = "car_"
+}
+
+dependencies {
+    implementation(libs.androidx.car.app)
+
+    testImplementation(libs.androidx.car.app.testing)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
+}

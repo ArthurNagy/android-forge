@@ -1,0 +1,39 @@
+package ${BASE_PACKAGE}.tv
+
+import androidx.lifecycle.ViewModel
+import ${BASE_PACKAGE}.core.domain.ObserveThemeModeUseCase
+import ${BASE_PACKAGE}.core.domain.SetThemeModeUseCase
+import ${BASE_PACKAGE}.core.model.ThemeMode
+import com.github.michaelbull.result.onErr
+import dagger.hilt.android.lifecycle.HiltViewModel
+import org.orbitmvi.orbit.OrbitContainerHost
+import org.orbitmvi.orbit.viewmodel.orbitContainer
+import timber.log.Timber
+import javax.inject.Inject
+
+/**
+ * The TV's start screen. A demo of the shared domain graph on the TV (the same use cases as the phone,
+ * over the TV's own DataStore) — replace it with the TV app's first real screen.
+ */
+@HiltViewModel
+internal class TvHomeViewModel
+    @Inject
+    constructor(
+        private val observeThemeMode: ObserveThemeModeUseCase,
+        private val setThemeMode: SetThemeModeUseCase,
+    ) : ViewModel(),
+        OrbitContainerHost<TvHomeState, TvHomeState, Nothing> {
+        override val container =
+            orbitContainer<TvHomeState, Nothing>(TvHomeState.Initial) {
+                observeTheme()
+            }
+
+        private fun observeTheme() = intent {
+            observeThemeMode().collect { mode -> reduce { state.copy(themeMode = mode) } }
+        }
+
+        /** The selection follows the stored value, so a failed write simply leaves the old mode selected. */
+        fun onThemeModeSelected(mode: ThemeMode) = intent {
+            setThemeMode(mode).onErr { error -> Timber.w("storing the theme mode failed: %s", error) }
+        }
+    }

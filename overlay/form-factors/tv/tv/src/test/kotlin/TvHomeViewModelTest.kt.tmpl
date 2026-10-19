@@ -1,0 +1,42 @@
+package ${BASE_PACKAGE}.tv
+
+import ${BASE_PACKAGE}.core.domain.DomainError
+import ${BASE_PACKAGE}.core.domain.ObserveThemeModeUseCase
+import ${BASE_PACKAGE}.core.domain.SetThemeModeUseCase
+import ${BASE_PACKAGE}.core.model.ThemeMode
+import ${BASE_PACKAGE}.core.testing.FakeUserPreferencesRepository
+import kotlinx.coroutines.test.runTest
+import org.orbitmvi.orbit.test.testWithInternalState
+import kotlin.test.Test
+import kotlin.test.assertNull
+
+class TvHomeViewModelTest {
+    @Test
+    fun followsAndStoresTheThemeMode() = runTest {
+        val repository = FakeUserPreferencesRepository(ThemeMode.DARK)
+        val viewModel = TvHomeViewModel(ObserveThemeModeUseCase(repository), SetThemeModeUseCase(repository))
+
+        viewModel.testWithInternalState(this, TvHomeState.Initial) {
+            runOnCreate()
+            expectInternalState { copy(themeMode = ThemeMode.DARK) }
+            containerHost.onThemeModeSelected(ThemeMode.LIGHT)
+            expectInternalState { copy(themeMode = ThemeMode.LIGHT) }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun aFailedWriteKeepsTheStoredMode() = runTest {
+        val repository = FakeUserPreferencesRepository(ThemeMode.DARK).apply { failNextWrite = DomainError.Unknown("disk full") }
+        val viewModel = TvHomeViewModel(ObserveThemeModeUseCase(repository), SetThemeModeUseCase(repository))
+
+        viewModel.testWithInternalState(this, TvHomeState.Initial) {
+            runOnCreate()
+            expectInternalState { copy(themeMode = ThemeMode.DARK) }
+            containerHost.onThemeModeSelected(ThemeMode.LIGHT).join()
+            assertNull(repository.failNextWrite) // the write was attempted (and failed)
+            expectNoItems()
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+}

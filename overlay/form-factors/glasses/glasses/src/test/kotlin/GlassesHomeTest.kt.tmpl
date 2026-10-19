@@ -1,0 +1,63 @@
+package ${BASE_PACKAGE}.glasses
+
+import android.content.Context
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.xr.glimmer.GlimmerTheme
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+@RunWith(AndroidJUnit4::class)
+class GlassesHomeTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    private val context: Context = ApplicationProvider.getApplicationContext()
+
+    @Test
+    fun theGlassesShowTheAppNameAndClose() {
+        var closed = false
+        composeRule.setContent { GlimmerTheme { GlassesHome(onClose = { closed = true }) } }
+
+        composeRule.onNodeWithText(context.getString(R.string.glasses_app_name)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.glasses_home_body)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.glasses_close)).performClick()
+
+        assertTrue(closed)
+    }
+
+    @Test
+    fun theLaunchButtonIsDisabledWhileNoGlassesAreConnected() {
+        composeRule.setContent { LaunchOnGlassesButtonContent(connected = false, onClick = {}) }
+
+        composeRule.onNodeWithText(context.getString(R.string.glasses_launch)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun theLaunchButtonStartsTheGlassesExperienceWhenConnected() {
+        var launches = 0
+        composeRule.setContent { LaunchOnGlassesButtonContent(connected = true, onClick = { launches++ }) }
+
+        composeRule.onNodeWithText(context.getString(R.string.glasses_launch)).assertIsEnabled().performClick()
+
+        assertEquals(1, launches)
+    }
+
+    @Test
+    @Config(sdk = [35])
+    fun belowAndroid16ThereIsNoLaunchButton() {
+        composeRule.setContent { LaunchOnGlassesButton() }
+
+        composeRule.onNodeWithText(context.getString(R.string.glasses_launch)).assertDoesNotExist()
+    }
+}

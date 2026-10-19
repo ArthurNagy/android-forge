@@ -98,6 +98,7 @@ From the files the change touches (`git diff --name-only origin/main...HEAD` in 
 | `automotive/`, `car/` | Android Automotive OS |
 | XR code in `:app` (spatial panels, `xr` packages) | XR headset — plus the phone, since it's the same APK |
 | `glasses/` | display glasses + its paired phone |
+| `widget/` | phone — only when the widget is already on its home screen (the CLI can't long-press to place it); not placed → that scenario is `ERROR` "place the widget by hand, then re-run" |
 | desktop-specific code (keyboard shortcuts, hover, multi-window) | desktop |
 | Android Auto-only behavior (templated screens on the head unit) · Cast | **cannot run here** — list under BLOCKING as unverified → `ERROR` with cause "needs the Desktop Head Unit / a Cast device; verify by hand" |
 
@@ -155,8 +156,10 @@ Interact through selectors, not coordinates, wherever the layout has the element
 - Fall back to `android screen capture --annotate -o <png>` + `android screen resolve` only when the layout lacks the node
   (animations, WebViews, custom canvas).
 
-Form-factor notes: on **TV**, focus must be visible on the element you act on (check `state` contains `FOCUSED`
-before pressing center); on **Wear**, check round-screen clipping in the screenshot; on **AAOS**, driving-restriction
+Form-factor notes: on **TV**, launch with `android run --apks=<apk> --device=<s> --activity=MainActivity` (a
+leanback-only launcher fails the CLI's component check otherwise); focus must be visible on the element you act on
+(check `state` contains `FOCUSED` before pressing center); on a TV AVD not made by `avd.sh` Play Protect blocks the CLI's
+instrumentation ("Unsafe app blocked" dialog) — report it as an ERROR telling the human to recreate it with `avd.sh ensure tv`; on **Wear**, check round-screen clipping in the screenshot; on **AAOS**, driving-restriction
 behavior can't be simulated — say so; on **tablet/foldable**, check the list-detail panes appear side by side where
 the design says.
 

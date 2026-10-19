@@ -36,10 +36,13 @@ spec() {
     case "$1" in
         phone)      echo "medium_phone|medium_phone|cli" ;;
         tablet)     echo "medium_tablet|medium_tablet|cli" ;;
-        desktop)    echo "medium_desktop|medium_desktop|cli" ;;
+        # The CLI names its desktop AVD desktop_medium (profile medium_desktop).
+        desktop)    echo "desktop_medium|medium_desktop|cli" ;;
         foldable)   echo "pixel_10_pro_fold|pixel_10_pro_fold|system-images/android-37.0/google_apis_playstore_ps16k/${a}" ;;
         wear)       echo "wearos_large_round|wearos_large_round|system-images/android-37.0/android-wear-signed/${a}" ;;
-        tv)         echo "tv_1080p|tv_1080p|system-images/android-36/google-tv/${a}" ;;
+        # TV images ship Play Protect, which blocks the Android CLI's instrumentation server ("built for an older
+        # version of Android") — ensure turns app verification off once, inside this AVD only (prepare_tv).
+        tv)         echo "tv_1080p|tv_1080p|system-images/android-36/android-tv/${a}" ;;
         automotive) echo "automotive_1408p_landscape_with_play|automotive_1408p_landscape_with_play|system-images/android-35-ext15/android-automotive-playstore/${a}" ;;
         xr)         echo "xr_headset_device|xr_headset_device|system-images/android-34/google-xr/${a}" ;;
         glasses)    echo "ai_glasses_device|ai_glasses_device|system-images/android-36/ai-glasses/${a}" ;;
@@ -67,6 +70,23 @@ avd_exists() { android emulator list 2>/dev/null | grep -qx "$1"; }
 image_installed() { [[ -d "$(sdk_root)/$1" ]]; }
 
 cmd_name() { field "$(spec "$1")" 1; }
+
+# Boot the new TV AVD once and turn off Play Protect's app verification — in this emulator only — so the Android CLI
+# can install its layout/input instrumentation server. The setting persists in the AVD's userdata.
+prepare_tv() {
+    local name="$1" before serial
+    before="$(adb devices | awk '/^emulator-/{print $1}')"
+    android emulator start "${name}" >/dev/null
+    serial="$(adb devices | awk '/^emulator-/{print $1}' | grep -vxF -f <(printf '%s\n' ${before}) | head -1 || true)"
+    if [[ -z "${serial}" ]]; then
+        echo "⚠ could not identify the booted ${name} emulator — turn off Play Protect app verification in its Settings by hand" >&2
+        return 0
+    fi
+    adb -s "${serial}" shell settings put global package_verifier_enable 0
+    adb -s "${serial}" shell settings put global verifier_verify_adb_installs 0
+    android emulator stop "${name}" >/dev/null
+    echo "TV emulator prepared: Play Protect app verification off (CLI instrumentation allowed)"
+}
 
 cmd_status() {
     command -v android >/dev/null || die "the Android CLI ('android') is not on PATH"
@@ -97,6 +117,7 @@ cmd_ensure() {
         echo "no" | "$(avdmanager_bin)" create avd --name "${name}" --device "${profile}" --package "${image//\//;}"
     fi
     avd_exists "${name}" || die "AVD ${name} was not created"
+    [[ "${ff}" == tv ]] && prepare_tv "${name}"
     echo "AVD ready: ${name} — boot it with: android emulator start ${name}"
 }
 

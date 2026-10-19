@@ -1,12 +1,17 @@
 package ${BASE_PACKAGE}
 
+import android.os.Build
 import android.os.Bundle
+import android.view.WindowInsetsController
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import ${BASE_PACKAGE}.core.designsystem.AppTheme
+import ${BASE_PACKAGE}.core.model.ThemeMode
 import ${BASE_PACKAGE}.core.navigation.EntryProviderInstaller
 import dagger.hilt.android.AndroidEntryPoint
 import org.orbitmvi.orbit.compose.collectAsState
@@ -29,9 +34,29 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val state by viewModel.collectAsState()
+            val darkTheme =
+                when (state.themeMode) {
+                    ThemeMode.LIGHT -> false
+                    ThemeMode.DARK -> true
+                    ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                }
+            SideEffect { useLightCaptionBar(!darkTheme) }
             AppTheme(themeMode = state.themeMode) {
                 AppNavigation(entryProviderInstallers = entryProviderInstallers)
             }
+        }
+    }
+
+    /**
+     * Desktop windowing (Android 15+, Googlebook / tablets): the caption bar's Back / Minimize / Maximize / Close
+     * buttons draw over the edge-to-edge content — match their tint to the app's theme, not the system's.
+     */
+    private fun useLightCaptionBar(light: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            window.insetsController?.setSystemBarsAppearance(
+                if (light) WindowInsetsController.APPEARANCE_LIGHT_CAPTION_BARS else 0,
+                WindowInsetsController.APPEARANCE_LIGHT_CAPTION_BARS,
+            )
         }
     }
 }

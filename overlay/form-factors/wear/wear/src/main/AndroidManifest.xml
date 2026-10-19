@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Marks the APK as a Wear OS app for Play. Never required="false": one APK for phone + watch isn't supported. -->
+    <uses-feature android:name="android.hardware.type.watch" />
+
+    <application
+        android:name=".MainApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/wear_ic_launcher"
+        android:label="@string/wear_app_name"
+        android:roundIcon="@mipmap/wear_ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Wear.Theme">
+
+        <!-- Standalone: every core feature works without a phone app. Set false (and add the phone-side
+             install prompt) only when the watch app genuinely needs the phone. -->
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="true" />
+
+        <!-- Wear's launcher builds Recents from task affinities, so lint (WearRecents) wants one set
+             explicitly — "" as in Android Studio's Wear template. A second launcher activity (a tile's
+             or a notification's target) gets its own unique taskAffinity. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

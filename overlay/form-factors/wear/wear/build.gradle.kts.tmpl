@@ -1,0 +1,35 @@
+// The Wear OS app (ADR 0009): its own APK with the phone app's applicationId, on Wear Compose Material 3.
+// It reuses :core:model / :core:domain / :core:data (the DI graph) — never the phone UI modules
+// (:core:designsystem, :core:ui, phone features): Wear has its own components, theme and navigation.
+plugins {
+    id("android-forge.android.application")
+    id("android-forge.hilt")
+}
+
+android {
+    namespace = "${BASE_PACKAGE}.wear"
+    resourcePrefix = "wear_"
+    defaultConfig {
+        applicationId = "${BASE_PACKAGE}"
+        // Wear OS 3 (API 30) is the oldest Wear OS Play's quality guidelines test against (Wear Compose M3 needs 25).
+        minSdk = 30
+        // Play needs a version code unique across every APK of the listing: keep the watch's apart from :app's.
+        versionCode = 100_000_001
+        versionName = "0.1.0"
+    }
+}
+
+dependencies {
+    implementation(project(":core:model"))
+    implementation(project(":core:domain"))
+    implementation(project(":core:data")) // only the app modules depend on :core:data — they assemble the DI graph
+
+    implementation(libs.androidx.wear.compose.material3)
+    implementation(libs.androidx.wear.compose.foundation)
+    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+    implementation(libs.orbit.viewmodel)
+    implementation(libs.orbit.compose)
+    implementation(libs.timber)
+
+    testImplementation(libs.orbit.test)
+}

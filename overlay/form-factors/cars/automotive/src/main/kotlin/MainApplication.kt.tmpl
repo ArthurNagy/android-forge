@@ -1,0 +1,18 @@
+package ${BASE_PACKAGE}.automotive
+
+import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
+import timber.log.Timber
+
+/**
+ * The AAOS app's Hilt application. Its graph is empty until a car screen shows app data: then
+ * depend on :core:data (+ :core:domain) here and make :car's MainCarAppService an
+ * `@AndroidEntryPoint` — the same graph :app's MainApplication builds for Android Auto.
+ */
+@HiltAndroidApp
+class MainApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
+    }
+}

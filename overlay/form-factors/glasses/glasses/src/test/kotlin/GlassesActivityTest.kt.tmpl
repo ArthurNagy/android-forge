@@ -1,0 +1,28 @@
+package ${BASE_PACKAGE}.glasses
+
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import kotlin.test.assertTrue
+
+/** The projected activity on its own (Robolectric doesn't project): Glimmer theme + home + Close. */
+@RunWith(AndroidJUnit4::class)
+class GlassesActivityTest {
+    @get:Rule
+    val composeRule = createAndroidComposeRule<GlassesActivity>()
+
+    @Test
+    fun theActivityShowsTheGlassesHomeAndCloses() {
+        val activity = composeRule.activity
+        composeRule.onNodeWithText(activity.getString(R.string.glasses_app_name)).assertIsDisplayed()
+
+        composeRule.onNodeWithText(activity.getString(R.string.glasses_close)).performClick()
+
+        assertTrue(activity.isFinishing)
+    }
+}

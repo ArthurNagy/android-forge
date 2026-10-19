@@ -1,0 +1,13 @@
+# android-forge :tv catalog additions — merged into the project's gradle/libs.versions.toml by
+# `apply-overlay.sh patch-libs <project> <this file>` (missing keys appended; a lower existing
+# [versions] value is raised to this floor, never lowered).
+#
+# Compose for TV: androidx.tv.material3 replaces the mobile androidx.compose.material3 in :tv (two
+# MaterialThemes drift apart). Lazy rows/columns are plain Compose Foundation (the old tv-foundation
+# TvLazy* layouts are deprecated). tv-material 1.1 needs minSdk >= 23, compileSdk >= 35.
+
+[versions]
+androidxTvMaterial = "1.1.0"
+
+[libraries]
+androidx-tv-material = { module = "androidx.tv:tv-material", version.ref = "androidxTvMaterial" }

@@ -1,0 +1,9 @@
+<!--
+  Android XR — paste into app/src/main/AndroidManifest.xml as a direct child of <manifest>.
+  required="false": the phone APK on the mobile Play track also serves XR headsets / wired XR glasses.
+  Required once :app ships Jetpack XR SDK code (the XR-differentiated tier); harmless before that.
+  Never required="true" in :app — that is only for a separate APK on Play's dedicated Android XR track.
+-->
+<uses-feature
+    android:name="android.software.xr.api.spatial"
+    android:required="false" />

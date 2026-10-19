@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android Automotive OS app (templated, Car App Library). The CarAppService comes from :car's manifest. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- required="true": this APK ships only on Play's dedicated Android Automotive OS track. -->
+    <uses-feature
+        android:name="android.hardware.type.automotive"
+        android:required="true" />
+    <!-- A Car App Library app needs the system templates host to render it. -->
+    <uses-feature
+        android:name="android.software.car.templates_host"
+        android:required="true" />
+    <!-- Play's AAOS feature requirements: cars may lack these, so they must never be required. -->
+    <uses-feature
+        android:name="android.hardware.wifi"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.screen.portrait"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.screen.landscape"
+        android:required="false" />
+
+    <application
+        android:name=".MainApplication"
+        android:icon="@mipmap/automotive_ic_launcher"
+        android:label="@string/automotive_app_name"
+        android:supportsRtl="true">
+
+        <!-- AAOS support. Never add Android Auto's com.google.android.gms.car.application here. -->
+        <meta-data
+            android:name="com.android.automotive"
+            android:resource="@xml/automotive_app_desc" />
+
+        <!-- The one entry point: renders :car's templates through the templates host. -->
+        <activity
+            android:name="androidx.car.app.activity.CarAppActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Usable while driving (UX restrictions on). Honored for Play installs and on userdebug
+                 emulator images; a sideloaded app on a Play image is blocked once the car moves. -->
+            <meta-data
+                android:name="distractionOptimized"
+                android:value="true" />
+        </activity>
+    </application>
+
+</manifest>
