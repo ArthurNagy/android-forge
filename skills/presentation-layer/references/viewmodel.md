@@ -18,26 +18,23 @@ internal class GalleryViewModel
                 refresh()
             }
 
-        private fun observe() =
-            intent {
-                observePhotos().collect { photos -> reduce { state.copy(photos = photos) } }
-            }
+        private fun observe() = intent {
+            observePhotos().collect { photos -> reduce { state.copy(photos = photos) } }
+        }
 
-        fun refresh() =
-            intent {
-                reduce { state.copy(loading = true, error = null) }
-                refreshPhotos()
-                    .onOk { reduce { state.copy(loading = false) } }
-                    .onErr { error -> reduce { state.copy(loading = false, error = error) } }
-            }
+        fun refresh() = intent {
+            reduce { state.copy(loading = true, error = null) }
+            refreshPhotos()
+                .onOk { reduce { state.copy(loading = false) } }
+                .onErr { error -> reduce { state.copy(loading = false, error = error) } }
+        }
 
         // Outcome-dependent navigation: the list may be stale, so open the photo only if it still exists.
-        fun onPhotoClicked(id: PhotoId) =
-            intent {
-                getPhoto(id)
-                    .onOk { reduce { state.copy(pendingNavigation = PhotoDetailKey(photoId = id.value)) } }
-                    .onErr { error -> reduce { state.copy(pendingMessage = error.messageRes()) } }
-            }
+        fun onPhotoClicked(id: PhotoId) = intent {
+            getPhoto(id)
+                .onOk { reduce { state.copy(pendingNavigation = PhotoDetailKey(photoId = id.value)) } }
+                .onErr { error -> reduce { state.copy(pendingMessage = error.messageRes()) } }
+        }
 
         fun onNavigationConsumed() = intent { reduce { state.copy(pendingNavigation = null) } }
 
@@ -47,6 +44,8 @@ internal class GalleryViewModel
 
 - `@HiltViewModel` + `@Inject constructor` + `ViewModel()` + `OrbitContainerHost<S, S, Nothing>` +
   `orbitContainer<S, Nothing>(S.Initial) { … }` (Orbit 12). No base class, no `AndroidViewModel`, no `Context`.
+  The use cases are `:core:domain`'s (`<base>.core.domain.photo.*` — the `domain-layer` skill); `messageRes()` is
+  `:core:ui`'s; `PhotoDetailKey` comes from `:feature:photo-detail:api`.
 - **Start work in the on-create block** — loads and long-lived observations. A `LaunchedEffect(Unit) { viewModel.load() }`
   would reload every time the user comes back.
 - **State-only events.** No `postSideEffect`; a one-shot event is a `pendingX` slot + `fun onXConsumed()` — the
@@ -65,7 +64,14 @@ internal class GalleryViewModel
       ) : ViewModel(),
           OrbitContainerHost<PhotoDetailState, PhotoDetailState, Nothing> {
           override val container = orbitContainer<PhotoDetailState, Nothing>(PhotoDetailState.Initial) { load() }
-          …
+
+          fun load() = intent {
+              reduce { state.copy(loading = true, error = null) }
+              getPhoto(PhotoId(key.photoId))
+                  .onOk { photo -> reduce { state.copy(loading = false, photo = photo) } }
+                  .onErr { error -> reduce { state.copy(loading = false, error = error) } }
+          }
+
           @AssistedFactory
           interface Factory {
               fun create(key: PhotoDetailKey): PhotoDetailViewModel

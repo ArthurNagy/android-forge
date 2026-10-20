@@ -60,9 +60,11 @@ internal interface PhotoNetworkModule {
 
 - A DTO mirrors the wire format; it is the one **model type** that may have default values (for fields the API
   omits).
-- A Retrofit `suspend` function returning a body **throws `HttpException` on non-2xx**. When a status means
-  something (404 = "doesn't exist"), declare `Response<PhotoDto>` and decide in the data source:
-  `if (response.code() == 404) return null`, else `response.body() ?: throw HttpException(response)`.
+- A Retrofit `suspend` function returning a body **throws `HttpException` on non-2xx**, and `catchNetwork` maps it:
+  404 → `DomainError.NotFound`, any other status → `Network.Http(status, code = null)` (`:core:ui` words 5xx as a
+  server problem, other statuses as a request that couldn't be completed). When a status means something specific
+  to this API (a 409 the screen must explain), map that `Network.Http` to the area's typed error in the repository
+  (`mapError`).
 - One `Retrofit` / `OkHttpClient` for the app (`NetworkModule`); per-host clients get a Hilt qualifier.
   Auth headers go in an OkHttp `Interceptor`; secrets come from `BuildConfig` fields fed by
   `local.properties`/CI env, never source ([secrets.md](../../../docs/secrets.md)).

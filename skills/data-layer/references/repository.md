@@ -5,15 +5,17 @@ Use when implementing a repository — the `catchNetwork` / `catchStorage` bound
 Both boundaries already ship — call them, don't re-implement them:
 
 - `:core:network`'s `suspend fun <T> catchNetwork(block: suspend () -> T): Result<T, DomainError>` —
-  `CancellationException` rethrown first; `HttpException` → `Network.Http(status, code = null)`; `IOException`
-  → `Network.Connectivity` (offline, DNS, timeouts); anything else → `Unknown(message)` (e.g. a body that
-  doesn't parse). Logged with `Timber.w`.
-- `:core:data`'s `catchStorage { }` — the same shape for Room, DataStore and file I/O: `CancellationException`
-  rethrown first, everything else → `Unknown(message)`.
+  `CancellationException` and any `Error` (OOM, stack overflow) rethrown first; an HTTP 404 → `NotFound`; any other
+  `HttpException` → `Network.Http(status, code = null)`; `IOException` → `Network.Connectivity` (offline, DNS,
+  timeouts); anything else → `Unknown(message)` (e.g. a body that doesn't parse). Logged with `Timber.w`.
+- `:core:data`'s `catchStorage { }` — the same shape for Room, DataStore and file I/O: `CancellationException` and
+  `Error`s rethrown first, everything else → `Unknown(message)`.
 
 An offline-first repository — Room is the single source of truth, the network refreshes it:
 
 ```kotlin
+package <base>.core.data.photo
+
 internal class OfflineFirstPhotoRepository
     @Inject
     constructor(
@@ -32,19 +34,26 @@ internal class OfflineFirstPhotoRepository
             catchNetwork { remote.photos() }.andThen { dtos -> catchStorage { photoDao.upsertAll(dtos.map { it.toEntity() }) } }
     }
 
+// photo/PhotoMappers.kt
 internal fun PhotoDto.toEntity() = PhotoEntity(id = id, title = title, description = description, favorite = favorite)
 
 internal fun PhotoEntity.toModel() = Photo(id = PhotoId(id), title = title, description = description, favorite = favorite)
 ```
 
+(Imports: `catchStorage` is `<base>.core.data.catchStorage`, `catchNetwork` is `<base>.core.network.catchNetwork`;
+`Result`, `andThen`, `map`, `toErrorIfNull` from `com.github.michaelbull.result` next to `kotlinx.coroutines.flow.map`
+— Kotlin picks the right `map` by receiver.) `:core:data` reaches the DAO and the remote data source through
+`implementation(project(":core:database"))` / `(":core:network")` above its `// android-forge:core-data-deps` marker.
+
 and its binding in `DataModule`: `@Binds fun bindsPhotoRepository(impl: OfflineFirstPhotoRepository): PhotoRepository`.
 
 - **Every data-source call goes through a boundary helper.** Nothing a library throws reaches `:core:domain`.
-  Meaningful answers are decided before the boundary (404 → `null` in the data source; `null` → `NotFound` in
-  the repository; an API error code → the area's typed error).
+  Meaningful answers become values at the boundary or right after it: a missing row is `null` → `NotFound`
+  (`toErrorIfNull`, above), an HTTP 404 is `NotFound` from `catchNetwork`, an API error code → the area's typed
+  error (`mapError`).
 - It is **kotlin-result's** `runCatching` (`com.github.michaelbull.result.runCatching`), never the stdlib's, and
-  `mapError` **rethrows `CancellationException` first, always**. Don't hand-roll `catch (e: Exception)` for the
-  same job.
+  `mapError` **rethrows `CancellationException` (and `Error`s) first, always**. Don't hand-roll
+  `catch (e: Exception)` for the same job.
 - A failure that is a *value* (a probe answering `null`) may use `try`/`catch` that rethrows
   `CancellationException` first, with a comment saying why every failure means the same thing there.
 - Streams never throw: Room/DataStore flows, `.catch { }` where a source can fail.

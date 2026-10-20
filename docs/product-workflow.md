@@ -95,20 +95,25 @@ Skip for: dependency version bumps, internal refactors, bug fixes.
 
 ### ADR template
 
+The `adr-authoring` skill owns the format (and how to supersede an ADR); in short:
+
 ```markdown
 # NNNN. <title>
 
 Date: <YYYY-MM-DD>
-Status: Accepted | Superseded by [NNNN](NNNN-...)
+Status: Accepted | Accepted (supersedes [NNNN](NNNN-...)) | Superseded by [NNNN](NNNN-...) | Deprecated
 
 ## Context
-<what's driving this decision>
+<the forcing function: what's driving this decision>
+
+Alternatives considered:
+- **<option>** — <why it loses here>
 
 ## Decision
-<what we will do>
+<imperative: "Use …", "Adopt …" — concrete enough for the reviewer to enforce>
 
 ## Consequences
-<what becomes easier, what becomes harder>
+<what becomes easier, what becomes harder, what every PR must now respect>
 ```
 
 ## docs/ROADMAP.md (optional)
@@ -140,7 +145,7 @@ GitHub issues are the **single source of work** — no Jira, no Linear, no secon
 ### Lifecycle
 
 1. **File** — an idea, a bug, a raw request (anyone's). Use the forms in `.github/ISSUE_TEMPLATE/`.
-2. **Refine** — `/android-forge-refine` (the `android-product-owner` agent drafts, you pick what gets filed; rules in the `backlog-issue-authoring` skill) or by hand. Shape it into one change that fits one PR: **Problem**, **Acceptance criteria** (WHEN … THEN …, one per line — each becomes a spec scenario and a test), **Out of scope**, optional **Depends on**, **Needs a human first**, **Change name**. Too big → keep it as the **parent issue** and split the work into GitHub **sub-issues**, one per PR (`gh issue create --parent <n>`; never via **Depends on** — the parent stays open, so the queue would wait on it forever). The queue skips any issue that has sub-issues; GitHub shows the parent's progress on the board. An outsider's issue is raw intake: re-file the refined version as your own and close the original with a link.
+2. **Refine** — `/android-forge-refine` (the `android-product-owner` agent drafts, you pick what gets filed; rules in the `backlog-issue-authoring` skill) or by hand. Shape it into one change that fits one PR: **Problem**, **Acceptance criteria** (WHEN … THEN …, one per line — each becomes a spec scenario and a test), **Out of scope**, optional **Depends on**, **Needs a human first**, **Change name**. Too big → keep it as the **parent issue** and split the work into GitHub **sub-issues**, one per PR (`gh issue create --parent <n>`; never via **Depends on** — the parent stays open, so the queue would wait on it forever). The queue skips any issue that has sub-issues; GitHub shows the parent's progress on the board. An outsider's issue is raw intake: re-file the refined version as your own ("Refined from #<n>") and comment on the original with the link — closing it is the human's call.
 
    **Design-heavy work gets an architect.** When a refine pass involves a parent issue — or a single issue the product owner marks `design: needed` because it adds a module, a data source or library, a form factor or a cross-cutting concern — the `android-architect` agent reads the code, ADRs and specs and fits the work into the codebase: which types and modules each issue adds or reuses, the technical dependency order (with one enabling `chore` issue when infrastructure must land first), technical **Notes** and **Out of scope** lines per issue, risks to clear first, and ADR drafts for decisions with real alternatives. The ADRs you pick are written to `docs/DECISIONS/` uncommitted — review and commit them before approving the issues that cite them — and the design is posted on the parent (or the single issue). Supervised only: the autonomous loop never runs it. Each issue's **Notes** reach `/opsx:propose` as design guidance.
 3. **Approve** — a human labels it `ready` (plus `priority:high` / `priority:low` if it should jump or trail the queue). **Only a human applies `ready`.** Claude files and refines issues but never approves them; with the autonomous loop installed, the merge guard enforces that.
@@ -157,7 +162,7 @@ Created by `/android-forge-init` (when it creates the GitHub repo) or `bash <plu
 | `in-progress` | Being worked (the loop sets and clears it) |
 | `priority:high` / `priority:low` | Work before / after unlabeled issues (then oldest first) |
 | `no-spec` | A `feat:` PR that deliberately ships without an OpenSpec change (see below) |
-| `bug` · `enhancement` · `chore` · `adr` | Type — the issue forms pre-apply them |
+| `bug` · `enhancement` · `chore` · `adr` | Type — the issue forms pre-apply `bug`, `enhancement` and `adr`; a chore is filed on the backlog form with `chore` in place of `enhancement` |
 
 ### Trust
 
@@ -197,6 +202,9 @@ Labeled `bug`: **What happened?** (required — steps, expected vs actual) · **
 The backlog form, labeled `enhancement`: **Problem** (required) · **Acceptance criteria** (required — WHEN … THEN …, one per line) · **Out of scope** · **Depends on** (`#12, #15`) · **Needs a human first** (credentials, URLs — the loop checks them before starting) · **Change name** (optional kebab-case, becomes `<issue>-<name>`) · **Notes** (design guidance, never scope — the proposer passes it to `/opsx:propose`). Field labels matter: `scripts/issues.sh` and the loop's workers read the rendered `### <label>` sections, so keep them if you customize the form.
 
 ### `adr_proposal.yml`
+
+An ADR proposal is a discussion, not the record: once it is agreed, the `adr-authoring` skill turns it into
+`docs/DECISIONS/NNNN-<title>.md`, committed as `docs(adr): <title>` in a PR whose body says `Closes #<issue>`.
 
 ```yaml
 name: ADR proposal

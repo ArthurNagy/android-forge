@@ -62,15 +62,18 @@ wherever one exists** — Google's docs, samples and Android skills then apply d
 - **Coordinates**: `com.michael-bull.kotlin-result:kotlin-result` (+ `-coroutines` for `coroutineBinding`);
   import package `com.github.michaelbull.result` (explicit imports). `api` in `:core:domain`.
 - **Idiom**: `onOk`/`onErr`/`fold`/`andThen`; the data boundary is kotlin-result's `runCatching { }.mapError { }`
-  rethrowing `CancellationException` (`catchNetwork { }` in `:core:network`).
+  rethrowing `CancellationException` and any `Error` (`catchNetwork { }` in `:core:network`, `catchStorage { }` in
+  `:core:data`).
 - **Anti-patterns**: `kotlin.Result` / the **stdlib** `runCatching`; a `catch` that swallows
   `CancellationException`; `DomainError` extending `Throwable`; `.get()!!`.
 
 ### Kotlin coroutines + Flow
 - **Why**: Google rates them "strongly recommended" for Android async work.
-- **Idiom**: `suspend` one-shots, `Flow` streams (`observe…` / `…Stream` names), `DispatcherProvider`
-  injected wherever a dispatcher is needed. Only `RealDispatcherProvider` touches `Dispatchers.*`
-  (and Room's `setQueryCoroutineContext` in `:core:database`).
+- **Idiom**: `suspend` one-shots, `Flow` streams (`observe…` / `…Stream` names). Code that switches dispatchers
+  takes `DispatcherProvider` — a use case's CPU-heavy work on `default`, a data source's blocking call on `io`;
+  Room, Retrofit and DataStore `suspend` APIs are main-safe, so nothing wraps them, and a ViewModel never takes it
+  (ADR 0006). Only `RealDispatcherProvider` touches `Dispatchers.*` (and Room's `setQueryCoroutineContext` in
+  `:core:database`'s `DatabaseModule`).
 
 ### kotlinx-serialization
 - **Why**: Nav 3 keys are saved through it; Retrofit's converter and typed DataStore use it too.
@@ -101,19 +104,21 @@ wherever one exists** — Google's docs, samples and Android skills then apply d
 - **Anti-patterns**: `android.util.Log`/`println` in app code; logging personal data.
 
 ### java.time + kotlin.time
-- **Why**: native from API 26 (android-forge's default minSdk); `kotlin.time.Instant`/`Clock` for
-  instants. minSdk < 26 enables core-library desugaring (`desugar_jdk_libs`).
+- **Why**: native on every supported device — android-forge's minSdk floor is 29, and the build conventions
+  fail at configuration below 26 (where `java.time` became part of the platform); `kotlin.time.Instant`/`Clock`
+  for instants.
 - **Anti-pattern**: `java.util.Date`/`Calendar`; `System.currentTimeMillis()` in testable code (inject a `Clock`).
 
 ### Android resources
 - **Why**: native i18n — `res/values/strings.xml` per module, `stringResource(R.string.x)`,
   `pluralStringResource`, per-app language settings (`generateLocaleConfig = true` + `resources.properties`).
-- **Where**: every user-facing string; each module's keys carry its `resourcePrefix`. See [i18n-a11y.md](i18n-a11y.md).
+- **Where**: every user-facing string; each Android library module's keys carry its `resourcePrefix` (`:app` is
+  exempt). See [i18n-a11y.md](i18n-a11y.md).
 
 ### Testing: JUnit 4 + Robolectric + Orbit test + Turbine + Compose UI Test v2 + Roborazzi
 - JUnit 4 (Hilt and Compose test rules run on it) with `kotlin-test-junit` assertions; Robolectric runs
-  Android code as local tests (SDK pinned to 36 by `:core:testing`'s `robolectric.properties`, JDK 21
-  launcher set by the conventions); Orbit `testWithInternalState` + `runOnCreate()`; Turbine for Flows;
+  Android code as local tests (SDK pinned to 36 by `:core:testing`'s `robolectric.properties`; the Android
+  conventions run Android modules' tests on a JDK 21 launcher, JVM modules test on their JDK 17 toolchain); Orbit `testWithInternalState` + `runOnCreate()`; Turbine for Flows;
   `androidx.compose.ui.test.junit4.v2.createComposeRule`; Roborazzi screenshot goldens in
   `src/test/screenshots/`. Fakes over mocks. See [testing.md](testing.md).
 
@@ -128,7 +133,9 @@ wherever one exists** — Google's docs, samples and Android skills then apply d
 
 ### Toolchain
 AGP ≥ 9.4.1 with **built-in Kotlin** (no `org.jetbrains.kotlin.android` plugin) · Kotlin 2.4.x · KSP 2.3.x
-(no kapt) · Gradle ≥ 9.8.1 · compileSdk/targetSdk 37 · Java 17 bytecode · JDK 21 for local tests.
+(no kapt) · Gradle ≥ 9.8.1 · compileSdk/targetSdk 37 · minSdk 29 (default and floor; `/android-forge-init`
+offers 29, 31 or 33) · Java 17 bytecode · a JDK 21 launcher for Android modules' local tests (JVM modules test on
+JDK 17).
 Every plugin comes from `build-logic` (precompiled convention plugins); modules apply them by id —
 never `alias(libs.plugins.x)`.
 

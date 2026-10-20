@@ -14,10 +14,8 @@ Run this once, in the first slice that persists data:
    android {
        namespace = "<base>.core.database"
    }
-   dependencies {
-       implementation(project(":core:model"))
-   }
    ```
+   (No project dependencies: entities are plain columns; `:core:data`'s mappers turn them into `:core:model` types.)
 2. `settings.gradle.kts`: `include(":core:database")`; `core/data/build.gradle.kts`: `implementation(project(":core:database"))`
    above the `// android-forge:core-data-deps` marker.
 3. Entity, DAO, database, Hilt module:
@@ -42,7 +40,10 @@ Run this once, in the first slice that persists data:
        suspend fun upsertAll(photos: List<PhotoEntity>)
 
        @Query("UPDATE photos SET favorite = :favorite WHERE id = :id")
-       suspend fun setFavorite(id: String, favorite: Boolean)
+       suspend fun setFavorite(
+           id: String,
+           favorite: Boolean,
+       )
    }
 
    @Database(entities = [PhotoEntity::class], version = 1, exportSchema = true)
@@ -55,17 +56,21 @@ Run this once, in the first slice that persists data:
    internal object DatabaseModule {
        @Provides
        @Singleton
-       fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase = Room
+       fun provideAppDatabase(
+           @ApplicationContext context: Context,
+       ): AppDatabase = Room
            .databaseBuilder<AppDatabase>(context, "app.db")
            .setDriver(BundledSQLiteDriver())
-           .setQueryCoroutineContext(Dispatchers.IO)   // Room's own I/O context — the one allowed Dispatchers.* outside RealDispatcherProvider
+           .setQueryCoroutineContext(Dispatchers.IO) // Room's own I/O context — the one allowed Dispatchers.* outside RealDispatcherProvider
            .build()
 
        @Provides
        fun providePhotoDao(database: AppDatabase): PhotoDao = database.photoDao()
    }
    ```
-   (Imports: `androidx.room3.*`, `androidx.sqlite.driver.bundled.BundledSQLiteDriver`.)
+   (Imports: the `androidx.room3` annotations plus `Room`/`RoomDatabase`, `androidx.sqlite.driver.bundled.BundledSQLiteDriver`,
+   Hilt's `dagger.*` and `ApplicationContext`, `kotlinx.coroutines.Dispatchers`; one file each — `photo/PhotoEntity.kt`,
+   `photo/PhotoDao.kt`, `AppDatabase.kt`, `DatabaseModule.kt`.)
 4. Commit `core/database/schemas/` — Room's exported schema history. Every shipped schema change bumps
    `version` and adds a migration (`@Database(autoMigrations = [AutoMigration(from = 1, to = 2)])`, or a
    `Migration` whose `suspend fun migrate(connection: SQLiteConnection)` runs SQL), tested with `room3-testing`'s

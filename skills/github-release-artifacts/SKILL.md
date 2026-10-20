@@ -51,24 +51,16 @@ attach them to the GitHub Release renamed per module (`app-mapping.txt`, `wear-m
 release step's `files:`), or set `retention-days` on the upload and document it. Crashlytics/Sentry plugins upload
 mappings themselves. Locally, `android describe --project_dir=.` lists every module's output paths.
 
-## Before tagging
+## Cutting a release
 
-1. Bump `versionCode`/`versionName` in each app module, in a commit that goes through the normal PR gate. The
-   version follows [release.md](../../docs/release.md) § Versioning (`git cliff --bumped-version` computes it from the
-   commits). Version codes must be unique across the listing: `:app` counts from 1, `:wear` from `100_000_001`,
-   `:tv` from `200_000_001`, `:automotive` from `300_000_001`.
-2. `./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true` green on `main`, bump
-   included.
-3. `./gradlew assembleRelease` locally once per release cycle — R8 problems only show in release builds; the
-   `r8-analyzer` skill audits keep rules when something is stripped or the APK grew.
-4. `play-policy-insights` skill — permissions, data collection and declarations vs Play policy (before any store release).
-5. Baseline Profile regenerated when startup paths changed (`./gradlew :app:generateReleaseBaselineProfile` on a
-   device, `:benchmarks` opt-in) and committed.
-6. The `android-qa` agent passed on every form factor the release touches.
-
-Then tag: `git tag -a v<version> -m "Release v<version>"`. An agent may create the annotated tag locally; **pushing
-it publishes the release, so `git push origin v<version>` is the user's** (or an agent's only after the user's
-explicit yes in that session).
+The flow is canonical in [release.md § Cutting a release](../../docs/release.md#cutting-a-release) — follow it from
+there. In short: compute the version (`git cliff --bumped-version`); bump `versionName` and `versionCode` in **each
+app module's `defaultConfig`** (`app/`, plus `wear/`, `tv/`, `automotive/` — each counts in its own range, so codes
+stay unique across the listing) in one `chore(release): v<x.y.z>` commit through the PR gate; run the release
+checks (gate, `assembleRelease` + `r8-analyzer`, `play-policy-insights`, Baseline Profile, `android-qa`); tag the
+merged commit. **Pushing the tag publishes the release, so the push is the user's** (an agent's only after the
+user's explicit yes in that session). A hotfix is a `fix/<urgent>` PR followed by a patch release through the same
+flow ([release.md § Hotfix flow](../../docs/release.md#hotfix-flow)).
 
 ## Body of the Release
 
@@ -94,8 +86,9 @@ git-cliff (`cliff.toml`) from Conventional Commits — see the `git-cliff-change
 
 ## Manual release (no CI) — user-run
 
-`gh release create` pushes the tag and publishes the Release, so this block is run by the user (or by an agent only
-after the user's explicit yes in that session). Sign with the same injected properties CI uses — the app modules
+Replaces only the tag push (step 5) of [release.md § Cutting a release](../../docs/release.md#cutting-a-release) —
+the bump commit and the checks come first. `gh release create` pushes the tag and publishes the Release, so this
+block is run by the user (or by an agent only after the user's explicit yes in that session). Sign with the same injected properties CI uses — the app modules
 have no `signingConfig` (or first add the `signing.properties` block from [release.md](../../docs/release.md)
 § Keystore policy); without one of the two the build produces unsigned artifacts:
 

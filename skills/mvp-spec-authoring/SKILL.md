@@ -90,7 +90,7 @@ Non-obvious constraints that shape architecture or scope. Examples:
 ✓ "Batch processing target: <30s for 4 images of 24MP"
 ✓ "Offline-only — no backend in v1"
 ✓ "Image processing must not block UI thread"
-✓ "Must run on Android API 26+"
+✓ "Must run on Android 10 (API 29, android-forge's floor) and up"
 
 ✗ "Use clean architecture" (architectural opinion, lives in ADRs)
 ✗ "Performant code" (no decision content)

@@ -67,9 +67,9 @@ it if it doesn't add clarity.
 Use `!` after type:
 
 ```
-feat!: raise minSdk to 28
+feat!: raise minSdk to 31
 
-BREAKING CHANGE: devices on Android 8.x no longer receive updates.
+BREAKING CHANGE: devices on Android 10 and 11 no longer receive updates.
 ```
 
 ## Examples

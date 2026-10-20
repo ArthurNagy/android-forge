@@ -11,7 +11,7 @@ and Google's own tooling.
 ## What it does
 
 `android-forge` creates the base project with **Google's Android CLI** (`android create`), raises it to a tested
-toolchain floor (AGP 9.4 with built-in Kotlin, Gradle 9.8, compile/target SDK 37), then overlays: convention plugins,
+toolchain floor (AGP 9.4 with built-in Kotlin, Gradle 9.8, compile/target SDK 37, minSdk 29), then overlays: convention plugins,
 the `:core:*` + `:feature:*:{api,impl}` module shape, a working Hilt → DataStore → use case → Orbit slice, the gates
 (Lint + compose-lints, ktlint + compose-rules, JaCoCo 85%, Roborazzi screenshots), CI, product docs and ADRs — and installs Google's
 **Android agent skills** into the project, tiered by the form factors and capabilities it uses. Devices, emulators,
@@ -24,8 +24,10 @@ docs and versions go through the Android CLI too.
 /plugin install android-forge@android-forge
 ```
 
-Needs the Android CLI (`/android-forge-doctor` checks and tells you how to install it), `envsubst`, `python3`, and
-optionally `gh` and `openspec`.
+Needs the Android CLI (`/android-forge-doctor` checks and tells you how to install it), a JDK 17+ for Gradle,
+`envsubst`, `python3`, `curl` (toolchain pinning, `/android-forge-bump-stack`) and `perl` (both ship with macOS and most
+Linux distributions), and optionally `gh` and `openspec` — plus `jq` once the autonomous build loop is installed
+(its merge guard needs it).
 
 ## Slash commands
 
@@ -54,13 +56,20 @@ Plugin skills (load in an android-forge project when the work matches): `domain-
 `presentation-layer` · `backlog-issue-authoring` · `mvp-spec-authoring` · `adr-authoring` · `conventional-commits` ·
 `git-cliff-changelog` · `github-release-artifacts` · `driving-ci-green`.
 
-Google's Android skills, installed per project in tiers (`scripts/skills.sh`): **baseline** — android-cli, adaptive,
-navigation-3, navigation-event, edge-to-edge, testing-setup, jetpack-compose-performance, android-profiler,
-android-intent-security, android-permissions-security, r8-analyzer, play-policy-insights; **form factors** — wear-compose-m3,
-wear-widgets, leanback-to-compose-tv-migration, engage-sdk-integration, android-for-cars-parked-apps,
-display-glasses-with-jetpack-compose-glimmer, media3-cast-integration, glance-canonical-layouts; **capabilities** —
-camerax, appfunctions, ml-kit-genai-prompt-api, litert-runtime, restore-credentials, verified-email,
-play-billing-library-version-upgrade; **adopt** — agp-9-upgrade, migrate-xml-views-to-jetpack-compose, styles.
+Google's Android skills, installed per project in tiers (`scripts/skills.sh` is the source of truth):
+
+- **baseline** (every project) — android-cli, adaptive, navigation-3, navigation-event, edge-to-edge, testing-setup,
+  jetpack-compose-performance, android-profiler, android-intent-security, android-permissions-security, r8-analyzer,
+  play-policy-insights;
+- **form factors** — `desktop` / `xr`: adaptive · `glasses`: display-glasses-with-jetpack-compose-glimmer ·
+  `cars`: android-for-cars-parked-apps · `tv`: leanback-to-compose-tv-migration, engage-sdk-integration ·
+  `wear`: wear-compose-m3, wear-widgets · `cast`: media3-cast-integration · `widgets`: glance-canonical-layouts;
+- **capabilities** (added with the library) — `camerax`: camerax · `appfunctions`: appfunctions ·
+  `genai`: ml-kit-genai-prompt-api · `litert`: litert-runtime · `credentials`: restore-credentials, verified-email ·
+  `billing`: play-billing-library-version-upgrade · `engage`: engage-sdk-integration;
+- **adopt** (suggested by `/android-forge-adopt`, never automatic) — agp-9-upgrade, migrate-xml-views-to-jetpack-compose,
+  styles.
+
 See [docs/android-cli.md](docs/android-cli.md).
 
 ## Locked stack
@@ -79,7 +88,7 @@ See [docs/android-cli.md](docs/android-cli.md).
 | i18n | Android resources with per-module prefixes, per-app languages |
 | Testing | JUnit 4 + Robolectric + Orbit test + Turbine + Compose UI Test v2 + Roborazzi (phone + tablet goldens) |
 | Gates | Android Lint + Slack compose-lints (warnings = errors) · Spotless/ktlint + compose-rules · JaCoCo ≥ 85% |
-| Toolchain | AGP ≥ 9.4.1 (built-in Kotlin), Gradle ≥ 9.8.1, Kotlin 2.4, KSP2, compile/target SDK 37 |
+| Toolchain | AGP ≥ 9.4.1 (built-in Kotlin), Gradle ≥ 9.8.1, Kotlin 2.4, KSP2, compile/target SDK 37, minSdk 29 |
 | Performance (opt-in) | Baseline Profiles + Macrobenchmark (`:benchmarks`) |
 | Crash reporting | Play Vitals by default; Firebase Crashlytics or Sentry Android opt-in |
 | Distribution | GitHub Releases (every app module); Firebase App Distribution / gradle-play-publisher (a Play track per form factor) opt-in |

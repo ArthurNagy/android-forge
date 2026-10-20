@@ -105,8 +105,9 @@ upper-cased):
 
 `git cliff --unreleased` previews the notes; `git cliff --bumped-version` computes the next version from the commits.
 The release itself — version bump, gate, tag, and the user-approved tag push that triggers
-`.github/workflows/release.yml` — follows the `github-release-artifacts` skill § Before tagging. CI then generates the
-release body with `orhun/git-cliff-action@v4` and uploads the artifacts.
+`.github/workflows/release.yml` — follows [release.md § Cutting a release](../../docs/release.md#cutting-a-release)
+(summarised by the `github-release-artifacts` skill). CI then generates the release body with
+`orhun/git-cliff-action@v4` and uploads the artifacts.
 
 ## Troubleshooting
 

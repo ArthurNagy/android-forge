@@ -7,7 +7,8 @@ Status: Accepted
 
 We need a state-management pattern across all ViewModels with:
 - Explicit MVI shape (intent → reduce → state) for predictability
-- First-class support for one-shot side effects (navigation, toasts)
+- One-shot events (navigation, snackbars) that survive configuration changes and process death and test like any
+  other state — no fire-and-forget event channel that can drop an event while the UI isn't collecting
 - Built-in testability without external mocking
 - Compatibility with Google's UI-layer guidance (screen-level `ViewModel`, unidirectional data flow, events
   handled in the ViewModel and exposed as state)

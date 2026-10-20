@@ -26,7 +26,7 @@ core/data/src/main/kotlin/<base-path>/core/data/
     PhotoMappers.kt             internal PhotoDto.toEntity(), PhotoEntity.toModel()
 core/network/src/main/kotlin/<base-path>/core/network/     (opt-in; "First API call" in recipe 1)
   NetworkModule.kt              OkHttpClient, Json, Retrofit (+ @Provides for each service)
-  CatchNetwork.kt               the network boundary: IOException / HttpException / other → DomainError
+  CatchNetwork.kt               the network boundary: IOException / HttpException (404 → NotFound) / other → DomainError
   photo/
     PhotoApi.kt                 internal Retrofit service interface
     PhotoDto.kt                 @Serializable wire shape (public: the data source returns it)
@@ -71,7 +71,7 @@ task needs (when reading this file directly instead of invoking the skill, they 
 - `:core:data` has no public declarations; no DTO, entity, `Response` or `Preferences` appears in a `:core:domain`
   signature; only `:core:data` depends on `:core:network` / `:core:database` / `:core:datastore`.
 - No exception escapes a repository: every data-source call goes through `catchNetwork` / `catchStorage`
-  (or a commented value-`try`) that rethrows `CancellationException` first.
+  (or a commented value-`try`) that rethrows `CancellationException` (and any `Error`) first.
 - No `Dispatchers.*` outside `RealDispatcherProvider` (and Room's `setQueryCoroutineContext`).
 - Each repository is `@Binds`-bound in `DataModule`; its tests cover every error it can return plus cancellation.
 - While iterating, the module you touched: `./gradlew :core:data:testDebugUnitTest` (also `:core:network:`,

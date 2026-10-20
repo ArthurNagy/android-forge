@@ -9,6 +9,13 @@ The app may grow beyond phones, tablets and foldables: Wear OS, Android TV, Andr
 Auto, XR headsets and glasses, Googlebook/desktop, Cast, widgets. Each has its own UI toolkit, manifest
 requirements, quality guidelines and (for some) its own Play track.
 
+Alternatives considered:
+- **One APK for every device type** (`:app` branching on the device at runtime) — one module to release, but every
+  device downloads every toolkit (Wear Compose, Compose for TV, Car App Library), manifests conflict (a launcher
+  category for TV, `uses-feature` for a watch), and Wear OS, TV and AAOS have their own Play tracks anyway.
+- **Form-factor UI as feature modules inside `:app`** — shares the app's DI graph and navigation, but the phone
+  UI's dependencies (`:core:designsystem`, Material 3 adaptive, phone features) leak into every device's APK.
+
 ## Decision
 
 Following the modularization guide ("if your app targets multiple device types, define an app module for

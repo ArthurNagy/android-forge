@@ -22,8 +22,12 @@ Alternatives considered:
 AGP's built-in JaCoCo (`enableUnitTestCoverage` on debug) in every Android module, the `jacoco` plugin on
 JVM modules, and the root convention `android-forge.root` aggregating both: `./gradlew coverageVerify`
 fails below **85% line coverage**, `./gradlew coverageReport` writes HTML/XML. Robolectric-loaded classes
-are counted (`includeNoLocationClasses`). Exclusions are class-file patterns: generated code and wiring
-(Compose singletons, serializers, Hilt modules, entry points, `api` modules, entry builders, design tokens).
+are counted (`includeNoLocationClasses`). `:core:testing` (test doubles only) and `com.android.test` modules
+(`:benchmarks`) are not measured. Exclusions are class-file patterns for generated code and wiring: Compose
+singletons, kotlinx-serialization serializers, Hilt modules (`*Module`) and Hilt/Dagger-generated classes,
+`R` / `BuildConfig`, `MainApplication` / `MainActivity`, `:feature:*:api` modules and entry builders (`*EntriesKt`),
+`DomainError`'s value types, design tokens (`AppColors`, `AppDimens`, `AppSpacing`, `AppType`) and
+`RealDispatcherProvider`.
 
 ## Consequences
 

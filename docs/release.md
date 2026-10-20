@@ -14,14 +14,41 @@ Conventional Commits drive the bump:
 - `fix:` / `perf:` → patch
 - `chore:` / `docs:` / `test:` / `ci:` / `build:` / `refactor:` / `style:` → no version bump (still appear in changelog)
 
-## Tagging
+`git cliff --bumped-version` computes the next version from the commits since the last tag.
 
-```
-git tag -a v0.3.0 -m "Release v0.3.0"
-git push origin v0.3.0
-```
+## Cutting a release
 
-Tag push triggers `.github/workflows/release.yml`.
+This is the canonical flow; the `github-release-artifacts` skill summarises it and links here.
+
+1. **Version.** `git cliff --bumped-version` (and `git cliff --unreleased` for the notes it will produce).
+2. **Bump commit.** In every app module's `defaultConfig` (`app/build.gradle.kts`, plus `wear/`, `tv/`,
+   `automotive/` when they exist), raise `versionName` to the new version and `versionCode` by one (each module
+   counts in its own range — § Version codes across form factors). One commit, `chore(release): v<x.y.z>`, through
+   a PR and the normal gate. Regenerating `CHANGELOG.md` (`git cliff --tag v<x.y.z> -o CHANGELOG.md`) may ride
+   along — optional.
+3. **Checks** on `main` with the bump merged:
+   - the CI gate green: `./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true`;
+   - `./gradlew assembleRelease` locally once per release cycle — R8 problems only show in release builds; the
+     `r8-analyzer` skill audits keep rules when something is stripped or the APK grew;
+   - before any store release, the `play-policy-insights` skill — permissions, data collection and declarations
+     against Play policy;
+   - the Baseline Profile regenerated when startup paths changed (`./gradlew :app:generateReleaseBaselineProfile`
+     on a device, opt-in `:benchmarks`) and committed;
+   - the quality tier you claim (see [quality.md](quality.md)) checked by the `android-qa` agent on every form
+     factor the release touches.
+4. **Tag** the merged bump commit: `git tag -a v<x.y.z> -m "Release v<x.y.z>"`. An agent may create the annotated
+   tag locally.
+5. **Push the tag** — `git push origin v<x.y.z>`. Pushing publishes the release, so this step is the user's (an
+   agent's only after the user's explicit yes in that session). The push triggers `.github/workflows/release.yml`,
+   which builds, signs and attaches every app module's AAB/APK under a git-cliff release body.
+
+### Hotfix flow
+
+1. Branch off `main`: `fix/<urgent>`; PR + merge as usual.
+2. Cut a patch release — § Cutting a release with `v<major>.<minor>.<patch+1>`; the bump commit still raises every
+   app module's `versionCode`.
+
+No `release/*` branch unless you support multiple major versions concurrently.
 
 ## Distribution tiers
 
@@ -79,17 +106,10 @@ apps have no Play distribution yet. See each [form-factors/](form-factors/) page
 
 ### Version codes across form factors
 
-Every APK/AAB of one Play listing needs a unique `versionCode`. android-forge offsets the form-factor apps:
-`:app` counts from 1, `:wear` from `100_000_001`, `:tv` from `200_000_001`, `:automotive` from `300_000_001` — bump
-each module's own code per release (the form-factor templates start there).
-
-### Before a store release
-
-- `play-policy-insights` skill — audit permissions, data collection and declarations against Play policy.
-- `r8-analyzer` skill — keep rules: redundant or too-broad rules cost size.
-- Baseline Profile regenerated (`./gradlew :app:generateReleaseBaselineProfile`, opt-in `:benchmarks`) when
-  startup paths changed.
-- The quality tier you claim (see [quality.md](quality.md)) checked by the `android-qa` agent on each form factor.
+Every APK/AAB of one Play listing needs a unique `versionCode`. It lives in each app module's `defaultConfig`, and
+android-forge offsets the form-factor apps: `:app` counts from 1, `:wear` from `100_000_001`, `:tv` from
+`200_000_001`, `:automotive` from `300_000_001` — the release bump commit raises each module's own code (the
+form-factor templates start there).
 
 ### When to add fastlane
 
@@ -164,12 +184,6 @@ commit_parsers = [
 
 Every commit since the last tag lands in exactly one group except GitHub/GitLab merge commits. A non-conventional subject still shows up (under **Other**) so a sloppy message is visible in review rather than silently missing from the release.
 
-Release workflow runs `git-cliff --latest --strip header` to populate the GitHub Release body. Full `CHANGELOG.md` regenerated on each release via `git-cliff -o CHANGELOG.md` and committed back to `main` via a follow-up PR (optional — manual is fine for solo work).
-
-## Hotfix flow
-
-1. Branch off `main`: `fix/<urgent>`
-2. PR + merge as usual
-3. Tag a patch release: `v<current-minor>.<patch+1>`
-
-No `release/*` branch unless you support multiple major versions concurrently.
+Release workflow runs `git-cliff --latest --strip header` to populate the GitHub Release body. A committed
+`CHANGELOG.md` is optional: regenerate it in the release bump commit (§ Cutting a release, step 2) — manual is fine
+for solo work.

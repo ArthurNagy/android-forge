@@ -5,7 +5,7 @@ description: Write or refine a GitHub issue for an android-forge project so it c
 
 # Backlog issue authoring — android-forge style
 
-In an android-forge project, GitHub issues are the single source of work: open issues labeled `ready` are the backlog that people and the autonomous build loop work from. An issue is **workable** when someone who has never seen the conversation could propose its OpenSpec change without asking a question. Canonical rules: the plugin's `docs/product-workflow.md`.
+In an android-forge project, GitHub issues are the single source of work: open issues labeled `ready` are the backlog that people and the autonomous build loop work from. An issue is **workable** when someone who has never seen the conversation could propose its OpenSpec change without asking a question. Its readers: the human who approves it, the `android-architect` agent (in `/android-forge-refine`, for a parent issue or one that needs design — it adds technical **Notes** and **Out of scope** lines), the proposer that turns it into an OpenSpec change (`/opsx:propose`, by hand or in the autonomous loop), and `android-qa`, which checks its acceptance criteria. Canonical rules: the plugin's `docs/product-workflow.md`.
 
 ## The one rule about `ready`
 
@@ -77,8 +77,47 @@ Empty optional sections render as `_No response_`; omit them or leave that marke
 
 ## Bugs and chores
 
-- **Bug** (`bug` label, Bug report form): steps, expected vs actual, platform + version. Add an acceptance criterion for the fix when "expected" is ambiguous.
-- **Chore** (`chore` label): build, tooling or maintenance with no user-visible behavior — Problem + a done-condition is enough; its PR will not be a `feat:` (so CI's spec-link check does not apply).
+- **Bug** (`bug` label, Bug report form) — its headings, verbatim (`scripts/issues.sh` and the loop read
+  **Acceptance criteria**, **Depends on** and **Change name** from a bug the same way):
+
+  ```markdown
+  ### What happened?
+
+  <steps to reproduce; expected vs actual>
+
+  ### Acceptance criteria
+
+  - WHEN the device is offline THEN the gallery shows the cached photos instead of an error
+
+  ### Depends on
+
+  #12
+
+  ### Change name
+
+  fix-offline-gallery
+
+  ### Platform
+
+  Pixel 8 (phone) · Android 16
+
+  ### App version
+
+  v0.3.2
+
+  ### Logs / screenshots
+
+  <log excerpt>
+  ```
+
+  **What happened?** is required; add an acceptance criterion for the fix whenever "expected" is ambiguous — each
+  becomes a regression test. Its PR is a `fix(…)`.
+- **Chore** (`chore` label): build, tooling or maintenance with no user-visible behavior — including the enabling
+  issue the `android-architect` adds before infrastructure-dependent work (the first Room table, a form factor's app
+  module). It uses the **backlog form's shape** above, labeled `chore` instead of `enhancement`: **Problem** says why
+  the work is needed now, **Acceptance criteria** are done-conditions a reviewer can check (`WHEN the app builds THEN
+  :core:database exists with the photos table and passing DAO tests`), plus **Out of scope** / **Depends on** /
+  **Change name** as usual. Its PR is not a `feat:` (so CI's spec-link check does not apply).
 
 ## Priority
 

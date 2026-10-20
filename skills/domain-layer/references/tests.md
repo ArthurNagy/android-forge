@@ -23,6 +23,13 @@ class ToggleFavoriteUseCaseTest {
     fun anUnknownPhotoIsNotFound() = runTest {
         assertEquals(Err(DomainError.NotFound), ToggleFavoriteUseCase(FakePhotoRepository())(PhotoId("missing")))
     }
+
+    @Test
+    fun aKnownPhotoFlipsItsFavorite() = runTest {
+        val repository = FakePhotoRepository().apply { seed(photo(id = "1", title = "a")) }
+
+        assertEquals(Ok(photo(id = "1", title = "a", favorite = true)), ToggleFavoriteUseCase(repository)(PhotoId("1")))
+    }
 }
 ```
 

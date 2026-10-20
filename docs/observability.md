@@ -63,7 +63,8 @@ interface from `:core:domain` or a `:core:analytics` module).
 
 - **Info**: user-initiated actions worth seeing as breadcrumbs ("opened photo:123").
 - **Warn**: recoverable failures, retries, fallbacks — every `DomainError` produced at a boundary
-  (`catchNetwork`, storage writes) logs once with `Timber.w(e, …)`.
+  (`catchNetwork`, `catchStorage`) logs once with `Timber.w(e, …)` — a 404 that became `NotFound` included.
+  Cancellation and `Error`s (OOM, stack overflow) are rethrown, not logged there: the crash reporter sees them.
 - **Error**: unexpected states that should never happen.
 
 `Timber.d` is for development: release builds plant no debug tree.

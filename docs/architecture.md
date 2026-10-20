@@ -23,7 +23,8 @@ stricter than Google's: **a feature reaches data only through `:core:domain`** (
 :core:ui                 composables shared by features, DomainError.toMessage(), shared strings
 :core:navigation         Navigator, EntryProviderInstaller, NavigationModule (@Multibinds), shared scene strategies
 :core:testing            shared test doubles (fakes, TestDispatcherProvider, MainDispatcherRule) + the
-                         Robolectric SDK pin — a test-only dependency (the conventions add it)
+                         Robolectric SDK pin and screenshot tolerance — a test-only dependency (the Android
+                         conventions add it)
 :feature:<name>:api      the feature's Nav 3 keys — nothing else (JVM module)
 :feature:<name>:impl     the feature's screens, Orbit ViewModels, state, strings, and the Hilt
                          @IntoSet entry builder that contributes its entries to the app
@@ -46,7 +47,7 @@ build-logic/             precompiled convention plugins (android-forge.*)
                    ├──▶ :core:datastore
                    ├──▶ :core:database
                    └──▶ :core:network ──▶ :core:domain   (DomainError for catchNetwork)
-:core:testing ──▶ :core:domain               (test-only; every module's tests get it)
+:core:testing ──▶ :core:domain               (test-only; every Android module's tests get it)
 ```
 
 Rules (the `android-reviewer` agent enforces them):
@@ -57,7 +58,9 @@ Rules (the `android-reviewer` agent enforces them):
   `:core:datastore`, `:core:database`, `:core:network`, or another feature's `:impl`.** Repositories
   reach a feature only as `:core:domain` interfaces that Hilt binds in `:core:data`.
 - Only app modules depend on `:core:data`: they assemble the graph.
-- `:core:testing` is never an `implementation` dependency.
+- `:core:testing` is never an `implementation` dependency. The Android conventions add it to every Android
+  module's tests; a JVM module that needs it declares `testImplementation(project(":core:testing"))` (`:core:domain`
+  does).
 - A form-factor app (`:wear`, `:tv`, `:automotive`) reuses `:core:model`/`:core:domain`/`:core:data`
   but not the phone UI (`:core:designsystem`, `:core:ui`, phone features): its toolkit differs (Wear
   Compose, Compose for TV, Car App Library). See [form-factors/](form-factors/).
@@ -75,7 +78,10 @@ This document stays the source of truth for the rules.
   `Network.Http(status, code)`, `NotFound`, `Unknown(cause)`), worded once by `:core:ui`'s exhaustive
   `DomainError.toMessage()`, plus the extension point `DomainError.Typed` that a domain area's own
   sealed errors extend (with the payload a screen needs to react).
-- `DispatcherProvider` — the only way production code reaches a dispatcher.
+- `DispatcherProvider` — the only way production code reaches a dispatcher. Code that switches dispatchers takes it:
+  a use case doing CPU-heavy work (`withContext(dispatchers.default)`), a data source calling a blocking API
+  (`dispatchers.io`). Room, Retrofit and DataStore are main-safe, so repositories don't wrap them; ViewModels never
+  take it.
 
 `Result<T, DomainError>` is [kotlin-result](https://github.com/michaelbull/kotlin-result)'s two-param
 `Result<V, E>` — Gradle coordinate `com.michael-bull.kotlin-result:kotlin-result`, import package
@@ -99,10 +105,10 @@ types without seeing use cases or repository interfaces (ADR 0003).
 - DTOs (`PhotoDto`, `@Serializable`) and entities (`PhotoEntity`, Room) map to `:core:model` types in
   the repository (`PhotoDto.toModel()`). DTOs may keep wire-format defaults.
 - **The exception boundary.** Data sources may throw; repositories never do. Network calls run through
-  `catchNetwork { … }` (`:core:network`: kotlin-result `runCatching` + `mapError`, `CancellationException`
-  rethrown; `IOException` → `Network.Connectivity`, Retrofit `HttpException` → `Network.Http`, anything
-  else → `Unknown`); storage calls run through `catchStorage { … }` (`:core:data`, same shape, every failure →
-  `Unknown`).
+  `catchNetwork { … }` (`:core:network`: kotlin-result `runCatching` + `mapError`; `CancellationException` and any
+  `Error` rethrown; `IOException` → `Network.Connectivity`; Retrofit `HttpException` → `NotFound` for a 404, else
+  `Network.Http(status, code = null)`; anything else → `Unknown`); storage calls run through `catchStorage { … }`
+  (`:core:data`, same shape, every other failure → `Unknown`).
 - **One repository per domain type** — never an `AppRepository` god object. Its name says where the truth lives:
   `OfflineFirst<Type>Repository` (local storage is the source of truth, the network refreshes it),
   `Offline<Type>Repository` (local only, like `OfflineUserPreferencesRepository`), `Remote<Type>Repository` (no
@@ -118,7 +124,7 @@ types without seeing use cases or repository interfaces (ADR 0003).
   states.
 
 ### `:core:navigation`
-- `Navigator` — `navigate(key)`, `goBack()`, `canGoBack`, `backOrNull()`, over the app's saveable back stack.
+- `Navigator` — `navigate(key)`, `goBack()`, `canGoBack`, `backOrNull(key)`, over the app's saveable back stack.
 - `typealias EntryProviderInstaller = EntryProviderScope<NavKey>.(Navigator) -> Unit` — what each
   feature contributes.
 - `NavigationModule` — `@Multibinds` declares the (possibly empty) `Set<EntryProviderInstaller>`.
@@ -189,29 +195,41 @@ internal data class GalleryState(
 
 @HiltViewModel
 internal class GalleryViewModel @Inject constructor(
-    private val getPhotos: GetPhotosUseCase,
+    private val observePhotos: ObservePhotosUseCase,
+    private val refreshPhotos: RefreshPhotosUseCase,
     private val getPhoto: GetPhotoUseCase,
 ) : ViewModel(), OrbitContainerHost<GalleryState, GalleryState, Nothing> {
-    override val container = orbitContainer<GalleryState, Nothing>(GalleryState.Initial) { load() }
+    override val container = orbitContainer<GalleryState, Nothing>(GalleryState.Initial) {
+        observe() // once per ViewModel = once per back-stack entry
+        refresh()
+    }
 
-    fun load() = intent {
+    private fun observe() = intent {
+        observePhotos().collect { photos -> reduce { state.copy(photos = photos) } }
+    }
+
+    fun refresh() = intent {
         reduce { state.copy(loading = true, error = null) }
-        getPhotos()
-            .onOk { photos -> reduce { state.copy(loading = false, photos = photos) } }
+        refreshPhotos()
+            .onOk { reduce { state.copy(loading = false) } }
             .onErr { error -> reduce { state.copy(loading = false, error = error) } }
     }
 
     // Outcome-dependent navigation goes through the slot; a tap that only navigates calls the screen's lambda.
-    fun openPhoto(id: PhotoId) = intent {
+    fun onPhotoClicked(id: PhotoId) = intent {
         getPhoto(id)
             .onOk { reduce { state.copy(pendingNavigation = PhotoDetailKey(photoId = id.value)) } }
             .onErr { error -> reduce { state.copy(pendingMessage = error.messageRes()) } }
     }
 
     fun onNavigationConsumed() = intent { reduce { state.copy(pendingNavigation = null) } }
+
+    fun onMessageConsumed() = intent { reduce { state.copy(pendingMessage = null) } }
 }
 
-// GalleryScreen — the screen gets a plain lambda from its entry builder, never the Navigator.
+// GalleryScreen(onNavigate: (NavKey) -> Unit, onNavigateBack: (() -> Unit)?, modifier, viewModel = hiltViewModel())
+// gets plain lambdas from its entry builder, never the Navigator, and renders the stateless
+// GalleryContent(state, snackbarHostState, onPhotoClick = viewModel::onPhotoClicked, onRetry = viewModel::refresh, onNavigateBack).
 // rememberUpdatedState: the effect outlives recompositions (compose-rules' lambda-param-in-effect).
 val currentOnNavigate by rememberUpdatedState(onNavigate)
 LaunchedEffect(state.pendingNavigation) {
@@ -220,6 +238,9 @@ LaunchedEffect(state.pendingNavigation) {
     viewModel.onNavigationConsumed()
 }
 ```
+
+The full, compiling gallery slice — entity, use cases, fake, repository, ViewModel, screen and tests — is in the
+`domain-layer`, `data-layer` and `presentation-layer` skills.
 
 Rules:
 - **No `postSideEffect`.** The side-effect type is `Nothing`. One-shot events are consumable state slots
@@ -233,7 +254,9 @@ Rules:
 - **Navigation**: when it depends on an outcome (a save, a validation, a lookup), the intent sets
   `pendingNavigation`; a tap that only navigates calls the screen's `onNavigate(Key)` lambda directly. Entries
   only wire `onNavigate = navigator::navigate`.
-- No dispatchers in ViewModels; use cases/repositories take `DispatcherProvider`.
+- No dispatchers in ViewModels — no `DispatcherProvider` in the constructor, no `withContext`: Orbit runs intents
+  off the main thread, and code that switches dispatchers (a use case's CPU-heavy work, a data source's blocking
+  call) takes `DispatcherProvider` itself (ADR 0006).
 - No `AndroidViewModel`, no `Context` in a ViewModel.
 - **Route arguments** come from the key through assisted injection:
   ```kotlin
@@ -245,9 +268,12 @@ Rules:
       @AssistedFactory interface Factory { fun create(key: PhotoDetailKey): PhotoDetailViewModel }
       …
   }
-  // in the entry builder:
+  // in the entry builder — the screen takes the assisted ViewModel as a required parameter:
   entry<PhotoDetailKey> { key ->
-      PhotoDetailScreen(viewModel = hiltViewModel<PhotoDetailViewModel, PhotoDetailViewModel.Factory>(creationCallback = { it.create(key) }), …)
+      PhotoDetailScreen(
+          viewModel = hiltViewModel<PhotoDetailViewModel, PhotoDetailViewModel.Factory>(creationCallback = { it.create(key) }),
+          onNavigateBack = navigator.backOrNull(key),
+      )
   }
   ```
 
@@ -261,9 +287,10 @@ class; promote when booleans start fighting each other.
 
 ```kotlin
 // :feature:gallery:impl — contributes its entries; navigates with other features' api keys
+@OptIn(ExperimentalMaterial3AdaptiveApi::class) // the material3-adaptive scene metadata is still experimental
 internal fun EntryProviderScope<NavKey>.galleryEntries(navigator: Navigator) {
-    entry<GalleryKey>(metadata = ListDetailSceneStrategy.listPane()) {
-        GalleryScreen(onNavigate = navigator::navigate, onNavigateBack = navigator.backOrNull())
+    entry<GalleryKey>(metadata = ListDetailSceneStrategy.listPane()) { key ->
+        GalleryScreen(onNavigate = navigator::navigate, onNavigateBack = navigator.backOrNull(key))
     }
 }
 
@@ -273,7 +300,8 @@ internal object GalleryEntryModule {
     fun provideGalleryEntries(): EntryProviderInstaller = { navigator -> galleryEntries(navigator) }
 }
 
-// :app — AppNavigation.kt (rendered by init); never lists features
+// :app — AppNavigation.kt (rendered by init), inside @OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable
+// fun AppNavigation(entryProviderInstallers, modifier); never lists features
 val backStack = rememberNavBackStack(HomeKey)          // saveable: survives rotation and process death
 val navigator = remember(backStack) { Navigator(backStack) }
 NavDisplay<NavKey>(
@@ -291,8 +319,9 @@ NavDisplay<NavKey>(
 - Every key is `@Serializable` (the back stack is saved through kotlinx-serialization).
 - A feature navigates to another by depending on its `:api` and calling `navigator.navigate(OtherKey(id))`
   from its entry builder; the ViewModel only sets `pendingNavigation`.
-- `onNavigateBack` is `navigator.backOrNull()` — `null` on the root entry, so the start destination shows
-  no Back control. System/predictive back goes through `NavDisplay`'s `onBack`.
+- `onNavigateBack` is `navigator.backOrNull(key)`, with the key the entry lambda receives — `null` when that key
+  is the root (bottom) entry of the back stack, so the start destination, and a list pane shown beside its detail,
+  has no Back control. System/predictive back goes through `NavDisplay`'s `onBack`.
 - Multi-pane: mark entries with `ListDetailSceneStrategy.listPane()` / `detailPane()` metadata; never use
   `ListDetailPaneScaffold` directly (the `adaptive` skill).
 - Top-level destinations (bottom bar / rail): `NavigationSuiteScaffold` in `:app` around `NavDisplay`, with

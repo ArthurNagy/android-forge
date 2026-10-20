@@ -3,8 +3,8 @@
 Use when testing a repository (fakes), a remote data source (MockWebServer), a DAO (Robolectric + in-memory Room) or a DataStore (temp file).
 
 - **Repository** (`core/data/src/test`): against fakes of its data sources and DAO — `internal class FakePhotoDao : PhotoDao`
-  over a `MutableStateFlow`, `FakePhotoRemoteDataSource` with a `failWith: Throwable?` knob. Cover the mapping
-  and **every error the repository can return**, plus cancellation once per helper
+  over a `MutableStateFlow`, `FakePhotoRemoteDataSource` with a `failWith: Throwable?` knob (`failWith?.let { throw it } ?: photos`).
+  Cover the mapping and **every error the repository can return**, plus cancellation once per helper
   (`assertFailsWith<CancellationException>`):
   ```kotlin
   @Test

@@ -56,4 +56,4 @@ need), `:core:data` and the UI modules are outer layers that depend on it — ne
   repository — the price of keeping the domain the single entry point (Google's guide makes the domain
   layer optional; here it is not).
 - Reviewer enforces: the dependency rules in docs/architecture.md, `internal` screens/ViewModels/state,
-  keys only in `api` modules, `resourcePrefix` on every Android module.
+  keys only in `api` modules, `resourcePrefix` on every Android library module (`:app` is exempt).

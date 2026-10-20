@@ -47,7 +47,7 @@ task needs (when reading this file directly instead of invoking the skill, they 
 - [Screen and Content](references/screen-and-content.md) — `XScreen` (ViewModel default parameter, one
   `LaunchedEffect` per slot through `rememberUpdatedState`) and stateless `XContent`; which navigation path; insets.
 - [Navigation 3](references/navigation.md) — keys in `:api`, `entry<Key>` builders, the `@IntoSet` module, navigating
-  to another feature, `backOrNull()`, becoming the start destination.
+  to another feature, `backOrNull(key)`, becoming the start destination.
 - [Strings and errors](references/strings-and-errors.md) — prefixed string resources, wording `DomainError` (typed
   errors first, `toMessage()` / `messageRes()` fallback), plurals, the template placeholder.
 - [Tests](references/tests.md) — ViewModel tests over real use cases and fakes, Robolectric screen tests, Roborazzi
@@ -72,7 +72,8 @@ task needs (when reading this file directly instead of invoking the skill, they 
 - `Icon` / `Image` / `AsyncImage` always pass `contentDescription` (a string resource, or an explicit `null` when decorative).
 - Touch targets ≥ 48dp (`Modifier.minimumInteractiveComponentSize()` on custom clickables).
 - RTL: `padding(start = …, end = …)`, `Alignment.Start` / `End` — never `left` / `right` / `absoluteOffset`.
-- `Modifier.testTag("<screen>:<element>")` on every element a test or a QA journey must find.
+- `Modifier.testTag("<screen>:<element>")` on every element a test or a QA journey must find (`gallery:retry`; a list
+  item adds its ID: `gallery:photo:<id>`).
 - Every composable that emits UI takes `modifier: Modifier = Modifier` as its first optional parameter
   (compose-rules).
 

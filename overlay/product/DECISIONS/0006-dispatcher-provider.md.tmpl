@@ -5,10 +5,23 @@ Status: Accepted
 
 ## Context
 
-Coroutine-using code (use cases, repositories, ViewModels) needs to specify which dispatcher to run on. The default option — referencing `Dispatchers.IO`, `Dispatchers.Default`, etc. directly — is convenient but:
-- Couples business logic to the global Dispatchers singleton
-- Makes tests flaky: real dispatchers run on background threads, breaking `runTest` determinism
-- Hides the dispatcher choice in implementations; consumers can't override
+Some code has to choose a dispatcher: a use case doing CPU-heavy work (sorting, parsing, image math) moves to
+`Dispatchers.Default`; a data source calling a blocking API (`java.io` streams, `ContentResolver` queries, image
+decoding) moves to `Dispatchers.IO`. Referencing `Dispatchers.*` directly is convenient but:
+- couples that code to the global `Dispatchers` singleton;
+- makes tests flaky: `Dispatchers.IO` / `Default` run on real background threads that `runTest`'s virtual clock
+  can't control (`Dispatchers.setMain` only replaces `Main`);
+- hides the dispatcher choice inside implementations, where a test can't override it.
+
+Most code needs no dispatcher at all: Room, Retrofit and DataStore `suspend` APIs are main-safe, and Orbit runs a
+ViewModel's intents on its own event loop.
+
+Alternatives considered:
+- **`Dispatchers.*` directly + `Dispatchers.setMain` in tests** — no abstraction, but only `Main` is replaceable;
+  code on `IO` / `Default` escapes the test scheduler.
+- **Hilt-qualified `CoroutineDispatcher`s** (`@Dispatcher(IO) ioDispatcher: CoroutineDispatcher`, Now in Android's
+  pattern) — works, but every dispatcher is its own qualifier and binding, and a test passes each one; one
+  interface is a single seam with a single test double.
 
 ## Decision
 
@@ -24,12 +37,21 @@ interface DispatcherProvider {
 
 Production `RealDispatcherProvider` (`internal`, in `:core:data`, bound with Hilt `@Binds`) returns the standard `Dispatchers.Main / IO / Default`. Tests pass `:core:testing`'s `TestDispatcherProvider(testScheduler)` — one `StandardTestDispatcher` on the `runTest` scheduler.
 
-Use cases and repositories take `DispatcherProvider` via constructor injection (Hilt). They reference `dispatchers.io` / `dispatchers.default`, never `Dispatchers.IO` directly.
+- **Code that switches dispatchers takes `DispatcherProvider`** through its constructor (Hilt) and uses
+  `withContext(dispatchers.default)` / `withContext(dispatchers.io)` — never `Dispatchers.*`.
+- **Repositories don't wrap main-safe APIs**: no `withContext(dispatchers.io)` around Room, Retrofit or DataStore
+  calls.
+- **ViewModels never take it**: no `DispatcherProvider` in a ViewModel constructor, no `withContext` in an intent —
+  the use case that needs another dispatcher switches itself.
+- **One exemption**: Room's `setQueryCoroutineContext(Dispatchers.IO)` in `:core:database`'s `DatabaseModule` (Room's
+  own query context, configured once).
 
 ## Consequences
 
-- Easier: deterministic `runTest`-based tests; explicit dispatcher choice in every coroutine-using class; trivial to swap in `Unconfined` or test dispatchers for specific tests.
-- Harder: one more constructor parameter on every use case / repo; reviewer must catch raw `Dispatchers.*` references.
-- Reviewer enforces: no raw `Dispatchers.IO/Default/Main` references anywhere except `RealDispatcherProvider` (and Hilt modules configuring a library's own context, e.g. Room's `setQueryCoroutineContext`).
-
-ViewModels typically don't need `DispatcherProvider` directly — Orbit's `intent {}` runs on the configured container dispatcher; use cases handle their own dispatcher switching.
+- Easier: deterministic `runTest`-based tests; the dispatcher choice is explicit where it is made; one test double
+  covers every dispatcher.
+- Harder: one more constructor parameter on the few classes that switch dispatchers; the reviewer must catch raw
+  `Dispatchers.*` references and needless `withContext` wrappers.
+- Reviewer enforces: no `Dispatchers.IO/Default/Main` anywhere except `RealDispatcherProvider` and Room's
+  `setQueryCoroutineContext` in `DatabaseModule`; no `DispatcherProvider` in a ViewModel; no `withContext(dispatchers.io)`
+  around a main-safe suspend API.

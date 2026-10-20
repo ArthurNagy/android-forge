@@ -11,7 +11,10 @@ interface PhotoRepository {
 
     suspend fun photo(id: PhotoId): Result<Photo, DomainError>
 
-    suspend fun setFavorite(id: PhotoId, favorite: Boolean): Result<Unit, DomainError>
+    suspend fun setFavorite(
+        id: PhotoId,
+        favorite: Boolean,
+    ): Result<Unit, DomainError>
 
     /** Fetches fresh photos into local storage; observers see them through [observePhotos]. */
     suspend fun refresh(): Result<Unit, DomainError>

@@ -45,7 +45,8 @@ task needs (when reading this file directly instead of invoking the skill, they 
 3. [Repository interfaces](references/repository-interfaces.md) — one per domain type, `suspend` + `Result` for
    one-shot operations, `Flow` streams that never throw, domain types only.
 4. [Use cases](references/use-cases.md) — public `@Inject` constructor, one `operator fun invoke`, business rules,
-   failures as values, `coroutineBinding`, kotlin-result imports.
+   failures as values, `coroutineBinding`, kotlin-result imports; the gallery slice's `ObservePhotosUseCase`,
+   `RefreshPhotosUseCase`, `GetPhotoUseCase` and `ToggleFavoriteUseCase`.
 5. **Wiring** — nothing to register: Hilt constructs `@Inject` use cases on demand. The repository interface is
    bound to its implementation in `:core:data`'s `DataModule` (`@Binds`).
 6. [Fake and entity builder in `:core:testing`](references/fakes-and-builders.md) — a fake that behaves like the

@@ -5,7 +5,7 @@ description: Author or supersede an Architecture Decision Record in an android-f
 
 # ADR authoring — android-forge style
 
-ADRs live in `docs/DECISIONS/NNNN-kebab-case-title.md`. They capture *why* a non-obvious decision was made — the kind of thing you'd otherwise re-debate every six months.
+ADRs live in `docs/DECISIONS/NNNN-kebab-case-title.md`. They capture *why* a non-obvious decision was made — the kind of thing a team otherwise re-debates every six months.
 
 ## Format (Michael Nygard)
 
@@ -44,8 +44,8 @@ Examples:
 ## Status
 
 - **Accepted** — current decision
-- **Accepted (supersedes [NNNN](NNNN-...))** — current decision that replaces an earlier ADR (§ Updating decisions)
-- **Superseded by [NNNN](NNNN-...)** — replaced by a later ADR; this ADR is read-only history
+- **Accepted (supersedes …)** — `Status: Accepted (supersedes [NNNN](NNNN-...))`: current decision that replaces an earlier ADR (§ Updating decisions)
+- **Superseded by …** — `Status: Superseded by [NNNN](NNNN-...)`: replaced by a later ADR; this ADR is read-only history
 - **Deprecated** — no longer relevant (the thing it governed is gone); left for context
 
 Never edit an Accepted ADR's substance. Write a new ADR that supersedes it.
@@ -65,6 +65,24 @@ Never edit an Accepted ADR's substance. Write a new ADR that supersedes it.
 ✗ Internal refactors with no architectural impact
 ✗ Bug fixes
 ✗ UI / design changes (those live in Figma + design tokens)
+
+## From an `adr_proposal.yml` issue
+
+The issue form (`adr` label) collects **Proposed title**, **Context**, **Decision** and **Consequences**; the issue
+is where the decision is discussed, the ADR file is the record. Once the proposal is agreed:
+
+1. Number it — the highest number in `docs/DECISIONS/` plus one — and name the file after the proposed title in
+   kebab-case (`NNNN-kebab-case-title.md`).
+2. Carry the form's sections into the format above: **Context** gains the forcing function and an
+   **Alternatives considered** list (the options the issue thread weighed — ask for them when the issue names none);
+   **Decision** is rewritten imperatively with the concrete shape; **Consequences** gets its Easier / Harder /
+   Enforced lines.
+3. `Date:` is the day it is written, `Status: Accepted` (or `Accepted (supersedes [NNNN](…))`, plus the superseded
+   ADR's status line — § Updating decisions).
+4. Copy each enforceable rule to CLAUDE.md § Project-specific overrides, commit both as `docs(adr): <title>`, and
+   open the PR with `Closes #<issue>` in its body so merging records the decision and closes the proposal.
+
+A proposal that is turned down gets no ADR file: whoever turned it down closes the issue with a comment saying why.
 
 ## Pre-seeded ADRs (from android-forge overlay)
 
@@ -120,7 +138,7 @@ Three pillars:
 
 ### Length
 
-Usually under ~60 lines — the seeded ADRs are 20–35. ADRs are not specs; they're decision logs. If you find yourself writing implementation detail, link to code or a doc instead.
+Usually under ~60 lines — the seeded ADRs are 20–35. ADRs are not specs; they're decision logs. Implementation detail belongs in code or a doc the ADR links to.
 
 ## Updating decisions
 
