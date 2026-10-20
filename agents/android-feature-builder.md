@@ -46,7 +46,7 @@ survive between Bash calls: step 1 writes your inputs to an env file, and every 
 | `feature/<name>/impl/build.gradle.kts` | — | `id("android-forge.feature.impl")`, `namespace = "<base>.feature.<pkg>.impl"`, `resourcePrefix = "<snake>_"`, `api(project(":feature:<name>:api"))` |
 | `<Name>State.kt` | internal | data class, **no defaults**, `companion object { val Initial }`, `@StringRes pendingMessage: Int?` slot |
 | `<Name>ViewModel.kt` | internal | `@HiltViewModel` + `@Inject constructor` + `ViewModel()` + `OrbitContainerHost<S, S, Nothing>`; work starts in `orbitContainer(Initial) { load() }` |
-| `<Name>Screen.kt` | internal | stateful `<Name>Screen(onNavigateBack, modifier, viewModel = hiltViewModel())` + stateless `internal <Name>Content` |
+| `<Name>Screen.kt` | internal | stateful `<Name>Screen(onNavigateBack, modifier, viewModel = hiltViewModel())` (a key argument: `viewModel` first, required) + stateless `internal <Name>Content` |
 | `<Name>Entries.kt` | internal | `fun EntryProviderScope<NavKey>.<camel>Entries(navigator: Navigator)` |
 | `<Name>EntryModule.kt` | internal | Hilt `@Provides @IntoSet` → `EntryProviderInstaller` |
 | `res/values/strings.xml` | — | `<snake>_placeholder_content` (+ every new string, prefixed) |
@@ -89,13 +89,14 @@ Surface a clear error and stop if a request conflicts with them:
 
 ## Process
 
-1. **Inputs, names, validation** — one Bash block. Fill the first four lines from your inputs (nothing else in this
+1. **Inputs, names, validation** — one Bash block. Fill the first five lines from your inputs (nothing else in this
    prompt spells them out); any ✗ → stop and return `RESULT: REFUSED` with that line as `FAILURE`:
    ```bash
    PROJECT_ROOT="<project_root>"
    PLUGIN_ROOT="<claude_plugin_root>"
    FEATURE_NAME="<feature_name>"
    BASE_PACKAGE="<base_package>"
+   START_DESTINATION="<start_destination: yes, or no>"
    printf '%s\n' "${FEATURE_NAME}" | grep -Eq '^[a-z][a-z0-9]*(-[a-z0-9]+)*$' \
        || { echo "✗ feature name must be lowercase kebab-case (photo-detail): ${FEATURE_NAME}"; exit 1; }
    grep -q "android-forge project rules" "${PROJECT_ROOT}/CLAUDE.md" 2>/dev/null \
@@ -108,9 +109,9 @@ Surface a clear error and stop if a request conflicts with them:
    FEATURE_NAME_CAMEL="$(echo "${FEATURE_NAME_PASCAL}" | awk '{print tolower(substr($0,1,1)) substr($0,2)}')"
    BASE_PACKAGE_PATH="$(echo "${BASE_PACKAGE}" | tr . /)"
    export PROJECT_ROOT PLUGIN_ROOT FEATURE_NAME FEATURE_NAME_PKG FEATURE_NAME_SNAKE FEATURE_NAME_PASCAL FEATURE_NAME_CAMEL \
-       BASE_PACKAGE BASE_PACKAGE_PATH
+       BASE_PACKAGE BASE_PACKAGE_PATH START_DESTINATION
    typeset -p PROJECT_ROOT PLUGIN_ROOT FEATURE_NAME FEATURE_NAME_PKG FEATURE_NAME_SNAKE FEATURE_NAME_PASCAL \
-       FEATURE_NAME_CAMEL BASE_PACKAGE BASE_PACKAGE_PATH > "${TMPDIR:-/tmp}/android-forge-feature.env"
+       FEATURE_NAME_CAMEL BASE_PACKAGE BASE_PACKAGE_PATH START_DESTINATION > "${TMPDIR:-/tmp}/android-forge-feature.env"
    ```
 
 2. **Read the project.** `CLAUDE.md` (form factors, features), one existing feature if any
@@ -139,8 +140,13 @@ Surface a clear error and stop if a request conflicts with them:
 
 4. **Key argument** (if `key_argument`): make the key a `data class <Name>Key(val <arg>) : NavKey`; give the ViewModel
    `@HiltViewModel(assistedFactory = <Name>ViewModel.Factory::class)`, an `@AssistedInject constructor(@Assisted private val key: <Name>Key, …)`
-   and a nested `@AssistedFactory interface Factory { fun create(key: <Name>Key): <Name>ViewModel }`; in the entry,
-   `entry<<Name>Key> { key -> <Name>Screen(…, viewModel = hiltViewModel<<Name>ViewModel, <Name>ViewModel.Factory>(creationCallback = { it.create(key) })) }`;
+   and a nested `@AssistedFactory interface Factory { fun create(key: <Name>Key): <Name>ViewModel }`; make the
+   Screen's first parameter a required `viewModel: <Name>ViewModel` —
+   `<Name>Screen(viewModel: <Name>ViewModel, onNavigateBack: (() -> Unit)?, modifier: Modifier = Modifier)` — and drop
+   the `= hiltViewModel()` default and its import from `<Name>Screen.kt` (rule 4: without its `creationCallback`,
+   `hiltViewModel()` fails at runtime); in the entry,
+   `entry<<Name>Key> { key -> <Name>Screen(viewModel = hiltViewModel<<Name>ViewModel, <Name>ViewModel.Factory>(creationCallback = { it.create(key) }), onNavigateBack = navigator.backOrNull(key)) }`
+   (import `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel` there);
    update the generated tests to construct `<Name>ViewModel(<Name>Key(…), …)`.
 
 5. **Use-case wiring** (if step 2 found one): add it to the ViewModel's `@Inject constructor`; replace the
@@ -159,8 +165,19 @@ Surface a clear error and stop if a request conflicts with them:
    - `start_destination: yes`: in `app/src/main/kotlin/<base>/AppNavigation.kt`, pass `<Name>Key` to
      `rememberNavBackStack(...)` (import it from `<base>.feature.<pkg>.api`), remove `entry<HomeKey> { HomeScreen() }`,
      delete `Home.kt`, `app/src/test/kotlin/<base>/HomeScreenTest.kt` and its goldens
-     `app/src/test/screenshots/<base>.HomeScreenTest.*.png`, and the `home_placeholder` string; update `AppNavigationTest` (it asserted the Home text) to assert
-     the new start screen.
+     `app/src/test/screenshots/<base>.HomeScreenTest.*.png`, and the `home_placeholder` string. Update
+     `AppNavigationTest` (it asserts the start screen's text): the real `<Name>Screen` can't render there — its entries
+     are `internal` to the impl and need `hiltViewModel()` — so the test's installer contributes a stub for the new
+     start key next to `TestKey` (replacing a previous start feature's stub) and asserts the stub's text where it
+     asserted the old start screen's (rename the test, e.g. `startsOn<Name>AndShowsContributedEntries`):
+     ```kotlin
+     val testFeature: EntryProviderInstaller = { nav ->
+         navigator = nav
+         entry<<Name>Key> { Text("<Name> start") }
+         entry<TestKey> { Text("Contributed entry") }
+     }
+     ```
+     (A start key with an argument needs a value in `rememberNavBackStack(<Name>Key(…))`; the stub entry matches any.)
    - If the marker is missing (an adopted project), add the dependency at the end of the app's `dependencies { }` and say so.
 
 7. **CLAUDE.md**: append the feature to the `Features:` line (replace `_(none yet …)_`).
@@ -174,7 +191,8 @@ Surface a clear error and stop if a request conflicts with them:
    [[ ${rc} -eq 0 ]] || exit "${rc}"                                       # wrapping depends on name lengths
    ./gradlew ":feature:${FEATURE_NAME}:impl:recordRoborazziDebug" --console=plain > "${LOG}" 2>&1; rc=$?
    tail -10 "${LOG}"; echo "recordRoborazziDebug exit=${rc}"; [[ ${rc} -eq 0 ]] || exit "${rc}"
-   ./gradlew ":feature:${FEATURE_NAME}:impl:testDebugUnitTest" ":app:assembleDebug" lint --console=plain > "${LOG}" 2>&1; rc=$?
+   APP_TASK=":app:assembleDebug"; [[ "${START_DESTINATION}" == yes ]] && APP_TASK=":app:testDebugUnitTest"   # AppNavigationTest
+   ./gradlew ":feature:${FEATURE_NAME}:impl:testDebugUnitTest" "${APP_TASK}" ":app:assembleDebug" lint --console=plain > "${LOG}" 2>&1; rc=$?
    tail -40 "${LOG}"; echo "build exit=${rc}"; exit "${rc}"
    ```
    Look at the two recorded PNGs (`feature/<name>/impl/src/test/screenshots/`) — they should show the placeholder

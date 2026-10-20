@@ -132,7 +132,11 @@ export BUILD_COMMANDS='```bash
 ./gradlew recordRoborazziDebug               # re-record screenshot goldens after an intended UI change
 ```'
 # Init's own modules only — form-factor modules are added by their builder in step 6.
-export MODULE_LIST="- :app · :core:{model,domain,data,datastore,designsystem,ui,navigation,testing} · build-logic/<, :core:network><, :benchmarks>"
+NETWORK="<yes|no — the Network opt-in>" BENCHMARKS="<yes|no — Baseline Profiles + Macrobenchmark>"
+MODULE_LIST="- :app · :core:{model,domain,data,datastore,designsystem,ui,navigation,testing}"
+if [[ "${NETWORK}" == yes ]]; then MODULE_LIST="${MODULE_LIST} · :core:network"; fi
+if [[ "${BENCHMARKS}" == yes ]]; then MODULE_LIST="${MODULE_LIST} · :benchmarks"; fi
+export MODULE_LIST="${MODULE_LIST} · build-logic/"
 export FEATURE_LIST="_(none yet — add via /android-forge-add-feature)_"
 # Comma-separated, or '(none)': "Retrofit 3 + OkHttp 5 (:core:network)", "Room 3 (opt-in, created with the first
 # table)", "Baseline Profiles + Macrobenchmark (:benchmarks)", and each notes-only opt-in by name.
@@ -409,7 +413,7 @@ Next:
   2. Push: gh repo create <APP_NAME> --private --source=. --remote=origin && git push -u origin main, then bash <plugin>/scripts/issues.sh labels
   3. Protect main — require a PR and the "PR / gate" check: https://github.com/arthurnagy/android-forge/blob/main/docs/ci.md#branch-protection
      Running the autonomous loop later (/android-forge-add-autoloop)? Its bookkeeping pushes to main need a bypass for
-     the account gh uses — see the branch-protection note in https://github.com/arthurnagy/android-forge/blob/main/docs/autoloop.md
+     the account gh uses — see https://github.com/arthurnagy/android-forge/blob/main/docs/autoloop.md#branch-protection
   4. /android-forge-spec — fill out docs/MVP_SPEC.md
   5. /android-forge-refine --gaps — draft the first backlog issues; approve with: gh issue edit <n…> --add-label ready
   6. /android-forge-add-feature <name> — your first feature (it can take over the start destination)

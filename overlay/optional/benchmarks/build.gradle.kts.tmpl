@@ -14,7 +14,8 @@ android {
     namespace = "${BASE_PACKAGE}.benchmarks"
     compileSdk = libs.versions.androidCompileSdk.get().toInt()
     defaultConfig {
-        minSdk = 28
+        // The app's minSdk, but at least 28: BaselineProfileRule is @RequiresApi(28).
+        minSdk = maxOf(28, libs.versions.androidMinSdk.get().toInt())
         targetSdk = libs.versions.androidTargetSdk.get().toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

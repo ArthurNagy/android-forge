@@ -55,7 +55,7 @@ source "${TMPDIR:-/tmp}/android-forge-adopt.env"; git -C "${TARGET:?}" switch -c
 ```bash
 source "${TMPDIR:-/tmp}/android-forge-adopt.env"; : "${TARGET:?}"
 grep -nE "include\(" "${TARGET}"/settings.gradle*                                    # modules
-grep -rnE "com\.android\.(application|library)|kotlin-kapt|org\.jetbrains\.kotlin\.android" --include="*.gradle*" "${TARGET}" | head -20
+grep -rnE "com\.android\.(application|library)|kotlin-kapt|org\.jetbrains\.kotlin\.android" --include="*.gradle*" --include="*.toml" "${TARGET}" | head -20
 grep -nE "^(agp|androidGradlePlugin|kotlin|hilt|koin|room|navigation|composeBom|androidxComposeBom)\b" "${TARGET}/gradle/libs.versions.toml" 2>/dev/null
 for lib in "dagger.hilt" "io.insert-koin" "org.orbit-mvi" "androidx.navigation:navigation-compose" "androidx.navigation3" \
            "androidx.room:" "androidx.room3" "retrofit2" "io.ktor" "androidx.fragment" "setContentView"; do
@@ -171,7 +171,8 @@ for t in "${OVERLAY}/git/ISSUE_TEMPLATE/"*.yml; do copy_new "${t}" "${TARGET}/.g
 
 Exactly one workflow must run the gate — `spotlessCheck lint coverageVerify -Proborazzi.test.verify=true assembleDebug`.
 Until Phase B's `build` layer lands, those tasks don't exist yet: keep `pr.yml` but tell the user the gate turns
-green only after the `build` and `tests` layers.
+green only after the `tests` layer (coverage) and the `a11y` layer (compose-rules / Lint findings in the existing UI
+code).
 
 ### 6. Phase B — audit
 
@@ -179,9 +180,11 @@ Invoke **`android-forge:android-reviewer`** in audit mode — one call per modul
 <module path> — whole tree, findings tagged by migrator layer") — and aggregate the per-layer counts. Turn them into a
 **dependency-ordered work-list** — the layer keys map 1:1 to the `android-migrator`'s `layer` input:
 
-1. `build` — AGP 9 + built-in Kotlin + KSP (via the `agp-9-upgrade` skill), `build-logic` conventions, the catalog
-   (`patch-libs`), the toolchain (`pin-toolchain`: Gradle ≥ 9.8.1 wrapper, 4 GiB heap), minSdk ≥ 29,
-   `android-forge.root` (gate tasks). Everything after relies on it.
+1. `build` — AGP 9 + built-in Kotlin + KSP (via the `agp-9-upgrade` skill); the `foundations` modules before any
+   convention (`:core:model`/`:core:domain`/`:core:testing` — every convention puts `:core:testing` on the test
+   classpath); `build-logic` conventions, the catalog (`patch-libs`), the toolchain (`pin-toolchain`: Gradle ≥ 9.8.1 wrapper,
+   4 GiB heap), minSdk ≥ 29, each app module's `resources.properties`, merged `-vNN` resource folders and wired backup
+   rules, `android-forge.root` (gate tasks). Everything after relies on it.
 2. `modules` — `:core:*` + `:feature:*:{api,impl}`; features stop depending on data modules. Per area.
 3. `dispatchers` — `DispatcherProvider` instead of `Dispatchers.*`.
 4. `result` — `Result<T, DomainError>`; `catchNetwork`/`catchStorage` boundaries; no `try/catch` in ViewModels.
@@ -192,7 +195,8 @@ Invoke **`android-forge:android-reviewer`** in audit mode — one call per modul
    `migrate-xml-views-to-jetpack-compose` skill first — each screen is its own step).
 9. `visibility` — `internal` everything that isn't cross-module API; `State.Initial`, no defaults.
 10. `tests` — fakes, Orbit harness, Robolectric screen tests, phone + tablet goldens, the 85% gate.
-11. `a11y` — strings with module prefixes, descriptions, typography, start/end.
+11. `a11y` — strings with module prefixes, descriptions, typography, start/end, and the compose-rules / Lint
+    findings left in the existing UI code (`spotlessCheck` + `lint` green from here).
 12. `adaptive` — no orientation locks, window-size layouts, list-detail scenes, edge-to-edge.
 
 Present the plan (counts per layer) and refactor **one layer at a time** by delegating to the
@@ -208,16 +212,21 @@ layer, re-run `android-forge:android-reviewer` on the touched files.
 
 ### 7. Verify
 
-After the `build` layer, and after every later one (its own Bash call, timeout 600000):
+After the `build` layer, and after every later one (its own Bash call, timeout 600000) — `spotlessApply` first, as
+init does (the rendered templates' imports and the project's own formatting fail `spotlessCheck` until it runs):
 
 ```bash
 source "${TMPDIR:-/tmp}/android-forge-adopt.env"; cd "${TARGET:?}" || exit 1; LOG="${TMPDIR:-/tmp}/android-forge-adopt-gradle.log"
-./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true --console=plain > "${LOG}" 2>&1; rc=$?
+./gradlew spotlessApply --continue --console=plain > "${LOG}" 2>&1; rc=$?; grep -E "ktlint\(" "${LOG}"; echo "spotlessApply exit=${rc}"
+./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true --continue --console=plain > "${LOG}" 2>&1; rc=$?
 tail -40 "${LOG}"; echo "exit=${rc}"
 ```
 
-(`coverageVerify` will fail below 85% until the `tests` layer — say so; don't lower the bound.) Run the app on an
-emulator (`android emulator start …`, `android run --apks=…`) after `hilt` and `nav`.
+Until the `a11y` layer, `spotlessApply`/`spotlessCheck` (compose-rules) and `lint` (compose-lints) fail on findings
+in the existing UI code that no formatter fixes (the `build` layer lists them), and until the `tests` layer,
+`coverageVerify` fails below 85% — say so; don't lower the bound, add a lint baseline or suppress. Anything else red
+is the last layer's to fix. Run the app on an emulator (`android emulator start …`, `android run --apks=…`) after
+`hilt` and `nav`.
 
 ### 8. Report
 

@@ -71,7 +71,10 @@ Run this once, in the first slice that persists data:
    (Imports: the `androidx.room3` annotations plus `Room`/`RoomDatabase`, `androidx.sqlite.driver.bundled.BundledSQLiteDriver`,
    Hilt's `dagger.*` and `ApplicationContext`, `kotlinx.coroutines.Dispatchers`; one file each — `photo/PhotoEntity.kt`,
    `photo/PhotoDao.kt`, `AppDatabase.kt`, `DatabaseModule.kt`.)
-4. Commit `core/database/schemas/` — Room's exported schema history. Every shipped schema change bumps
+4. The project's `CLAUDE.md`: under `## Modules`, add `- :core:database — Room 3: entities, DAOs, AppDatabase`;
+   on the `Optional in this project:` line, `Room 3 (opt-in, created with the first table)` becomes
+   `Room 3 (:core:database)` — or append `Room 3 (:core:database)` (replacing `(none)`) when it isn't listed.
+5. Commit `core/database/schemas/` — Room's exported schema history. Every shipped schema change bumps
    `version` and adds a migration (`@Database(autoMigrations = [AutoMigration(from = 1, to = 2)])`, or a
    `Migration` whose `suspend fun migrate(connection: SQLiteConnection)` runs SQL), tested with `room3-testing`'s
    `MigrationTestHelper`.

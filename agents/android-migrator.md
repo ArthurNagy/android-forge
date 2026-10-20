@@ -80,10 +80,11 @@ goes into your report as `NEEDS INPUT`.
        > "${TMPDIR:-/tmp}/android-forge-migrate.env"
    ```
    A ✗ → stop and report it.
-2. **Read your layer's recipe — only that section** (plus `foundations`, which `dispatchers` and `result` need first):
+2. **Read your layer's recipe — only that section** (plus `foundations`, which `build` renders first and
+   `dispatchers` / `result` build on):
    ```bash
    source "${TMPDIR:-/tmp}/android-forge-migrate.env"; : "${PLUGIN_ROOT:?}" "${LAYER:?}"
-   awk -v l="${LAYER}" '/^## /{p = ($2 == l || ($2 == "foundations" && (l == "dispatchers" || l == "result")))} p' \
+   awk -v l="${LAYER}" '/^## /{p = ($2 == l || ($2 == "foundations" && (l == "build" || l == "dispatchers" || l == "result")))} p' \
        "${PLUGIN_ROOT}/docs/migration.md"
    ```
    Then the doc and skills the section names.
@@ -99,8 +100,10 @@ source "${TMPDIR:-/tmp}/android-forge-migrate.env"; cd "${PROJECT_ROOT:?}" || ex
 ./gradlew <affected modules>:assembleDebug <modules>:testDebugUnitTest --console=plain > "${LOG}" 2>&1; rc=$?; tail -40 "${LOG}"; echo "exit=${rc}"
 ```
 
-Once the `build` layer is in, `lint` the same way. Red (`exit` ≠ 0) → stop, return the failing tail verbatim
-(`grep -n "What went wrong" -A15 "${LOG}"` helps), mark the layer **incomplete**.
+Once the `build` layer is in, `spotlessApply --continue` first and `lint --continue` after, the same way. Red
+(`exit` ≠ 0) → stop, return the failing tail verbatim (`grep -n "What went wrong" -A15 "${LOG}"` helps), mark the
+layer **incomplete** — except, before `a11y`, `spotlessApply` / `lint` findings only in code your layer didn't touch:
+they belong to `a11y` (list them, don't fail on them). One in code you wrote or edited is yours.
 
 ## Report (terse — internal output)
 

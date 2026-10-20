@@ -129,7 +129,11 @@ values.
 [[ -d openspec ]] && openspec --version && node --version
 grep -q "android-forge project rules" openspec/config.yaml 2>/dev/null && echo "android-forge rules present"
 gh --version | head -1
-gh label list --limit 200 --json name --jq '[.[].name] | map(select(. == "ready" or . == "in-progress" or . == "no-spec"))'
+if [[ "$(git remote get-url origin 2>/dev/null)" == *github* ]]; then
+    gh label list --limit 200 --json name --jq '[.[].name] | map(select(. == "ready" or . == "in-progress" or . == "no-spec"))'
+else
+    echo "no GitHub origin — labels check skipped"
+fi
 ```
 
 - `gh` < 2.94 → ✗: the work queue reads GitHub sub-issues (`--parent`, `subIssuesSummary`). Remediation: `brew upgrade gh`.
@@ -137,6 +141,8 @@ gh label list --limit 200 --json name --jq '[.[].name] | map(select(. == "ready"
 - `openspec/` present → `openspec` ≥ 1.14. Remediation: `brew upgrade openspec` / `npm install -g @fission-ai/openspec@latest`.
 - `openspec/config.yaml` without android-forge's rules → ⚠, merge `${CLAUDE_PLUGIN_ROOT}/overlay/openspec/config.yaml.tmpl`.
 - Workflow labels missing on GitHub → ⚠, `bash "${CLAUDE_PLUGIN_ROOT}/scripts/issues.sh" labels` (writes to GitHub).
+  No GitHub `origin` → report `no GitHub origin — skipped`, with no fix to offer (`issues.sh labels` writes to the
+  origin repo).
 
 ### 11. Gradle smoke test (in a project)
 
@@ -165,5 +171,5 @@ Per section: ✓ OK / ⚠ Drift (expected vs actual + remediation) / ✗ Missing
 ✓ Gradle configuration OK
 ```
 
-Then a summary count. If anything is fixable from the plugin (SDK platform, an AVD, skills, labels, catalog floors),
-offer the fixes via `AskUserQuestion` (multi-select) and run only what the user picks.
+Then a summary count. If anything is fixable from the plugin (SDK platform, an AVD, skills, catalog floors, labels
+when `origin` is on GitHub), offer the fixes via `AskUserQuestion` (multi-select) and run only what the user picks.

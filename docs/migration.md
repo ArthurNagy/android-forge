@@ -2,18 +2,20 @@
 
 The layer recipes `/android-forge-adopt` Phase B runs through the `android-migrator` agent — **one layer per
 invocation**, in dependency order: `build` · `modules` · `dispatchers` · `result` · `repos` · `hilt` · `orbit` ·
-`nav` · `visibility` · `tests` · `a11y` · `adaptive`, plus `foundations` (the base types `dispatchers` and `result`
-need first). Each section names the doc that holds the rules, then **Detect** (find every site), **Transform** (edit
-precisely) and **Verify** (residual grep empty + build). The migrator reads only its layer's section; the rules
-themselves stay in the docs each section names — this page is the how.
+`nav` · `visibility` · `tests` · `a11y` · `adaptive`, plus `foundations` (the base modules: `build` renders them
+first, `dispatchers` and `result` build on them). Each section names the doc that holds the rules, then **Detect**
+(find every site), **Transform** (edit precisely) and **Verify** (residual grep empty + build). The migrator reads
+only its layer's section; the rules themselves stay in the docs each section names — this page is the how.
 
 Shell snippets run in the migrator's shell: they source its env file, which sets `PROJECT_ROOT`, `PLUGIN_ROOT` (the
 android-forge plugin — `${CLAUDE_PLUGIN_ROOT}` in a command), `BASE_PACKAGE`, `BASE_PACKAGE_PATH`, `LAYER` and
 `MIN_SDK`.
 
-## foundations — the domain base types (before `dispatchers` / `result`)
+## foundations — `:core:model`, `:core:domain`, `:core:testing` (run by `build`; `dispatchers` / `result` need them)
 
-The domain base types must exist. Render missing ones from the plugin templates (with `BASE_PACKAGE`):
+The base modules must exist: every Android convention adds `testImplementation(project(":core:testing"))`, and
+`:core:testing` builds on `:core:domain` and `:core:model`. Render missing ones from the plugin templates (with
+`BASE_PACKAGE`):
 
 ```bash
 source "${TMPDIR:-/tmp}/android-forge-migrate.env"; : "${PROJECT_ROOT:?}" "${PLUGIN_ROOT:?}" "${BASE_PACKAGE_PATH:?}"
@@ -29,13 +31,17 @@ fake) — delete them if the app has its own settings model, keeping `Dispatcher
 `TestDispatcherProvider`, `MainDispatcherRule` and `robolectric.properties`. `RealDispatcherProvider` + its `@Binds`
 come with `:core:data` (`render-module core.data …`, then trim the same example). kotlin-result: Gradle coordinate
 `com.michael-bull.kotlin-result:kotlin-result`, package `com.github.michaelbull.result`, `api` in `:core:domain`.
+**Verify** (once `build` is in): `./gradlew spotlessApply --continue` (the templates' import order is ktlint's only
+after it runs), then `./gradlew :core:domain:test assembleDebug`.
 
 ## build — conventions, AGP 9, KSP, catalog, toolchain
 - Doc: `stack.md` § Toolchain, `ci.md`.
 - **Detect:** AGP < 9 / Kotlin < 2.4 in the catalog; `org.jetbrains.kotlin.android` / `kotlin-kapt` plugins; modules
   configuring `compileSdk`, Lint, test options by hand; no `build-logic/`; a Gradle wrapper below 9.8.1; minSdk below 29.
 - **Transform:** AGP 9 upgrade first through the **`agp-9-upgrade`** skill (built-in Kotlin, KAPT → KSP — Hilt and Room
-  need KSP). Then copy `${PLUGIN_ROOT}/overlay/build-logic` into the project, `includeBuild("build-logic")` in `pluginManagement`,
+  need KSP). Then `foundations`' block (above) before any module applies a convention: each one puts `:core:testing`
+  on its test classpath, so a project without it fails to configure. Then copy `${PLUGIN_ROOT}/overlay/build-logic`
+  into the project, `includeBuild("build-logic")` in `pluginManagement`,
   root `plugins { id("android-forge.root") }` (removing root `alias(...) apply false` lines for plugins build-logic
   provides), `patch-libs` with `${PLUGIN_ROOT}/overlay/gradle/libs.versions.toml.additions.tmpl` (`MIN_SDK` = the
   `min_sdk` the caller passed — `patch-libs` raises `androidMinSdk` to it, a floor), `pin-toolchain` (Gradle ≥ 9.8.1
@@ -49,13 +55,76 @@ come with `:core:data` (`render-module core.data …`, then trim the same exampl
   ```bash
   source "${TMPDIR:-/tmp}/android-forge-migrate.env"; : "${PROJECT_ROOT:?}" "${PLUGIN_ROOT:?}" "${MIN_SDK:?}"
   mkdir -p "${PROJECT_ROOT}/build-logic" && cp -R "${PLUGIN_ROOT}/overlay/build-logic/." "${PROJECT_ROOT}/build-logic/"
+  mkdir -p "${PROJECT_ROOT}/gradle" && touch "${PROJECT_ROOT}/gradle/libs.versions.toml"     # no catalog yet → an empty one
   bash "${PLUGIN_ROOT}/scripts/apply-overlay.sh" patch-libs "${PROJECT_ROOT}" "${PLUGIN_ROOT}/overlay/gradle/libs.versions.toml.additions.tmpl"
   bash "${PLUGIN_ROOT}/scripts/apply-overlay.sh" pin-toolchain "${PROJECT_ROOT}"
   ```
   minSdk: below 29 without a `min_sdk` from the caller → stop before editing and report `NEEDS INPUT` (raise to 29?);
   the conventions refuse anything below 26 (`java.time` without desugaring).
-- **Verify:** `./gradlew assembleDebug lint` green; the gate tasks exist (`./gradlew help --task coverageVerify`);
-  `gradle/wrapper/gradle-wrapper.properties` on ≥ 9.8.1.
+
+Then what `scripts/android-new.sh prepare` does for a new project: in every module, `-vNN` resource folders at or
+below minSdk merged into their unqualified folder (Lint `ObsoleteSdkInt`); in every app module (one applying
+`com.android.application`), `res/resources.properties` (the application convention's `generateLocaleConfig` needs
+it — set `unqualifiedResLocale` to the language of `res/values/strings.xml` if that isn't English) and the
+backup-rule XMLs the Android Studio templates ship wired into the manifest (Lint `UnusedResources`); plus CLAUDE.md's
+`**minSdk:**` line set to the catalog's `androidMinSdk`. It moves and adds, never deletes — a file present in both
+folders is listed for a hand-merge, the `-vNN` copy winning (it is the one every supported device uses):
+```bash
+source "${TMPDIR:-/tmp}/android-forge-migrate.env"; : "${PROJECT_ROOT:?}" "${PLUGIN_ROOT:?}"
+python3 - "${PROJECT_ROOT}" "${PLUGIN_ROOT}" <<'PY'
+import pathlib, re, shutil, sys
+root, plugin = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+min_sdk = int(re.search(r'^androidMinSdk\s*=\s*"(\d+)"', (root / "gradle/libs.versions.toml").read_text(), re.M).group(1))
+skip = {"build", "build-logic", ".gradle", ".git"}
+builds = [p for p in root.rglob("build.gradle*") if p.parent != root and not skip.intersection(p.relative_to(root).parts[:-1])]
+for folder in sorted(f for p in builds for f in p.parent.glob("src/*/res/*-v*")):
+    m = re.fullmatch(r"(.+)-v(\d+)", folder.name)
+    if not (folder.is_dir() and m and int(m.group(2)) <= min_sdk):
+        continue
+    target = folder.parent / m.group(1)
+    target.mkdir(exist_ok=True)
+    for f in sorted(folder.iterdir()):
+        if (target / f.name).exists():
+            print(f"hand-merge: {f} into {target.name}/ (the -v{m.group(2)} copy wins)")
+        else:
+            f.rename(target / f.name)
+    if not any(folder.iterdir()):
+        folder.rmdir()
+        print(f"merged: {folder.relative_to(root)} into {target.name}")
+apps = sorted({p.parent for p in builds if re.search(r"android[.-]?application", p.read_text(), re.I)})
+for module in apps:
+    res, manifest = module / "src/main/res", module / "src/main/AndroidManifest.xml"
+    if not (res / "resources.properties").exists():
+        res.mkdir(parents=True, exist_ok=True)
+        shutil.copy(plugin / "overlay/app/src/main/res/resources.properties", res)
+        print(f"added: {res / 'resources.properties'}")
+    tag = re.search(r"<application\b[^>]*>", manifest.read_text(), re.S) if manifest.exists() else None
+    if tag:
+        new = tag.group(0)
+        for attr, xml in (("dataExtractionRules", "data_extraction_rules"), ("fullBackupContent", "backup_rules")):
+            if (res / "xml" / f"{xml}.xml").exists() and f"android:{attr}=" not in new:
+                new = new.replace("<application", f'<application\n        android:{attr}="@xml/{xml}"', 1)
+        if new != tag.group(0):
+            manifest.write_text(manifest.read_text().replace(tag.group(0), new, 1))
+            print(f"wired backup rules: {manifest}")
+claude = root / "CLAUDE.md"
+if claude.exists():
+    text = claude.read_text()
+    synced = re.sub(r"^(- \*\*minSdk:\*\*) \d+", rf"\g<1> {min_sdk}", text, count=1, flags=re.M)
+    if synced != text:
+        claude.write_text(synced)
+        print(f"CLAUDE.md: minSdk {min_sdk}")
+print("app modules:", ", ".join(str(m.relative_to(root)) for m in apps) or "none found")
+PY
+```
+
+- **Verify:** `./gradlew spotlessApply --continue` (it also reformats the project's own sources to ktlint — expect a
+  diff), then `./gradlew assembleDebug` green; the gate tasks exist (`./gradlew help --task coverageVerify`);
+  `gradle/wrapper/gradle-wrapper.properties` on ≥ 9.8.1. `spotlessApply` and `./gradlew lint --continue` still run
+  red on findings in the existing UI code that no formatter fixes — compose-rules / compose-lints such as a missing
+  `modifier` parameter or a public `@Preview`, hard-coded strings, … — list them in the report: the **`a11y`** layer
+  owns them. A finding in a build file, manifest or resource this layer touched is this layer's to fix. No lint
+  baseline, no suppressions.
 
 ## modules — the `:core:*` + `:feature:*:{api,impl}` shape (structural — per area)
 - Doc: `architecture.md` § Module map, § Dependency direction; ADR 0003.
@@ -136,9 +205,13 @@ come with `:core:data` (`render-module core.data …`, then trim the same exampl
 
 ## a11y — accessibility, i18n, resource prefixes
 - Doc: `i18n-a11y.md`. **Detect:** hard-coded strings; `Icon`/`Image` without `contentDescription`; `.sp` literals;
-  `left/right`; resource keys without the module prefix. **Transform:** strings → the module's `strings.xml` with its
-  `resourcePrefix` (set it in the build file; rename keys and their references); descriptions; typography; start/end.
-  **Verify:** `./gradlew lint` (warnings are errors) + build.
+  `left/right`; resource keys without the module prefix; every other finding `./gradlew spotlessCheck lint` still
+  reports in existing code (the ones `build` listed — compose-rules / compose-lints: a missing `modifier` parameter,
+  a public `@Preview`, …).
+  **Transform:** strings → the module's `strings.xml` with its
+  `resourcePrefix` (set it in the build file; rename keys and their references); descriptions; typography; start/end;
+  each remaining finding fixed at its source — no baseline, no suppressions.
+  **Verify:** `./gradlew spotlessCheck lint` (warnings are errors) + build.
 
 ## adaptive — large screens and edge-to-edge
 - Doc: `form-factors/adaptive.md`; the **`adaptive`** and **`edge-to-edge`** skills. **Detect:** `screenOrientation`,
