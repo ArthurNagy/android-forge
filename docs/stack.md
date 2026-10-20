@@ -85,8 +85,9 @@ wherever one exists** — Google's docs, samples and Android skills then apply d
   file, provided `@Singleton` by `DataStoreModule`. Typed data: a kotlinx-serialization JSON
   `Serializer<T>` (the Proto plugin needs AGP 9 opt-out flags). Secrets: a Tink-encrypted serializer —
   never `EncryptedSharedPreferences` (deprecated).
-- **Idiom**: reads never throw (`.catch { if (it is IOException) emit(emptyPreferences()) else throw it }`);
-  writes may — the repository maps them to `DomainError`.
+- **Idiom**: reads never throw — `retryWhen` on `IOException`: emit `emptyPreferences()`, then retry after a back-off
+  (`catch` would complete the flow); the DataStore gets `ReplaceFileCorruptionHandler { emptyPreferences() }`
+  (`DataStoreModule`). Writes may throw — the repository maps them to `DomainError`.
 
 ### Coil 3
 - **Why**: the Compose-first image loader (Glide's Compose module is still beta); shares the app's

@@ -2,9 +2,11 @@ import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 
 /*
  * Convention for every app module (:app and the opt-in form-factor apps: :wear, :tv,
- * :automotive). Always Compose. Release builds run R8 (full mode is AGP's default) with
- * resource shrinking; `generateLocaleConfig` publishes the app's languages to the system's
- * per-app language settings (needs src/main/res/resources.properties).
+ * :automotive). Always Compose — but no Material library: each app module picks its own (:app the
+ * mobile `androidx.compose.material3`, :wear Wear Compose Material 3, :tv `androidx.tv.material3`), so
+ * a TV or watch screen can't auto-import the phone's components. Release builds run R8 (full mode is
+ * AGP's default) with resource shrinking; `generateLocaleConfig` publishes the app's languages to the
+ * system's per-app language settings (needs src/main/res/resources.properties).
  */
 plugins {
     id("com.android.application")
@@ -25,7 +27,7 @@ fun lib(alias: String) = catalog.findLibrary(alias).get()
 android {
     compileSdk = catalogVersion("androidCompileSdk").toInt()
     defaultConfig {
-        minSdk = catalogVersion("androidMinSdk").toInt()
+        minSdk = catalog.androidMinSdk() // fails below android-forge's floor (26)
         targetSdk = catalogVersion("androidTargetSdk").toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -100,7 +102,6 @@ dependencies {
     "implementation"(lib("androidx-activity-compose"))
     "implementation"(lib("androidx-compose-ui"))
     "implementation"(lib("androidx-compose-foundation"))
-    "implementation"(lib("androidx-compose-material3"))
     "implementation"(lib("androidx-compose-ui-tooling-preview"))
     "debugImplementation"(lib("androidx-compose-ui-tooling"))
     "debugImplementation"(lib("androidx-compose-ui-test-manifest"))

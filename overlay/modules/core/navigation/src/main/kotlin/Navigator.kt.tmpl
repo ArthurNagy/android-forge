@@ -27,6 +27,11 @@ class Navigator(
         if (canGoBack) backStack.removeAt(backStack.lastIndex)
     }
 
-    /** A screen's Back action, or null on the root entry so the screen shows no Back control. */
-    fun backOrNull(): (() -> Unit)? = if (canGoBack) ::goBack else null
+    /**
+     * The Back action for the entry showing [key] — pass the key the entry's content lambda receives:
+     * `entry<GalleryKey> { key -> GalleryScreen(onNavigateBack = navigator.backOrNull(key)) }`. Null when
+     * [key] is the root (bottom) entry, so that screen shows no Back control — also while a list-detail
+     * scene shows the root list beside its detail, which the back-stack size alone can't tell.
+     */
+    fun backOrNull(key: NavKey): (() -> Unit)? = if (backStack.firstOrNull() == key) null else ::goBack
 }

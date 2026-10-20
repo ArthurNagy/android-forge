@@ -10,7 +10,8 @@ android {
         buildConfig = true
     }
     defaultConfig {
-        // The API every remote data source talks to. Per-flavor or per-build-type values go here too.
+        // The API every remote data source talks to. A per-environment value (a staging server for debug) goes in
+        // buildTypes { debug { buildConfigField(...) } } — android-forge projects use build types, never product flavors.
         buildConfigField("String", "API_BASE_URL", "\"https://api.example.com/\"")
     }
 }

@@ -21,9 +21,20 @@ class DomainErrorMessageTest {
     fun everyBuiltInCaseHasItsOwnMessage() {
         assertEquals(R.string.core_ui_error_connectivity, DomainError.Network.Connectivity.messageRes())
         assertEquals(R.string.core_ui_error_server, DomainError.Network.Http(status = 503, code = null).messageRes())
+        assertEquals(R.string.core_ui_error_request, DomainError.Network.Http(status = 403, code = null).messageRes())
         assertEquals(R.string.core_ui_error_not_found, DomainError.NotFound.messageRes())
         assertEquals(R.string.core_ui_error_unknown, DomainError.Unknown(cause = "boom").messageRes())
         assertEquals(R.string.core_ui_error_unknown, SomeTypedError.messageRes())
+    }
+
+    @Test
+    fun onlyServerErrorStatusesBlameTheServer() {
+        for (status in listOf(500, 502, 599)) {
+            assertEquals(R.string.core_ui_error_server, DomainError.Network.Http(status, code = null).messageRes(), "HTTP $status")
+        }
+        for (status in listOf(400, 401, 409, 422, 429, 499, 600)) {
+            assertEquals(R.string.core_ui_error_request, DomainError.Network.Http(status, code = null).messageRes(), "HTTP $status")
+        }
     }
 
     @Test

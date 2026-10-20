@@ -42,7 +42,9 @@ come with `:core:data` (`render-module core.data …`, then trim the same exampl
   wrapper, 4 GiB daemon heap for Hilt/KSP + Robolectric), and
   replace each module's hand-written Android config with the matching convention
   (`android-forge.android.application` / `.android.library[.compose]` / `.jvm.library` + `.hilt` once Hilt is in).
-  Keep module-specific config (namespace, `applicationId`, flavors, signing); drop hand-set `minSdk` — the conventions
+  Keep module-specific config (namespace, `applicationId`, signing, flavors — but a flavored module fails the coverage
+  gate's `coverageInputs` check, since android-forge measures one debug variant per module: move per-environment
+  values to build types); drop hand-set `minSdk` — the conventions
   read `androidMinSdk`.
   ```bash
   source "${TMPDIR:-/tmp}/android-forge-migrate.env"; : "${PROJECT_ROOT:?}" "${PLUGIN_ROOT:?}" "${MIN_SDK:?}"

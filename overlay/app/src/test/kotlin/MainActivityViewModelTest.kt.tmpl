@@ -9,13 +9,13 @@ import kotlin.test.Test
 
 class MainActivityViewModelTest {
     @Test
-    fun followsTheStoredThemeMode() = runTest {
+    fun loadsThenFollowsTheStoredThemeMode() = runTest {
         val repository = FakeUserPreferencesRepository(ThemeMode.DARK)
         val viewModel = MainActivityViewModel(ObserveThemeModeUseCase(repository))
 
         viewModel.testWithInternalState(this, MainActivityState.Initial) {
             runOnCreate()
-            expectInternalState { copy(themeMode = ThemeMode.DARK) }
+            expectInternalState { copy(loading = false, themeMode = ThemeMode.DARK) }
             repository.setThemeMode(ThemeMode.LIGHT)
             expectInternalState { copy(themeMode = ThemeMode.LIGHT) }
             cancelAndIgnoreRemainingItems()

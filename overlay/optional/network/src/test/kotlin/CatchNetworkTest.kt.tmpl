@@ -14,6 +14,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CatchNetworkTest {
+    private fun httpError(status: Int) = HttpException(Response.error<Unit>(status, "".toResponseBody(null)))
+
     @Test
     fun aSuccessfulCallPassesItsValueThrough() = runTest {
         assertEquals(Ok(42), catchNetwork { 42 })
@@ -21,9 +23,13 @@ class CatchNetworkTest {
 
     @Test
     fun anErrorStatusBecomesHttp() = runTest {
-        val result = catchNetwork { throw HttpException(Response.error<Unit>(503, "".toResponseBody(null))) }
+        assertEquals(Err(DomainError.Network.Http(status = 503, code = null)), catchNetwork { throw httpError(503) })
+        assertEquals(Err(DomainError.Network.Http(status = 400, code = null)), catchNetwork { throw httpError(400) })
+    }
 
-        assertEquals(Err(DomainError.Network.Http(status = 503, code = null)), result)
+    @Test
+    fun notFoundBecomesNotFound() = runTest {
+        assertEquals(Err(DomainError.NotFound), catchNetwork { throw httpError(404) })
     }
 
     @Test
@@ -39,5 +45,10 @@ class CatchNetworkTest {
     @Test
     fun cancellationPropagates() = runTest {
         assertFailsWith<CancellationException> { catchNetwork { throw CancellationException("cancelled") } }
+    }
+
+    @Test
+    fun errorsPropagate() = runTest {
+        assertFailsWith<OutOfMemoryError> { catchNetwork { throw OutOfMemoryError("out of memory") } }
     }
 }

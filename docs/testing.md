@@ -39,9 +39,10 @@ Robolectric SDK pin reaches them); a JVM module adds `testImplementation(project
   `.MediumTablet`, …). Goldens live in `src/test/screenshots/` and are committed.
   - `./gradlew recordRoborazziDebug` — (re)record after an intended UI change; review the PNGs.
   - CI verifies: `-Proborazzi.test.verify=true` makes every local test run compare; a missing golden fails.
-    Up to 0.1% of an image's pixels may differ (`:core:testing`'s `ScreenshotTolerancePlugin` sets it for every
-    module), so macOS-recorded goldens survive Linux CI's anti-aliasing; anything bigger needs a re-record
-    ([ci.md](ci.md) § Screenshot goldens across OSes).
+    Each pixel may differ by a colour distance of 0.02 (a few levels per channel) and up to 0.01% of an image's
+    pixels by more — `:core:testing`'s `ScreenshotTolerancePlugin`, a Robolectric plugin, sets it for every module's
+    `captureRoboImage()` — so macOS-recorded goldens survive Linux CI's anti-aliasing while a changed letter in a
+    headline still fails; anything bigger needs a re-record ([ci.md](ci.md) § Screenshot goldens across OSes).
 - **UI Automator 2.4 / instrumented tests** — `app/src/androidTest` for flows that need a real device;
   run on demand or in an opt-in Gradle Managed Device job (see [ci.md](ci.md)).
 
@@ -168,9 +169,14 @@ class GalleryScreenTest {
 Compose code counts; `:core:testing` and `com.android.test` modules are not measured) and fails below **85% line
 coverage**; `./gradlew coverageReport` writes `build/reports/jacoco/coverageReport/html/`. Excluded as generated
 or wiring-only: Compose singletons, serializers, Hilt modules (`*Module`) and Hilt/Dagger-generated classes,
-`R`/`BuildConfig`, `MainApplication`/`MainActivity`, feature `api` modules and `*EntriesKt`, `DomainError`, design
-tokens, `RealDispatcherProvider`. The list is `coverageExcludes` in build-logic's `android-forge.root` convention
-(ADR 0008).
+Room's generated `*_Impl` classes, `R`/`BuildConfig`, `MainApplication`/`MainActivity`, feature `api` modules and
+`*EntriesKt`, `DomainError`, design tokens, `RealDispatcherProvider`. The list is `coverageExcludes` in build-logic's
+`android-forge.root` convention (ADR 0008).
+
+Android classes come from AGP's Variant API (`ScopedArtifact.CLASSES`, debug variant). Each module's `coverageInputs`
+task fails the gate when a module with sources contributes no classes, a module with tests wrote no execution data,
+or the module declares product flavors (android-forge measures one debug variant per module);
+`coverageAggregateInputs` fails when nothing is measured.
 
 ## Running on a device or emulator
 

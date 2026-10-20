@@ -2,7 +2,8 @@ import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 
 /*
  * Base convention for every Android library module (:core:* Android modules, :feature:*:impl,
- * form-factor libraries). SDK levels come from the catalog (`androidCompileSdk`, `androidMinSdk`),
+ * form-factor libraries). SDK levels come from the catalog (`androidCompileSdk`, `androidMinSdk` — 26
+ * at least: java.time without core-library desugaring),
  * Kotlin is AGP 9's built-in Kotlin (no kotlin-android plugin), debug unit tests record JaCoCo
  * coverage for the root `coverageVerify` gate, and Android Lint treats warnings as errors.
  *
@@ -21,7 +22,7 @@ fun catalogVersion(key: String): String = catalog.findVersion(key).get().require
 android {
     compileSdk = catalogVersion("androidCompileSdk").toInt()
     defaultConfig {
-        minSdk = catalogVersion("androidMinSdk").toInt()
+        minSdk = catalog.androidMinSdk() // fails below android-forge's floor (26)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {

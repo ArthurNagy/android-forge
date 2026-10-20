@@ -1,0 +1,57 @@
+package ${BASE_PACKAGE}.core.testing
+
+import com.dropbox.differ.SimpleImageComparator
+import com.github.takahirom.roborazzi.InternalRoborazziApi
+import com.github.takahirom.roborazzi.RoborazziOptions
+import com.github.takahirom.roborazzi.provideRoborazziContext
+import org.robolectric.pluginapi.TestEnvironmentLifecyclePlugin
+
+/**
+ * The compare tolerance of every module's Roborazzi goldens, set once here instead of in each test.
+ * Goldens are recorded on developer machines (often macOS) and verified on CI (Linux); Robolectric's
+ * native graphics can round antialiased edges slightly differently per OS and CPU, and a pixel-exact
+ * comparison would fail a PR with no UI change. Tolerated: a color difference of up to
+ * [MAX_PIXEL_DISTANCE] per pixel (a few levels per channel — invisible), and up to [CHANGE_THRESHOLD]
+ * of an image's pixels beyond that. One changed letter in a headline already changes more pixels; a
+ * changed word, icon, color or layout far more — they still fail `-Proborazzi.test.verify=true`.
+ *
+ * Robolectric finds this plugin through META-INF/services and runs it before every test; it makes the
+ * tolerance Roborazzi's default options, which every `captureRoboImage()` without explicit
+ * `roborazziOptions` uses (the hook Roborazzi's own RoborazziRule sets). If a Roborazzi upgrade changes
+ * that internal hook, :core:testing stops compiling — /android-forge-bump-stack sees it.
+ */
+class ScreenshotTolerancePlugin : TestEnvironmentLifecyclePlugin {
+    override fun onSetupApplicationState() {
+        // Robolectric also runs in modules without Roborazzi (Room's DAO tests): nothing to set there.
+        if (roborazziOnClasspath) RoborazziDefaults.apply()
+    }
+
+    private companion object {
+        val roborazziOnClasspath = runCatching { Class.forName("com.github.takahirom.roborazzi.RoborazziContextKt") }.isSuccess
+    }
+}
+
+/**
+ * Color distance a pixel may differ by and still count as unchanged: √(Δr² + Δg² + Δb² + Δa²) on 0–1
+ * channels, so 0.02 ≈ 5 levels (of 255) in one channel or 2–3 in each. Roborazzi's default: 0.007.
+ */
+private const val MAX_PIXEL_DISTANCE = 0.02F
+
+/** Fraction of an image's pixels allowed to differ beyond [MAX_PIXEL_DISTANCE] (0.01%). */
+private const val CHANGE_THRESHOLD = 0.0001F
+
+/** Apart from the plugin, so loading the plugin never needs Roborazzi's classes. */
+private object RoborazziDefaults {
+    @OptIn(InternalRoborazziApi::class)
+    fun apply() {
+        provideRoborazziContext().setRuleOverrideRoborazziOptions(
+            RoborazziOptions(
+                compareOptions =
+                    RoborazziOptions.CompareOptions(
+                        changeThreshold = CHANGE_THRESHOLD,
+                        imageComparator = SimpleImageComparator(maxDistance = MAX_PIXEL_DISTANCE),
+                    ),
+            ),
+        )
+    }
+}

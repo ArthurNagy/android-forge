@@ -38,7 +38,7 @@ uploaded as the `reports` artifact — on failure too.
 
 Goldens (`<module>/src/test/screenshots/`, Roborazzi on Robolectric) are verified on **Linux** — `pr.yml` runs on
 `ubuntu-latest`. Robolectric's rendering can differ slightly between macOS and Linux (font rasterisation,
-anti-aliasing); the build conventions compare with a small tolerance, but a golden recorded on a Mac can still
+anti-aliasing); `:core:testing`'s `ScreenshotTolerancePlugin` compares with a small tolerance, but a golden recorded on a Mac can still
 fail CI with no UI change. Then re-record on Linux instead of loosening the comparison:
 
 1. Push the branch; Actions → **Record goldens** → *Run workflow* on that branch (`record-goldens.yml`: the same

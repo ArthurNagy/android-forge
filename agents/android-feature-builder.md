@@ -158,7 +158,8 @@ Surface a clear error and stop if a request conflicts with them:
      That is all the app needs — the entries arrive through Hilt multibinding.
    - `start_destination: yes`: in `app/src/main/kotlin/<base>/AppNavigation.kt`, pass `<Name>Key` to
      `rememberNavBackStack(...)` (import it from `<base>.feature.<pkg>.api`), remove `entry<HomeKey> { HomeScreen() }`,
-     delete `Home.kt` and the `home_placeholder` string; update `AppNavigationTest` (it asserted the Home text) to assert
+     delete `Home.kt`, `app/src/test/kotlin/<base>/HomeScreenTest.kt` and its goldens
+     `app/src/test/screenshots/<base>.HomeScreenTest.*.png`, and the `home_placeholder` string; update `AppNavigationTest` (it asserted the Home text) to assert
      the new start screen.
    - If the marker is missing (an adopted project), add the dependency at the end of the app's `dependencies { }` and say so.
 

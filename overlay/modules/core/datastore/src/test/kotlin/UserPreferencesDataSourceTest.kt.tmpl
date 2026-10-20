@@ -1,11 +1,20 @@
 package ${BASE_PACKAGE}.core.datastore
 
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import app.cash.turbine.test
 import ${BASE_PACKAGE}.core.model.ThemeMode
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import java.io.File
+import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -13,15 +22,56 @@ class UserPreferencesDataSourceTest {
     @get:Rule
     val tmpFolder: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
 
+    private fun TestScope.dataStore(file: File = tmpFolder.newFolder().resolve("prefs.preferences_pb")) =
+        PreferenceDataStoreFactory.create(corruptionHandler = userPreferencesCorruptionHandler, scope = backgroundScope) { file }
+
     @Test
     fun themeModeIsSystemUntilSetThenTheStoredValue() = runTest {
-        val dataStore = PreferenceDataStoreFactory.create(scope = backgroundScope) {
-            tmpFolder.newFolder().resolve("prefs.preferences_pb")
-        }
-        val dataSource = UserPreferencesDataSource(dataStore)
+        val dataSource = UserPreferencesDataSource(dataStore())
 
         assertEquals(ThemeMode.SYSTEM, dataSource.themeMode.first())
         dataSource.setThemeMode(ThemeMode.DARK)
         assertEquals(ThemeMode.DARK, dataSource.themeMode.first())
+    }
+
+    @Test
+    fun aCorruptFileReadsAsTheDefaultsAndTheNextWriteReplacesIt() = runTest {
+        val file = tmpFolder.newFolder().resolve("prefs.preferences_pb").apply { writeBytes(byteArrayOf(-1, -1, -1, -1)) }
+        val dataSource = UserPreferencesDataSource(dataStore(file))
+
+        assertEquals(ThemeMode.SYSTEM, dataSource.themeMode.first())
+        dataSource.setThemeMode(ThemeMode.LIGHT)
+        assertEquals(ThemeMode.LIGHT, dataSource.themeMode.first())
+    }
+
+    @Test
+    fun aFailedReadFallsBackToTheDefaultsAndKeepsFollowingTheStore() = runTest {
+        val store = dataStore()
+        UserPreferencesDataSource(store).setThemeMode(ThemeMode.DARK)
+        val dataSource = UserPreferencesDataSource(FirstReadFails(store))
+
+        dataSource.themeMode.test {
+            assertEquals(ThemeMode.SYSTEM, awaitItem())
+            assertEquals(ThemeMode.DARK, awaitItem())
+            dataSource.setThemeMode(ThemeMode.LIGHT)
+            assertEquals(ThemeMode.LIGHT, awaitItem())
+        }
+    }
+
+    /** Fails the first read with an IOException (a transient I/O error), then reads [delegate]. */
+    private class FirstReadFails(
+        private val delegate: DataStore<Preferences>,
+    ) : DataStore<Preferences> {
+        private var failed = false
+
+        override val data: Flow<Preferences> = flow {
+            if (!failed) {
+                failed = true
+                throw IOException("read failed")
+            }
+            emitAll(delegate.data)
+        }
+
+        override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences = delegate.updateData(transform)
     }
 }

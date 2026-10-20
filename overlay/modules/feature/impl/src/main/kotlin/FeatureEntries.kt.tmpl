@@ -11,7 +11,7 @@ import ${BASE_PACKAGE}.feature.${FEATURE_NAME_PKG}.api.${FEATURE_NAME_PASCAL}Key
  * from their `:api` modules; the screens get plain lambdas, never the Navigator.
  */
 internal fun EntryProviderScope<NavKey>.${FEATURE_NAME_CAMEL}Entries(navigator: Navigator) {
-    entry<${FEATURE_NAME_PASCAL}Key> {
-        ${FEATURE_NAME_PASCAL}Screen(onNavigateBack = navigator.backOrNull())
+    entry<${FEATURE_NAME_PASCAL}Key> { key ->
+        ${FEATURE_NAME_PASCAL}Screen(onNavigateBack = navigator.backOrNull(key))
     }
 }

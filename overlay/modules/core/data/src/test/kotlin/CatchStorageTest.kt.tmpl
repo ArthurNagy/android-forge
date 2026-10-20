@@ -25,4 +25,9 @@ class CatchStorageTest {
     fun cancellationPropagates() = runTest {
         assertFailsWith<CancellationException> { catchStorage { throw CancellationException("cancelled") } }
     }
+
+    @Test
+    fun errorsPropagate() = runTest {
+        assertFailsWith<OutOfMemoryError> { catchStorage { throw OutOfMemoryError("out of memory") } }
+    }
 }

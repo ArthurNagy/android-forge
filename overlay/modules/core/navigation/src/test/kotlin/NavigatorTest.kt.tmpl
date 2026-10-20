@@ -29,14 +29,24 @@ class NavigatorTest {
 
     @Test
     fun theRootEntryCannotBePopped() {
-        val navigator = Navigator(NavBackStack(Root))
+        val backStack = NavBackStack<NavKey>(Root)
+        val navigator = Navigator(backStack)
 
         assertFalse(navigator.canGoBack)
-        assertNull(navigator.backOrNull())
+        assertNull(navigator.backOrNull(Root))
         navigator.goBack()
-        assertFalse(navigator.canGoBack)
+        assertEquals(listOf(Root), backStack.toList())
+    }
 
-        navigator.navigate(Detail)
-        assertNotNull(navigator.backOrNull())
+    @Test
+    fun onlyTheRootEntryHasNoBackAction() {
+        // A list-detail scene shows the root list beside its detail: the list still gets no Back.
+        val backStack = NavBackStack<NavKey>(Root, Detail)
+        val navigator = Navigator(backStack)
+
+        assertNull(navigator.backOrNull(Root))
+        val back = assertNotNull(navigator.backOrNull(Detail))
+        back()
+        assertEquals(listOf(Root), backStack.toList())
     }
 }
