@@ -7,8 +7,9 @@ argument-hint: "[--from-dump]"
 
 Generates or revises `docs/MVP_SPEC.md` for an android-forge project.
 
-First load the `android-forge:mvp-spec-authoring` skill (Skill tool) — it holds the section templates and the
-good-vs-vague checklist this command applies.
+First load the `android-forge:mvp-spec-authoring` skill (Skill tool; where it isn't available, read
+`${CLAUDE_PLUGIN_ROOT}/skills/mvp-spec-authoring/SKILL.md`) — it holds the section templates and the good-vs-vague
+checklist this command applies.
 
 If `docs/MVP_SPEC.md` already has content, ask via `AskUserQuestion` first: **Revise sections (Recommended)** ·
 **Start over** — never overwrite it without that answer.

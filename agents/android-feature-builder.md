@@ -29,12 +29,13 @@ Inputs (from `/android-forge-add-feature` or the user):
 - `feature_name` — kebab-case (`photo-detail`)
 - `base_package` — reverse-domain (`com.example.myapp`; the project CLAUDE.md's "Application ID / base package")
 - `project_root` — absolute path
-- `claude_plugin_root` — absolute path to the installed android-forge plugin
+- `claude_plugin_root` — absolute path to the installed android-forge plugin; not passed → `${CLAUDE_PLUGIN_ROOT}`
 - `start_destination` — optional `yes`: this feature replaces the `Home` placeholder as the app's start destination
 - `key_argument` — optional (e.g. `photoId: String`): the key carries an argument and the ViewModel gets it by assisted injection
 
 The Bash tool may run **zsh**: brace every variable (`"${FEATURE_NAME}:api"` — an unbraced `$FEATURE_NAME:a…`
-is a zsh path modifier) and quote every path (the project path usually contains a space).
+is a zsh path modifier) and quote every path (the project path usually contains a space). Shell state doesn't
+survive between Bash calls: step 1 writes your inputs to an env file, and every later block starts by sourcing it.
 
 ## What you produce
 
@@ -72,7 +73,8 @@ Surface a clear error and stop if a request conflicts with them:
    `modifier: Modifier = Modifier`; hoists state into the stateless `internal <Name>Content`. An assisted ViewModel
    (key argument) is a **required** `viewModel` parameter instead — the entry builds it (rule 5).
 5. Keys live only in `:api`, are `@Serializable` and carry IDs. Entries go in `<camel>Entries(navigator)`, contributed by
-   the `@IntoSet` entry module; screens receive lambdas (`navigator::navigate`, `navigator.backOrNull()`), never the
+   the `@IntoSet` entry module; screens receive lambdas (`navigator::navigate`, and `navigator.backOrNull(key)` with the
+   key the entry's lambda receives — null for the root entry, so a list pane beside its detail shows no Back), never the
    `Navigator`. A key argument reaches the ViewModel through `@AssistedInject` + `@AssistedFactory` and
    `hiltViewModel<VM, VM.Factory>(creationCallback = { it.create(key) })` in the entry.
 6. Dependencies: the impl uses what the `android-forge.feature.impl` convention provides plus other features' `:api`;
@@ -87,37 +89,52 @@ Surface a clear error and stop if a request conflicts with them:
 
 ## Process
 
-1. **Read the project.** `CLAUDE.md` (base package, form factors, features), one existing feature if any
-   (`ls "${project_root}/feature"`), and `:core:domain` use cases:
+1. **Inputs, names, validation** — one Bash block. Fill the first four lines from your inputs (nothing else in this
+   prompt spells them out); any ✗ → stop and return `RESULT: REFUSED` with that line as `FAILURE`:
    ```bash
-   grep -rl "UseCase$\|: UseCase" "${project_root}/core/domain/src/main/kotlin" 2>/dev/null
-   ```
-   A use case matching the feature's purpose (`Get<Name>UseCase`, `Observe<Name>…`) gets wired in step 5.
-   Unfamiliar or pre-stable Jetpack API needed? `android docs search "<keywords>"` before using it.
-
-2. **Names** (one Bash block; every later block re-derives or reuses them):
-   ```bash
-   FEATURE_NAME="${feature_name}"
+   PROJECT_ROOT="<project_root>"
+   PLUGIN_ROOT="<claude_plugin_root>"
+   FEATURE_NAME="<feature_name>"
+   BASE_PACKAGE="<base_package>"
+   printf '%s\n' "${FEATURE_NAME}" | grep -Eq '^[a-z][a-z0-9]*(-[a-z0-9]+)*$' \
+       || { echo "✗ feature name must be lowercase kebab-case (photo-detail): ${FEATURE_NAME}"; exit 1; }
+   grep -q "android-forge project rules" "${PROJECT_ROOT}/CLAUDE.md" 2>/dev/null \
+       || { echo "✗ ${PROJECT_ROOT} is not an android-forge project (CLAUDE.md lacks the project-rules line)"; exit 1; }
+   [[ ! -e "${PROJECT_ROOT}/feature/${FEATURE_NAME}" ]] || { echo "✗ feature/${FEATURE_NAME} already exists"; exit 1; }
+   [[ -f "${PLUGIN_ROOT}/scripts/apply-overlay.sh" ]] || { echo "✗ not the android-forge plugin: ${PLUGIN_ROOT}"; exit 1; }
    FEATURE_NAME_PKG="${FEATURE_NAME//-/}"                                    # photo-detail → photodetail
    FEATURE_NAME_SNAKE="${FEATURE_NAME//-/_}"                                 # photo-detail → photo_detail
    FEATURE_NAME_PASCAL="$(echo "${FEATURE_NAME}" | awk -F- '{for(i=1;i<=NF;i++) printf "%s%s",toupper(substr($i,1,1)),substr($i,2)}')"
    FEATURE_NAME_CAMEL="$(echo "${FEATURE_NAME_PASCAL}" | awk '{print tolower(substr($0,1,1)) substr($0,2)}')"
-   BASE_PACKAGE="${base_package}"; BASE_PACKAGE_PATH="$(echo "${BASE_PACKAGE}" | tr . /)"
-   export FEATURE_NAME FEATURE_NAME_PKG FEATURE_NAME_SNAKE FEATURE_NAME_PASCAL FEATURE_NAME_CAMEL BASE_PACKAGE BASE_PACKAGE_PATH
+   BASE_PACKAGE_PATH="$(echo "${BASE_PACKAGE}" | tr . /)"
+   export PROJECT_ROOT PLUGIN_ROOT FEATURE_NAME FEATURE_NAME_PKG FEATURE_NAME_SNAKE FEATURE_NAME_PASCAL FEATURE_NAME_CAMEL \
+       BASE_PACKAGE BASE_PACKAGE_PATH
+   typeset -p PROJECT_ROOT PLUGIN_ROOT FEATURE_NAME FEATURE_NAME_PKG FEATURE_NAME_SNAKE FEATURE_NAME_PASCAL \
+       FEATURE_NAME_CAMEL BASE_PACKAGE BASE_PACKAGE_PATH > "${TMPDIR:-/tmp}/android-forge-feature.env"
    ```
-   Refuse a name that already exists (`feature/${FEATURE_NAME}` present).
 
-3. **Render both modules and rename `Feature*` files** (same Bash block as step 2):
+2. **Read the project.** `CLAUDE.md` (form factors, features), one existing feature if any
+   (`ls "${PROJECT_ROOT}/feature"`), and `:core:domain` use cases:
    ```bash
-   AO="${claude_plugin_root}/scripts/apply-overlay.sh"
-   bash "${AO}" render-module "feature.${FEATURE_NAME_PKG}.api" "${claude_plugin_root}/overlay/modules/feature/api" \
-       "${project_root}/feature/${FEATURE_NAME}/api" "${BASE_PACKAGE_PATH}"
-   bash "${AO}" render-module "feature.${FEATURE_NAME_PKG}.impl" "${claude_plugin_root}/overlay/modules/feature/impl" \
-       "${project_root}/feature/${FEATURE_NAME}/impl" "${BASE_PACKAGE_PATH}"
-   find "${project_root}/feature/${FEATURE_NAME}" -type f -name 'Feature*.kt' | while read -r f; do
-       mv "$f" "$(dirname "$f")/${FEATURE_NAME_PASCAL}$(basename "$f" | sed 's/^Feature//')"
+   source "${TMPDIR:-/tmp}/android-forge-feature.env"; : "${PROJECT_ROOT:?}"
+   grep -rl "UseCase$\|: UseCase" "${PROJECT_ROOT}/core/domain/src/main/kotlin" 2>/dev/null
+   ```
+   A use case matching the feature's purpose (`Get<Name>UseCase`, `Observe<Name>…`) gets wired in step 5.
+   Unfamiliar or pre-stable Jetpack API needed? `android docs search "<keywords>"` before using it.
+
+3. **Render both modules and rename `Feature*` files:**
+   ```bash
+   source "${TMPDIR:-/tmp}/android-forge-feature.env"
+   : "${PROJECT_ROOT:?}" "${PLUGIN_ROOT:?}" "${FEATURE_NAME:?}" "${FEATURE_NAME_PASCAL:?}" "${BASE_PACKAGE_PATH:?}"
+   AO="${PLUGIN_ROOT}/scripts/apply-overlay.sh"
+   bash "${AO}" render-module "feature.${FEATURE_NAME_PKG}.api" "${PLUGIN_ROOT}/overlay/modules/feature/api" \
+       "${PROJECT_ROOT}/feature/${FEATURE_NAME}/api" "${BASE_PACKAGE_PATH}"
+   bash "${AO}" render-module "feature.${FEATURE_NAME_PKG}.impl" "${PLUGIN_ROOT}/overlay/modules/feature/impl" \
+       "${PROJECT_ROOT}/feature/${FEATURE_NAME}/impl" "${BASE_PACKAGE_PATH}"
+   find "${PROJECT_ROOT}/feature/${FEATURE_NAME}" -type f -name 'Feature*.kt' | while read -r f; do
+       mv "${f}" "$(dirname "${f}")/${FEATURE_NAME_PASCAL}$(basename "${f}" | sed 's/^Feature//')"
    done
-   bash "${AO}" patch-settings "${project_root}" "feature:${FEATURE_NAME}:api,feature:${FEATURE_NAME}:impl"
+   bash "${AO}" patch-settings "${PROJECT_ROOT}" "feature:${FEATURE_NAME}:api,feature:${FEATURE_NAME}:impl"
    ```
 
 4. **Key argument** (if `key_argument`): make the key a `data class <Name>Key(val <arg>) : NavKey`; give the ViewModel
@@ -126,7 +143,7 @@ Surface a clear error and stop if a request conflicts with them:
    `entry<<Name>Key> { key -> <Name>Screen(…, viewModel = hiltViewModel<<Name>ViewModel, <Name>ViewModel.Factory>(creationCallback = { it.create(key) })) }`;
    update the generated tests to construct `<Name>ViewModel(<Name>Key(…), …)`.
 
-5. **Use-case wiring** (if step 1 found one): add it to the ViewModel's `@Inject constructor`; replace the
+5. **Use-case wiring** (if step 2 found one): add it to the ViewModel's `@Inject constructor`; replace the
    "Replace with a use case" comment in `load()` with the real call (explicit imports
    `com.github.michaelbull.result.onOk` / `onErr`):
    ```kotlin
@@ -147,19 +164,39 @@ Surface a clear error and stop if a request conflicts with them:
 
 7. **CLAUDE.md**: append the feature to the `Features:` line (replace `_(none yet …)_`).
 
-8. **Format, record goldens, build** (allow several minutes on a cold daemon):
+8. **Format, record goldens, build** — one Bash call with a 600000 ms timeout (several minutes on a cold daemon). The
+   log keeps the full output; each step's exit code is Gradle's, and the first non-zero one stops the block:
    ```bash
-   cd "${project_root}" || exit 1
-   ./gradlew spotlessApply -q 2>&1 | tail -10                              # wrapping depends on name lengths
-   ./gradlew ":feature:${FEATURE_NAME}:impl:recordRoborazziDebug" -q 2>&1 | tail -10
-   ./gradlew ":feature:${FEATURE_NAME}:impl:testDebugUnitTest" ":app:assembleDebug" lint --console=plain 2>&1 | tail -30
+   source "${TMPDIR:-/tmp}/android-forge-feature.env"; cd "${PROJECT_ROOT:?}" || exit 1; : "${FEATURE_NAME:?}"
+   LOG="${TMPDIR:-/tmp}/android-forge-feature-gradle.log"
+   ./gradlew spotlessApply --console=plain > "${LOG}" 2>&1; rc=$?; tail -10 "${LOG}"; echo "spotlessApply exit=${rc}"
+   [[ ${rc} -eq 0 ]] || exit "${rc}"                                       # wrapping depends on name lengths
+   ./gradlew ":feature:${FEATURE_NAME}:impl:recordRoborazziDebug" --console=plain > "${LOG}" 2>&1; rc=$?
+   tail -10 "${LOG}"; echo "recordRoborazziDebug exit=${rc}"; [[ ${rc} -eq 0 ]] || exit "${rc}"
+   ./gradlew ":feature:${FEATURE_NAME}:impl:testDebugUnitTest" ":app:assembleDebug" lint --console=plain > "${LOG}" 2>&1; rc=$?
+   tail -40 "${LOG}"; echo "build exit=${rc}"; exit "${rc}"
    ```
    Look at the two recorded PNGs (`feature/<name>/impl/src/test/screenshots/`) — they should show the placeholder
    on a phone and a tablet.
 
-9. **Report** (terse — internal output): files created, edits applied (file + marker), use case wired (yes/no, which),
-   start destination changed (yes/no), build status (green/red + the last lines if red), and next steps — filling in the
-   screen follows the `presentation-layer` skill; check it on a device with `android run` or the `android-qa` agent.
+## Result — return EXACTLY this block as your final message
+
+`/android-forge-add-feature` builds its report from it, so keep the keys and their order:
+
+```
+RESULT: OK | FAILED | REFUSED
+MODULES: :feature:<name>:api, :feature:<name>:impl            (- when REFUSED)
+FILES: <every file created, relative to project_root, comma-separated>
+APP: <app/build.gradle.kts — above // android-forge:feature-modules | appended (marker missing) | ->
+USE_CASE: <the use case wired, e.g. ObservePhotosUseCase | none>
+START_DESTINATION: <<Name>Key — Home removed | unchanged>
+GOLDENS: <the recorded PNGs, relative to project_root, comma-separated | none>
+BUILD: green | red | not run
+FAILURE: <only for FAILED / REFUSED — the ✗ line, or the failing step and its log tail verbatim>
+```
+
+`RESULT: OK` only with `BUILD: green`. `FAILED` = something was written but a step or the build failed — `FILES`
+lists what exists, so the caller can show it.
 
 ## What you do NOT do
 

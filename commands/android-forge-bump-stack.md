@@ -63,12 +63,15 @@ Never go below android-forge's floor (Gradle 9.8.1 — `pin-toolchain`; AGP 9.4.
 
 ### 6. Build to verify
 
+One Bash call (timeout 600000); the log keeps the full output and the exit code is Gradle's:
+
 ```bash
-cd <projectRoot>
-./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true 2>&1 | tail -50
+cd "<projectRoot>" || exit 1; LOG="${TMPDIR:-/tmp}/android-forge-bump-stack-gradle.log"
+./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true --console=plain > "${LOG}" 2>&1; rc=$?
+tail -50 "${LOG}"; echo "exit=${rc}"
 ```
 
-If green, proceed to step 7. If red, surface the failure verbatim — user decides whether to revert or fix forward. **Do not** auto-revert.
+`exit=0` → step 7. Otherwise surface the failure verbatim — user decides whether to revert or fix forward. **Do not** auto-revert.
 
 ### 7. Surface breaking-change notes
 

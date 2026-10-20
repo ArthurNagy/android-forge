@@ -46,7 +46,7 @@ Also read: the already-merged specs in `openspec/specs/**`, the project's `CLAUD
 4. **Dependency safety.** Does it build ONLY on already-merged specs (`openspec/specs/**`) and closed issues? Flag any forward reference to work not yet implemented.
 5. **Spec quality.** Are requirements testable and unambiguous? Does every requirement have at least one concrete scenario? Do delta specs reconcile cleanly with existing specs — no silent conflicts, duplication, or contradiction? Run `openspec validate <slug> --json` (via Bash) and treat any validation error as at least REVISE.
 6. **Tasks executability.** Is `tasks.md` concrete, ordered, and individually verifiable? Would a competent implementer produce the intended slice without guessing? Is there a test task for every scenario, carrying the `// Scenario: <name>` marker `openspec/config.yaml` asks for (QA traces coverage through it)? Does every new or changed screen get a screen test and phone + tablet Roborazzi goldens?
-7. **Locked stack & decisions.** Consistent with the android-forge locked stack (project `CLAUDE.md` stack table) and the project's ADRs under `docs/DECISIONS/`? Flag drift — e.g. a task introducing a library the stack locks differently, or contradicting a recorded decision.
+7. **Locked stack & decisions.** Consistent with the android-forge locked stack (the one-line list under `## Stack` in the project `CLAUDE.md`, plus its `Optional in this project:` line) and the project's ADRs under `docs/DECISIONS/`? Flag drift — e.g. a task introducing a library the stack locks differently, or contradicting a recorded decision.
 
 ## Method
 

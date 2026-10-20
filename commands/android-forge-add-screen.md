@@ -46,11 +46,21 @@ Ask via `AskUserQuestion` if missing (offer the existing `feature/*/` names as t
 4. **Key argument?** Make the key a `data class` and give the ViewModel `@AssistedInject` + an `@AssistedFactory`
    (see the `presentation-layer` skill's ViewModel recipe, `references/viewmodel.md`); the entry creates it with
    `hiltViewModel<VM, VM.Factory>(creationCallback = { it.create(key) })`.
-5. **Entry**: in the feature's `<Feature>Entries.kt`, add `entry<<Screen>Key> { <Screen>Screen(onNavigateBack = navigator.backOrNull()) }`
-   (with `ListDetailSceneStrategy.detailPane()` metadata when it is the detail of a list in this feature).
+5. **Entry**: in the feature's `<Feature>Entries.kt`, add
+   `entry<<Screen>Key> { key -> <Screen>Screen(onNavigateBack = navigator.backOrNull(key)) }`, with
+   `ListDetailSceneStrategy.detailPane()` metadata when it is the detail of a list in this feature. `backOrNull(key)`
+   is null when that entry is the back stack's root, so the root (or a list pane beside its detail) shows no Back.
    The screen that opens it sets `pendingNavigation = <Screen>Key(…)` and its entry passes `onNavigate = navigator::navigate`.
-6. **Format, record, build**:
-   `./gradlew spotlessApply -q && ./gradlew :feature:<feature>:impl:recordRoborazziDebug -q && ./gradlew :feature:<feature>:impl:testDebugUnitTest :app:assembleDebug`.
+6. **Format, record, build** — one Bash call (timeout 600000); each exit code is Gradle's, the first non-zero stops it:
+   ```bash
+   cd "<project>" || exit 1; F=":feature:<feature-name>:impl"; LOG="${TMPDIR:-/tmp}/android-forge-add-screen-gradle.log"
+   ./gradlew spotlessApply --console=plain > "${LOG}" 2>&1; rc=$?; tail -10 "${LOG}"; echo "spotlessApply exit=${rc}"
+   [[ ${rc} -eq 0 ]] || exit "${rc}"
+   ./gradlew "${F}:recordRoborazziDebug" --console=plain > "${LOG}" 2>&1; rc=$?; tail -10 "${LOG}"; echo "record exit=${rc}"
+   [[ ${rc} -eq 0 ]] || exit "${rc}"
+   ./gradlew "${F}:testDebugUnitTest" :app:assembleDebug --console=plain > "${LOG}" 2>&1; rc=$?
+   tail -40 "${LOG}"; echo "build exit=${rc}"; exit "${rc}"
+   ```
 7. **Report** files created, edits applied, the screenshots to review, build result.
 
 ## Notes

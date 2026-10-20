@@ -1,5 +1,5 @@
 ---
-description: Check the local Android toolchain against what an android-forge project needs — Android CLI, SDK platform and form-factor system images, emulators, JDKs, Gradle/AGP floors, the project's Android skills, git hooks and the spec/issue workflow. Diagnostic; asks before fixing anything.
+description: Check the toolchain an android-forge project needs — Android CLI, SDK, system images, emulators, JDKs, Gradle/AGP floors, minSdk, skills, hooks, spec workflow.
 ---
 
 # /android-forge-doctor
@@ -73,13 +73,25 @@ build (network) — ⚠ only offline.
 grep distributionUrl gradle/wrapper/gradle-wrapper.properties
 grep -E '^(androidGradlePlugin|kotlin|ksp|hilt|androidCompileSdk|androidTargetSdk|androidMinSdk) *=' gradle/libs.versions.toml
 grep -q 'includeBuild("build-logic")' settings.gradle.kts && grep -q 'android-forge.root' build.gradle.kts && echo "build-logic wired"
+MIN_SDK="$(sed -nE 's/^androidMinSdk *= *"([0-9]+)".*/\1/p' gradle/libs.versions.toml 2>/dev/null)"   # the project's minSdk:
+[ -n "${MIN_SDK}" ] || MIN_SDK="$(cat app/build.gradle.kts app/build.gradle 2>/dev/null \
+    | grep -oE 'minSdk(Version)? *=? *[0-9]+' | grep -oE '[0-9]+$' | head -1)"                      # catalog, else :app
+echo "minSdk: ${MIN_SDK:-unknown}"
 ```
 
 Expected: Gradle ≥ 9.8.1, AGP ≥ 9.4.1, Kotlin 2.4.x with a matching KSP 2.3.x and Hilt ≥ 2.59.2, compile/target SDK
-37, build-logic wired. Remediation: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/apply-overlay.sh" pin-toolchain .` (wrapper + heap) and
-`bash "${CLAUDE_PLUGIN_ROOT}/scripts/apply-overlay.sh" patch-libs .
-"${CLAUDE_PLUGIN_ROOT}/overlay/gradle/libs.versions.toml.additions.tmpl"` (raises catalog floors, never lowers), or
-`/android-forge-bump-stack`. `kotlin-android` or `kapt` plugins present → ✗ (AGP 9 built-in Kotlin + KSP; the
+37, build-logic wired, minSdk ≥ 26 — below that ✗ (the conventions refuse to configure: `java.time` without
+desugaring); 26–28 → ⚠, android-forge recommends 29 (raise `androidMinSdk` when the product allows). Remediation:
+`bash "${CLAUDE_PLUGIN_ROOT}/scripts/apply-overlay.sh" pin-toolchain .` (wrapper + heap) and, with `MIN_SDK` set to the
+project's minSdk printed above — `patch-libs` treats it as a floor, and an unset value is written as
+`androidMinSdk = ""`:
+
+```bash
+MIN_SDK="<the minSdk printed above>" bash "${CLAUDE_PLUGIN_ROOT}/scripts/apply-overlay.sh" patch-libs . \
+    "${CLAUDE_PLUGIN_ROOT}/overlay/gradle/libs.versions.toml.additions.tmpl"      # raises catalog floors, never lowers
+```
+
+or `/android-forge-bump-stack`. `kotlin-android` or `kapt` plugins present → ✗ (AGP 9 built-in Kotlin + KSP; the
 `agp-9-upgrade` skill migrates).
 
 ### 6. Android skills (in a project)
@@ -129,7 +141,8 @@ gh label list --limit 200 --json name --jq '[.[].name] | map(select(. == "ready"
 ### 11. Gradle smoke test (in a project)
 
 ```bash
-./gradlew help -q --console=plain 2>&1 | tail -10
+LOG="${TMPDIR:-/tmp}/android-forge-doctor-gradle.log"
+./gradlew help -q --console=plain > "${LOG}" 2>&1; rc=$?; tail -10 "${LOG}"; echo "exit=${rc}"
 ```
 
 Configuration must succeed (plugins resolve from build-logic). Don't run `--refresh-dependencies`.
@@ -144,7 +157,7 @@ Per section: ✓ OK / ⚠ Drift (expected vs actual + remediation) / ✗ Missing
 ⚠ Wear OS image missing (android-37.0/android-wear-signed) — bash <plugin>/scripts/avd.sh ensure wear  (~2 GB)
 ✓ Devices: emulator-5554 (medium_phone)
 ✓ JDK toolchains: 17, 21
-✓ Gradle 9.8.1 · AGP 9.4.1 · Kotlin 2.4.21 · KSP 2.3.12 · Hilt 2.60.1 · SDK 37/37/26 · build-logic wired
+✓ Gradle 9.8.1 · AGP 9.4.1 · Kotlin 2.4.21 · KSP 2.3.12 · Hilt 2.60.1 · SDK 37/37/29 · build-logic wired
 ⚠ Android skills: wear-widgets missing — bash <plugin>/scripts/skills.sh install . wear
 ✓ Android Studio: not running (optional)
 ✓ git hooks: pre-commit installed, gitleaks on PATH

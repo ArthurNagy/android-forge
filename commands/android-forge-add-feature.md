@@ -1,5 +1,5 @@
 ---
-description: Add a new feature — :feature:<name>:api (Nav 3 key) + :feature:<name>:impl (Compose screen, @HiltViewModel Orbit ViewModel, state, Hilt @IntoSet entry builder, strings, tests and phone/tablet screenshots) — and join it to the app.
+description: Add a feature — :feature:<name>:api (Nav 3 key) + :impl (Compose screen, Hilt Orbit ViewModel, state, entry, tests, phone/tablet goldens) — joined to :app.
 argument-hint: <feature-name>
 ---
 
@@ -24,7 +24,9 @@ No argument → ask via `AskUserQuestion`. Also ask (one call, skip what the use
 
 ## Flow
 
-1. **Validate** the name (`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`) and that `feature/<name>` doesn't exist.
+1. **Validate** the name (`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`), that `feature/<name>` doesn't exist, and that the
+   project's `CLAUDE.md` has the "android-forge project rules" line (else: not an android-forge project — point at
+   `/android-forge-adopt`). The agent re-checks all three and refuses on any.
 2. **Base package**: the `**Application ID / base package:**` line of the project `CLAUDE.md`; else `namespace` in
    `app/build.gradle.kts`; else ask.
 3. **Delegate** to the `android-forge:android-feature-builder` agent with `feature_name`, `base_package`,
@@ -33,13 +35,19 @@ No argument → ask via `AskUserQuestion`. Also ask (one call, skip what the use
    `overlay/modules/feature/{api,impl}`, wires a matching `:core:domain` use case if one exists, adds the impl to
    `app/build.gradle.kts` above `// android-forge:feature-modules`, switches the start destination if asked,
    updates `CLAUDE.md`, runs `spotlessApply`, records the screenshot goldens and builds.
-4. **Report** what it returns:
+4. **Report** from the agent's final `RESULT:` block (keys `MODULES`, `FILES`, `APP`, `USE_CASE`,
+   `START_DESTINATION`, `GOLDENS`, `BUILD`, `FAILURE`):
+   - `REFUSED` → show `FAILURE`; nothing was written.
+   - `FAILED` → show `FAILURE` verbatim and the `FILES` that now exist (the user decides whether to fix forward or
+     delete them); never report it as added.
+   - `OK` →
 
 ```
-✓ Added :feature:<name>:api (<Name>Key) + :feature:<name>:impl (screen, ViewModel, state, entries, Hilt entry module, strings, tests)
-✓ Joined :app (one dependency line; entries via @IntoSet)<; start destination is now <Name>Key>
-✓ Screenshots: feature/<name>/impl/src/test/screenshots/ (phone + tablet) — review them
-✓ Build: green | red (with output)
+✓ Added <MODULES> (<Name>Key; screen, ViewModel, state, entries, Hilt entry module, strings, tests)
+✓ Joined :app — <APP>; entries via @IntoSet<; start destination is now <START_DESTINATION>>
+✓ Use case: <USE_CASE>
+✓ Screenshots: <GOLDENS> (phone + tablet) — review them
+✓ Build: <BUILD>
 
 Next: the screen renders a placeholder (TODO(android-forge)) — build the real UI following the presentation-layer
 skill; add the use case in :core:domain first if it doesn't exist (domain-layer skill).

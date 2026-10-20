@@ -1,5 +1,5 @@
 ---
-description: Adopt android-forge into an EXISTING Android project — overlay docs, CI, product workflow and Android skills non-destructively, then drive a reviewer-led, layer-by-layer refactor onto the locked stack (AGP 9 conventions, :core/:feature modules, Hilt, Orbit, Nav 3, Result+DomainError).
+description: Adopt android-forge into an EXISTING Android project — docs, CI and skills added non-destructively, then a reviewer-led refactor onto the locked stack.
 ---
 
 # /android-forge-adopt
@@ -17,33 +17,43 @@ Execute steps **in order**. Stop and ask when unclear. Everything happens on a b
 ## Conventions
 
 - Quote paths and brace variables (`"${TARGET}"` — the Bash tool may run zsh; the folder may contain spaces).
+- **Shell state doesn't survive between Bash calls.** Step 0 writes `TARGET` to
+  `"${TMPDIR:-/tmp}/android-forge-adopt.env"`; step 2 rewrites it with every variable plus `OVERLAY`, `SH` and the
+  `copy_new` helper. Every later block starts by `source`-ing it.
 - **Never blind-overwrite.** An existing target → render to scratch (`"${TMPDIR:-/tmp}/aforge-*"`),
   `git --no-index diff`, merge with the Edit tool after showing the user. `apply-overlay.sh render … --no-clobber`
   keeps existing files.
-- The plugin never pushes, never enables branch protection.
+- This command does not push to GitHub or enable branch protection — the user does both themselves.
 
 ### 0. Preconditions + safety
 
 Run from the **root of the existing project**:
 
 ```bash
-TARGET="$PWD"
+TARGET="${PWD}"
 [[ -f "${TARGET}/settings.gradle.kts" || -f "${TARGET}/settings.gradle" ]] || { echo "✗ no settings.gradle(.kts) — run from the project root"; exit 1; }
 grep -rqlE "com\.android\.(application|library)" --include="*.gradle*" --include="*.toml" "${TARGET}" \
   || { echo "✗ no Android Gradle plugin found — not an Android project"; exit 1; }
 grep -rqlE "org\.jetbrains\.kotlin\.multiplatform|kotlin\(\"multiplatform\"\)" --include="*.kts" "${TARGET}" \
   && echo "⚠ Kotlin Multiplatform detected — kmp-forge (/kmp-forge-adopt) is the right plugin for KMP projects"
 [[ -f "${TARGET}/gradle/libs.versions.toml" ]] || echo "⚠ no version catalog — the build layer creates one"
+git -C "${TARGET}" rev-parse --git-dir >/dev/null 2>&1 || { echo "✗ not a git repository — git init + commit first"; exit 1; }
 git -C "${TARGET}" diff --quiet && git -C "${TARGET}" diff --cached --quiet \
   || { echo "✗ working tree dirty — commit or stash first"; exit 1; }
+typeset -p TARGET > "${TMPDIR:-/tmp}/android-forge-adopt.env"     # step 2 rewrites it with every variable
 ```
 
-Then `git -C "${TARGET}" switch -c chore/adopt-android-forge`, after confirming via `AskUserQuestion` that the user
-understands many files will change (on a branch, reversible).
+Then, after confirming via `AskUserQuestion` that the user understands many files will change (on a branch,
+reversible):
+
+```bash
+source "${TMPDIR:-/tmp}/android-forge-adopt.env"; git -C "${TARGET:?}" switch -c chore/adopt-android-forge
+```
 
 ### 1. Detect the existing structure
 
 ```bash
+source "${TMPDIR:-/tmp}/android-forge-adopt.env"; : "${TARGET:?}"
 grep -nE "include\(" "${TARGET}"/settings.gradle*                                    # modules
 grep -rnE "com\.android\.(application|library)|kotlin-kapt|org\.jetbrains\.kotlin\.android" --include="*.gradle*" "${TARGET}" | head -20
 grep -nE "^(agp|androidGradlePlugin|kotlin|hilt|koin|room|navigation|composeBom|androidxComposeBom)\b" "${TARGET}/gradle/libs.versions.toml" 2>/dev/null
@@ -52,6 +62,7 @@ for lib in "dagger.hilt" "io.insert-koin" "org.orbit-mvi" "androidx.navigation:n
   grep -rqlF "${lib}" --include="*.kt" --include="*.kts" --include="*.toml" --include="*.gradle" "${TARGET}" && echo "has ${lib}"
 done
 grep -rnE "screenOrientation|resizeableActivity" --include=AndroidManifest.xml "${TARGET}" | head
+grep -rhoE "minSdk(Version)? *=? *[0-9]+|androidMinSdk *= *\"[0-9]+\"" --include="*.gradle*" --include="*.toml" "${TARGET}" | sort -u   # minSdk
 android describe --project_dir="${TARGET}" 2>/dev/null | grep -E "^Task:" | head      # app modules the Android CLI sees
 ```
 
@@ -66,19 +77,41 @@ Same as `/android-forge-init` step 2, **inferred** and confirmed: `APP_NAME`, `A
 `BASE_PACKAGE_PATH`, `MIN_SDK` (the app's), `SCAFFOLD_DATE`, `FORM_FACTORS` (detected), `BUILD_COMMANDS`,
 `MODULE_LIST` (the REAL modules), `FEATURE_LIST`, `OPTIONAL_LIBS` (detected), `FIGMA_URL`, `PROJECT_OVERRIDES`,
 `TIMELINE`, `USE_OPENSPEC` (yes when `openspec/` exists; else ask as init does — OpenSpec ≥ 1.14, never install
-without an answer), `SPEC_WORKFLOW` (copy init's `if … fi` block verbatim, single quotes). Persist them with
-`typeset -p … > "${TMPDIR:-/tmp}/android-forge-adopt.env"` and `source` it in every later block.
-
-### 3. Phase A — additive (automatic)
+without an answer), `SPEC_WORKFLOW` (copy init's `if … fi` block verbatim, single quotes). One Bash call: the
+exports, then the env file — the variables plus the `OVERLAY` / `SH` paths and the `copy_new` helper that every
+later block uses:
 
 ```bash
-source "${TMPDIR:-/tmp}/android-forge-adopt.env"; : "${TARGET:?}" "${BASE_PACKAGE:?}"
+source "${TMPDIR:-/tmp}/android-forge-adopt.env"; export TARGET="${TARGET:?}"
+export APP_NAME="<inferred>" APP_TAGLINE='<one-liner or empty>' BASE_PACKAGE="<the app's namespace>"
+export BASE_PACKAGE_PATH="$(echo "${BASE_PACKAGE}" | tr . /)" MIN_SDK="<the app's minSdk>"
+export SCAFFOLD_DATE="$(date -u +%Y-%m-%d)" FIGMA_URL="(none)" PROJECT_OVERRIDES="" TIMELINE=""
+export FORM_FACTORS='<one Markdown bullet per detected form factor>' MODULE_LIST='<the real modules>'
+export BUILD_COMMANDS='<as init>' FEATURE_LIST='<the real features>' OPTIONAL_LIBS='<detected, or (none)>'
+export USE_OPENSPEC="<yes|no>"
+# <init's `if [[ "${USE_OPENSPEC}" == yes ]]; then export SPEC_WORKFLOW=… fi` block, verbatim>
+{
+    typeset -p TARGET APP_NAME APP_TAGLINE BASE_PACKAGE BASE_PACKAGE_PATH MIN_SDK SCAFFOLD_DATE FORM_FACTORS \
+        BUILD_COMMANDS MODULE_LIST FEATURE_LIST OPTIONAL_LIBS FIGMA_URL PROJECT_OVERRIDES TIMELINE USE_OPENSPEC \
+        SPEC_WORKFLOW
+    cat <<'HELPERS'
 OVERLAY="${CLAUDE_PLUGIN_ROOT}/overlay"; SH="${CLAUDE_PLUGIN_ROOT}/scripts/apply-overlay.sh"
 copy_new() {   # copy only if absent; otherwise show the diff for a hand-merge
     # Positional params stay braced: Claude Code replaces bare dollar-digit tokens in command text with the user's arguments.
     if [[ -e "${2}" ]]; then echo "=== exists, not replaced — diff (existing ← → android-forge): ${2}"; git --no-pager diff --no-index "${2}" "${1}" || true
     else mkdir -p "$(dirname "${2}")" && cp "${1}" "${2}" && echo "added: ${2}"; fi
 }
+HELPERS
+} > "${TMPDIR:-/tmp}/android-forge-adopt.env"
+```
+
+Every later block starts with
+`source "${TMPDIR:-/tmp}/android-forge-adopt.env"; : "${TARGET:?}" "${BASE_PACKAGE:?}" "${OVERLAY:?}"`.
+
+### 3. Phase A — additive (automatic)
+
+```bash
+source "${TMPDIR:-/tmp}/android-forge-adopt.env"; : "${TARGET:?}" "${BASE_PACKAGE:?}" "${OVERLAY:?}"
 
 # Secrets hygiene
 copy_new "${OVERLAY}/git/.gitleaks.toml" "${TARGET}/.gitleaks.toml"
@@ -92,23 +125,28 @@ rm -rf "${TMPDIR:-/tmp}/aforge-product" && bash "${SH}" render "${OVERLAY}/produ
 copy_new "${TMPDIR:-/tmp}/aforge-product/MVP_SPEC.md" "${TARGET}/docs/MVP_SPEC.md"
 for adr in "${TMPDIR:-/tmp}/aforge-product/DECISIONS/"*.md; do copy_new "${adr}" "${TARGET}/docs/DECISIONS/$(basename "${adr}")"; done
 
-# Android skills — baseline tier (+ the detected form factors' tiers, + `adopt` for the migration skills)
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/skills.sh" install "${TARGET}" baseline adopt
+# Android skills — the baseline tier, plus each detected form factor's (wear, tv, cars, …)
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/skills.sh" install "${TARGET}" baseline <detected form-factor tiers>
 ```
 
-Add each detected form factor's tier too (`wear`, `tv`, `cars`, …). Report every result.
+Report every result. The **`adopt`** tier (`agp-9-upgrade`, `migrate-xml-views-to-jetpack-compose`, `styles`) is
+suggested, never automatic: Phase B's `build` and `nav` layers lean on it. Ask via `AskUserQuestion` whether to
+install it now; only on a yes:
+`source "${TMPDIR:-/tmp}/android-forge-adopt.env"; bash "${CLAUDE_PLUGIN_ROOT}/scripts/skills.sh" install "${TARGET:?}" adopt`.
 
-**OpenSpec** (`USE_OPENSPEC=yes`): render `${CLAUDE_PLUGIN_ROOT}/overlay/openspec` to scratch; with an existing `openspec/`, merge
-android-forge's `context`/`rules`/`operations` into its `config.yaml` by hand; else `openspec init --tools claude
---no-animation "${TARGET}"` and copy the rendered `config.yaml` over the stub.
+**OpenSpec** (`USE_OPENSPEC=yes`; source the env file first): render `"${OVERLAY}/openspec"` to scratch
+(`bash "${SH}" render …`); with an existing `openspec/`, merge android-forge's `context`/`rules`/`operations` into its
+`config.yaml` by hand; else `openspec init --tools claude --no-animation "${TARGET}"` and copy the rendered
+`config.yaml` over the stub.
 
 **Issue labels** — only if `origin` is on GitHub and the user says yes (it writes to GitHub):
-`(cd "${TARGET}" && bash "${CLAUDE_PLUGIN_ROOT}/scripts/issues.sh" labels)`.
+`source "${TMPDIR:-/tmp}/android-forge-adopt.env"; (cd "${TARGET:?}" && bash "${CLAUDE_PLUGIN_ROOT}/scripts/issues.sh" labels)`.
 
 ### 4. Phase A — overwrite-danger (scratch + diff + merge)
 
 ```bash
-bash "${SH}" render "${OVERLAY}/root" "${TMPDIR:-/tmp}/aforge-root"
+source "${TMPDIR:-/tmp}/android-forge-adopt.env"; : "${TARGET:?}" "${BASE_PACKAGE:?}" "${OVERLAY:?}"
+rm -rf "${TMPDIR:-/tmp}/aforge-root" && bash "${SH}" render "${OVERLAY}/root" "${TMPDIR:-/tmp}/aforge-root"
 for f in CLAUDE.md .gitignore .editorconfig cliff.toml; do
     if [[ -f "${TARGET}/${f}" ]]; then echo "=== diff: ${f}"; git --no-pager diff --no-index "${TARGET}/${f}" "${TMPDIR:-/tmp}/aforge-root/${f}" || true
     else cp "${TMPDIR:-/tmp}/aforge-root/${f}" "${TARGET}/${f}" && echo "added: ${f}"; fi
@@ -122,8 +160,11 @@ done
 ### 5. Phase A — CI workflows
 
 ```bash
+source "${TMPDIR:-/tmp}/android-forge-adopt.env"; : "${TARGET:?}" "${BASE_PACKAGE:?}" "${OVERLAY:?}"
 rm -rf "${TMPDIR:-/tmp}/aforge-ci" && bash "${SH}" render "${OVERLAY}/ci" "${TMPDIR:-/tmp}/aforge-ci"
-for wf in pr.yml release.yml spec-link.yml; do copy_new "${TMPDIR:-/tmp}/aforge-ci/${wf}" "${TARGET}/.github/workflows/${wf}"; done
+for wf in "${TMPDIR:-/tmp}/aforge-ci/"*; do     # every workflow overlay/ci ships
+    copy_new "${wf}" "${TARGET}/.github/workflows/$(basename "${wf}")"
+done
 copy_new "${OVERLAY}/git/pull_request_template.md" "${TARGET}/.github/pull_request_template.md"
 for t in "${OVERLAY}/git/ISSUE_TEMPLATE/"*.yml; do copy_new "${t}" "${TARGET}/.github/ISSUE_TEMPLATE/$(basename "${t}")"; done
 ```
@@ -139,7 +180,8 @@ Invoke **`android-forge:android-reviewer`** in audit mode — one call per modul
 **dependency-ordered work-list** — the layer keys map 1:1 to the `android-migrator`'s `layer` input:
 
 1. `build` — AGP 9 + built-in Kotlin + KSP (via the `agp-9-upgrade` skill), `build-logic` conventions, the catalog
-   (`patch-libs`), `android-forge.root` (gate tasks). Everything after relies on it.
+   (`patch-libs`), the toolchain (`pin-toolchain`: Gradle ≥ 9.8.1 wrapper, 4 GiB heap), minSdk ≥ 29,
+   `android-forge.root` (gate tasks). Everything after relies on it.
 2. `modules` — `:core:*` + `:feature:*:{api,impl}`; features stop depending on data modules. Per area.
 3. `dispatchers` — `DispatcherProvider` instead of `Dispatchers.*`.
 4. `result` — `Result<T, DomainError>`; `catchNetwork`/`catchStorage` boundaries; no `try/catch` in ViewModels.
@@ -158,12 +200,20 @@ Present the plan (counts per layer) and refactor **one layer at a time** by dele
 `target` for per-area / per-screen layers). The user confirms between layers; never fire them all at once. After each
 layer, re-run `android-forge:android-reviewer` on the touched files.
 
+- **Before `build`** — `MIN_SDK` below 29 → ask via `AskUserQuestion`: **Raise to 29 (Recommended)** · **Keep
+  `<n>`** — offered only when `<n>` ≥ 26; below that the conventions refuse to configure (`java.time` without
+  desugaring), so the second option becomes **Raise to 26**. Pass the answer as `min_sdk`.
+- The migrator never asks: a `NEEDS INPUT` line in its report (a missing Google skill, an undecidable minSdk) → ask
+  the user, act on the answer (e.g. install the `adopt` tier on a yes), and re-run that layer.
+
 ### 7. Verify
 
-After the `build` layer, and after every later one:
+After the `build` layer, and after every later one (its own Bash call, timeout 600000):
 
 ```bash
-./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true
+source "${TMPDIR:-/tmp}/android-forge-adopt.env"; cd "${TARGET:?}" || exit 1; LOG="${TMPDIR:-/tmp}/android-forge-adopt-gradle.log"
+./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true --console=plain > "${LOG}" 2>&1; rc=$?
+tail -40 "${LOG}"; echo "exit=${rc}"
 ```
 
 (`coverageVerify` will fail below 85% until the `tests` layer — say so; don't lower the bound.) Run the app on an
@@ -173,8 +223,8 @@ emulator (`android emulator start …`, `android run --apks=…`) after `hilt` a
 
 ```
 ✓ Branch: chore/adopt-android-forge
-✓ Docs + ADRs: added/merged · Android skills: baseline<+ tiers> in .claude/skills/
-✓ CI: pr.yml / release.yml / spec-link.yml added<, merged>
+✓ Docs + ADRs: added/merged · Android skills: baseline<+ form-factor tiers><+ adopt> in .claude/skills/
+✓ CI: <each workflow from overlay/ci> added<, merged>
 ✓ Spec workflow: <OpenSpec with android-forge rules | plain docs>; issue labels <created | skipped>
 ~ CLAUDE.md / .gitignore / .editorconfig: merged (review the diffs)
 

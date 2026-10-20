@@ -1,5 +1,5 @@
 ---
-description: Find an Android/Jetpack (or any Maven) library — Android docs + Google Maven + Maven Central — add it to gradle/libs.versions.toml and the right module, and install the matching Android skill tier when one exists.
+description: Find an Android/Jetpack (or Maven) library, add it to gradle/libs.versions.toml and the right module, and install its matching Android skill tier.
 argument-hint: <search-query or group:artifact>
 ---
 

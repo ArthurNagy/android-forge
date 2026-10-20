@@ -1,5 +1,5 @@
 ---
-description: Product-owner pass over the backlog — turn an idea, some vague issues, or the MVP spec's uncovered gaps into workable GitHub issues (via the android-product-owner agent; for a parent issue or an issue that needs design, the android-architect agent then fits it into the codebase and drafts its ADRs), file the ones you pick, and print the command to approve them. Never applies `ready`.
+description: Refine the backlog — turn an idea, vague issues or MVP-spec gaps into GitHub issues (product owner + architect) and file the ones you pick. Never applies ready.
 argument-hint: "<idea text> | #12 #15 | --gaps"
 ---
 
