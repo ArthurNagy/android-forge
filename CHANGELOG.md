@@ -16,9 +16,11 @@ modules, templates, build logic, QA and review rebuilt for Android.
 
 ### Added
 - **Project creation through Google's Android CLI** — `scripts/android-new.sh` runs `android create empty-activity`
-  and prepares its output (sample code removed, `mipmap-anydpi-v26` merged at minSdk ≥ 26, manifest wired to
-  `MainApplication` and the template's backup rules, `includeBuild("build-logic")`, root build reduced to
-  `android-forge.root`); `ensure-sdk` installs compileSdk 37.
+  and prepares its output (sample code removed, `mipmap-anydpi-v26` merged, manifest wired to `MainApplication` and the
+  template's backup rules, `includeBuild("build-logic")`, root build reduced to `android-forge.root`) — into a
+  non-empty directory too, without overwriting; `ensure-sdk` installs compileSdk 37. **minSdk 29** by default (31/33
+  offered); the conventions refuse < 26 (`java.time` without desugaring).
+- **LICENSE from canonical texts** (`overlay/licenses/`: MIT, Apache-2.0, Proprietary) with year and holder filled in.
 - **Locked stack**: Jetpack Compose + Material 3 adaptive, Hilt (KSP2), Orbit 12 state-only, androidx Navigation 3
   with `:feature:<name>:{api,impl}` and Hilt `@IntoSet` entry builders (`@Multibinds`-declared), kotlin-result
   `Result<T, DomainError>` with `catchNetwork`/`catchStorage` boundaries, DataStore, Coil 3, Timber, java.time,
@@ -30,10 +32,20 @@ modules, templates, build logic, QA and review rebuilt for Android.
 - **Build logic**: precompiled conventions `android-forge.{android.application, android.library[.compose],
   jvm.library, feature.api, feature.impl, hilt, room, spotless, root}`; AGP 9.4 built-in Kotlin; JDK 21 test launcher +
   Robolectric SDK pin; root `unitTests` / `coverageReport` / `coverageVerify` (JaCoCo ≥ 85%, Robolectric-run Compose
-  counted).
+  counted; Android classes from AGP's Variant API, and the gate fails rather than pass blind when a module contributes
+  no classes or execution data, when nothing is measured, or on product flavors).
 - **Gates**: Android Lint (warnings = errors) with Slack's compose-lints, Spotless + ktlint + compose-rules, JaCoCo, Roborazzi screenshot
-  verification (phone + tablet goldens committed in `src/test/screenshots/`). CI runs
-  `spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true`; release builds every app module.
+  verification (phone + tablet goldens committed in `src/test/screenshots/`, compared with a small cross-OS tolerance
+  set by `:core:testing`'s `ScreenshotTolerancePlugin`; `record-goldens.yml` re-records on Linux on demand). CI runs
+  `spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true` with a read-only token; release builds
+  every app module. The gitleaks pre-commit hook scans resources (`strings.xml`) — only images, fonts, goldens and
+  build output are skipped.
+- **Merge guard v5** for the autonomous loop: a bash launcher + an embedded python3 shell lexer (stdlib, ≥ 3.8). It
+  checks the PR and repository a merge really targets, unwraps wrappers and aliases, denies force pushes in every
+  spelling, protects its own files and `openspec/AUTOLOOP.md` from every Claude caller in the enforce modes, denies
+  subagent-posted gate verdicts, and in the enforce modes denies any command it can't parse that mentions a merge,
+  push, ref, token, guard file or `ready`. The loop posts every review, issue and commit text through quoted-heredoc
+  files.
 - **Form factors** — `/android-forge-add-form-factor` + the `android-form-factor-builder` agent: Googlebook/desktop,
   XR headset, XR display glasses, Android Auto, Android Automotive OS, TV, Wear OS, Cast, home-screen widgets;
   `docs/form-factors/`, `docs/quality.md` (Google's quality tiers).
@@ -47,7 +59,8 @@ modules, templates, build logic, QA and review rebuilt for Android.
 - **`android-reviewer`** enforces the module, Hilt, Orbit, Nav 3, Result, adaptive, resource-prefix and manifest rules
   and runs Google's intent/permission security skills on manifest and IPC changes; **`android-migrator`** moves an
   existing Android app onto the stack layer by layer (build, modules, dispatchers, result, repos, hilt, orbit, nav,
-  visibility, tests, a11y, adaptive) with Google's migration skills.
+  visibility, tests, a11y, adaptive) with Google's migration skills — its per-layer recipes live in `docs/migration.md`;
+  the `build` layer renders the foundations first, pins the toolchain and raises minSdk to 29 after asking.
 - `/android-forge-add-library` discovers through `android docs` + Google Maven + Maven Central and installs a library's
   skill tier; `/android-forge-bump-stack` cross-checks with `android studio version-lookup`.
 - ADRs 0001–0009 (Orbit, Hilt, modules, Nav 3, Result, DispatcherProvider, Lint over detekt, JaCoCo, app module per
@@ -61,6 +74,21 @@ modules, templates, build logic, QA and review rebuilt for Android.
   compile-checked recipes in `references/`.
 
 ### Validated
+- After the independent review's fixes (minSdk 29, merge guard v5), every flow run literally from the final docs into
+  paths with a space, gate green at 85%:
+  - `/android-forge-init` with the network + benchmarks opt-ins at 99.2% line coverage; + the Room First table
+    recipe, `photo-detail` (key argument) and `gallery` (start destination) features and the Gallery/Photo slice copied
+    from the three layer skills at 95.5% (`:app:assembleRelease` passes R8).
+  - Form factors: Wear + TV through init itself (98.3%; `:wear`/`:tv`/`:app` release builds pass R8); Auto (POI) +
+    Automotive + widgets + glasses + XR + desktop + Cast added one by one, then a feature taking over the start
+    destination with the glasses entry point intact (94.2%); init + widgets + Wear + TV at minSdk 29 and 31 (96.2%);
+    templated messaging refused for Automotive, `<uses name="notification"/>` for Auto.
+  - `/android-forge-adopt` on a stock `android create` project (minSdk 24): Phase A, then the `build` layer at minSdk
+    29 — configures and `assembleDebug` passes; the remaining compose-rules finding in its UI code is the `a11y`
+    layer's.
+  - Merge guard: a hook-JSON harness of 1037 checks (every listed bypass DENY in the enforce modes, the loop's own
+    commands ALLOW, `log` never denies) on `/bin/bash` 3.2 + python 3.9, bash 5.3 + python 3.15, and GNU coreutils
+    first; the add-autoloop smoke check through the wired `settings.json` command.
 - At the 85% gate, after the PR review fixes: the bare scaffold at 99.1% line coverage (the new `AppThemeTest` covers
   the theme no other scaffold test reached) and 97.0% after `photo-detail`; `:wear` + `:tv` at 97.4%; `:car` +
   `:automotive` + `:widget` + `:glasses` + the XR and desktop manifest lines at 93.2% — that project's
@@ -80,8 +108,5 @@ modules, templates, build logic, QA and review rebuilt for Android.
 - On emulators: Wear OS (`wearos_large_round`); TV (`tv_1080p`, D-pad focus move + select read back through
   `android layout`); AAOS (`automotive_1408p_landscape_with_play`: `CarAppActivity` renders the ListTemplate, Hilt on
   `CarAppService`); desktop windowing (`desktop_medium`: free-form window, two panes when maximized).
-- Merge guard: the add-autoloop smoke check through the wired `settings.json` command (audit lines for the main
-  conversation and a subagent), and in `enforce` mode it denies a merge without a gate PASS, applying `ready`, a
-  force-push to main, and a subagent writing `.claude/settings.json`.
 - Not run on a device: Android Auto (Desktop Head Unit), XR headset, display glasses, placing the widget on a home
   screen (no long-press in the CLI), the caption-bar tint (needs an API 35+ desktop image), Cast.

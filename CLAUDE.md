@@ -19,7 +19,8 @@ Distribution: self-contained marketplace (`.claude-plugin/marketplace.json`, `so
 
 ## Commands
 
-The scripts need `android` (Google's Android CLI), `envsubst` (gettext), `jq`, `python3`, `perl`, `curl` and `gh` ≥ 2.94;
+The scripts need `android` (Google's Android CLI), `envsubst` (gettext), `jq`, `python3` ≥ 3.8 (issues.sh and the merge
+guard), `perl`, `curl` and `gh` ≥ 2.94;
 the scaffolds need JDK 17 and 21 toolchains (`/android-forge-doctor` checks the rest).
 
 ```bash
@@ -31,16 +32,16 @@ BASE_PACKAGE=com.foo.app APP_NAME=Foo envsubst '${BASE_PACKAGE} ${APP_NAME}' < o
 
 # Create a real project and apply the overlay by hand (what /android-forge-init does) — a scratch target
 bash scripts/android-new.sh ensure-sdk 37
-bash scripts/android-new.sh create Foo com.foo.app 26 "/tmp/af/Foo"
+bash scripts/android-new.sh create Foo com.foo.app 29 "/tmp/af/Foo"
 BASE_PACKAGE=com.foo.app bash scripts/apply-overlay.sh render-module core.domain overlay/modules/core/domain /tmp/af/Foo/core/domain com/foo/app
 bash scripts/apply-overlay.sh patch-settings /tmp/af/Foo "core:model,core:domain"
-MIN_SDK=26 bash scripts/apply-overlay.sh patch-libs /tmp/af/Foo overlay/gradle/libs.versions.toml.additions.tmpl   # appends + raises floors
+MIN_SDK=29 bash scripts/apply-overlay.sh patch-libs /tmp/af/Foo overlay/gradle/libs.versions.toml.additions.tmpl   # appends + raises floors
 bash scripts/apply-overlay.sh pin-toolchain /tmp/af/Foo                                                            # wrapper + heap
 
 # Android skills (tiers are defined in scripts/skills.sh) and emulators per form factor
 bash scripts/skills.sh tiers
 bash scripts/skills.sh install /tmp/af/Foo baseline wear
-bash scripts/avd.sh status            # name | status | ensure <phone|tablet|desktop|foldable|wear|tv|automotive|xr|glasses>
+bash scripts/avd.sh status            # name | status | ensure <phone|tablet|desktop|foldable|wear|tv|automotive|xr|glasses> | prepare tv
 
 # Latest stable versions of every catalog key (Google Maven + Maven Central + services.gradle.org)
 bash scripts/fetch-latest-versions.sh toml
@@ -72,12 +73,13 @@ scripts/
   android-new.sh       create (android create + prepare) | prepare | ensure-sdk
   apply-overlay.sh     render [--no-clobber] | render-module | patch-settings | patch-libs (append + raise floors) | pin-toolchain
   skills.sh            Google Android skill tiers: tiers | install | check | update
-  avd.sh               emulators per form factor: name | status | ensure
+  avd.sh               emulators per form factor: name | status | ensure | prepare tv
   fetch-latest-versions.sh   for /android-forge-bump-stack
   issues.sh            GitHub issues as the work queue
 overlay/
   root/                CLAUDE.md.tmpl, .gitignore, .editorconfig (ktlint rules), cliff.toml
-  ci/                  pr.yml (the gate), release.yml (every app module), spec-link.yml
+  ci/                  pr.yml (the gate), release.yml (every app module), spec-link.yml, record-goldens.yml (manual
+                       Linux re-record)
   git/                 PR/issue templates (issue-form labels are a contract), .gitleaks.toml, pre-commit hook
   openspec/            config.yaml.tmpl — android-forge's OpenSpec rules
   product/             MVP_SPEC.md.tmpl + DECISIONS/0001..0009
@@ -90,8 +92,9 @@ overlay/
   optional/network/    :core:network (Retrofit/OkHttp/catchNetwork) · optional/benchmarks/ (:benchmarks)
   form-factors/<ff>/   per form factor: libs.versions.toml.additions + module templates / README recipes
   autoloop/            merge-guard.sh + settings.json + AUTOLOOP.md.tmpl
+  licenses/            canonical LICENSE texts (MIT, Apache-2.0, Proprietary) — init fills year/holder
 docs/                  source-of-truth conventions linked from every scaffolded CLAUDE.md (incl. form-factors/,
-                       android-cli.md, quality.md)
+                       android-cli.md, quality.md); migration.md = android-migrator's per-layer recipes
 ```
 
 ## How a scaffold works
@@ -99,11 +102,12 @@ docs/                  source-of-truth conventions linked from every scaffolded 
 `/android-forge-init`: questions (name, package, minSdk, form factors, opt-ins, license, git, spec workflow) →
 env file (`typeset -p … > "${TMPDIR}/android-forge-init.env"`, `source`d by every later block) →
 `android-new.sh create` (`android create empty-activity` + `prepare`: sample code removed, `mipmap-anydpi-v26` merged
-at minSdk ≥ 26, manifest gets `.MainApplication` + backup rules, `includeBuild("build-logic")`, root build reduced to
-`id("android-forge.root")`) → render root/ci/git/product/openspec → copy build-logic → `render-module` every core
+— minSdk is 29 by default and the conventions refuse < 26 (`java.time` without desugaring) — manifest gets
+`.MainApplication` + backup rules, `includeBuild("build-logic")`, root build reduced to `id("android-forge.root")`) → render root/ci/git/product/openspec → copy build-logic → `render-module` every core
 module and `:app` → `patch-settings` → `patch-libs` (appends aliases, raises `android create`'s older pins) →
 `pin-toolchain` → opt-ins (network, benchmarks; Room = the data-layer skill's First table recipe later) → form factors
-(the form-factor-builder agent) → `skills.sh install baseline` → `spotlessApply`, `recordRoborazziDebug`, the gate →
+(the form-factor-builder agent — it decides presence from `settings.gradle.kts`/the manifest/the catalog and adds its
+own CLAUDE.md lines; init renders only the adaptive one) → `skills.sh install baseline` → `spotlessApply`, `recordRoborazziDebug`, the gate →
 git (+ `gh repo create`/push only on an explicit yes).
 
 Features: `/android-forge-add-feature` → `android-feature-builder` renders `modules/feature/{api,impl}`, renames
@@ -127,15 +131,20 @@ Canonical text: `docs/architecture.md`, `docs/stack.md`, `docs/testing.md`. Enco
   (`pendingNavigation: NavKey?`, `@StringRes pendingMessage: Int?`) + `onXConsumed()`; never `postSideEffect`; lambda
   params in effects via `rememberUpdatedState`.
 - **Nav 3**: `@Serializable` keys; `rememberNavBackStack(StartKey)` + `Navigator`; list-detail scene strategy; screens
-  get lambdas, never the Navigator; `navigator.backOrNull()` for the root's missing Back.
+  get lambdas, never the Navigator; `navigator.backOrNull(key)` (null for the root entry, so a list pane beside its
+  detail shows no Back).
 - **Result + sealed DomainError** (kotlin-result): built-in cases worded by `:core:ui`'s `toMessage()` + `DomainError.Typed`;
-  exceptions stop at `catchNetwork { }` / `catchStorage { }`, which rethrow `CancellationException` first.
+  exceptions stop at `catchNetwork { }` / `catchStorage { }`, which rethrow `CancellationException` and `Error` first
+  (HTTP 404 → `NotFound`).
 - **DispatcherProvider**: no `Dispatchers.*` outside `RealDispatcherProvider` (and Room's `setQueryCoroutineContext`).
 - **Visibility**: `internal` by default; `:core:data` and feature `impl`s expose nothing public; no constructor defaults
   on entities/State; `State.Initial`; use-case constructors stay public.
-- **Resources**: every Android module's keys carry its `resourcePrefix`; strings in `values/strings.xml`.
+- **Resources**: every Android library module's keys carry its `resourcePrefix` (`:app` is exempt); strings in
+  `values/strings.xml`.
 - **Adaptive**: no orientation/resizability locks; window-size layouts; edge-to-edge; phone + tablet goldens per screen.
-- **Tests**: JUnit 4 + Robolectric (SDK pinned to 36 by `:core:testing`'s `robolectric.properties`, JDK 21 launcher,
+- **Tests**: JUnit 4 + Robolectric (SDK pinned to 36 by `:core:testing`'s `robolectric.properties`; its
+  `ScreenshotTolerancePlugin` sets Roborazzi's cross-OS compare tolerance for every module; JDK 21 launcher for
+  Android modules' tests,
   `jdk.internal.access` export — set by the conventions); fakes over mocks; Orbit harness; ViewModels built outside
   `setContent`.
 - **Gate**: `spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true` (Lint warnings = errors;
@@ -155,9 +164,11 @@ Canonical text: `docs/architecture.md`, `docs/stack.md`, `docs/testing.md`. Enco
 - **New overlay variable**: the `.tmpl`, `OVERLAY_VARS` in `scripts/apply-overlay.sh`, and the export block of the
   command that renders it (init step 2; add-feature / add-form-factor / add-autoloop). Unset vars render as "".
 - **Changing a locked-stack rule** — update in lockstep: `docs/<area>.md` (canonical), `agents/android-reviewer.md`,
-  `agents/android-feature-builder.md`, `agents/android-migrator.md`, the layer skill (examples must keep compiling —
-  re-validate them in a scratch project), the templates under `overlay/`, and `overlay/openspec/config.yaml.tmpl` /
-  the "Rules the reviewer enforces" list in `overlay/root/CLAUDE.md.tmpl` if they name the rule.
+  `agents/android-feature-builder.md`, `agents/android-migrator.md` + its recipe in `docs/migration.md`, the layer skill
+  and its `references/` (examples must keep compiling — re-validate them in a scratch project), the templates under
+  `overlay/`, and `overlay/openspec/config.yaml.tmpl` / the "Rules the reviewer enforces" list in
+  `overlay/root/CLAUDE.md.tmpl` if they name the rule. Skills that quote the gate command (driving-ci-green,
+  conventional-commits, the layer skills) change with it.
 - **Catalog**: every alias a convention plugin looks up (`catalog.findLibrary("…")`) must exist in
   `overlay/gradle/libs.versions.toml.additions.tmpl`; version keys there double as floors; `scripts/fetch-latest-versions.sh`
   lists the same keys for bump-stack.
@@ -167,7 +178,10 @@ Canonical text: `docs/architecture.md`, `docs/stack.md`, `docs/testing.md`. Enco
 - **Skill tiers** — `scripts/skills.sh` is the source of truth; mirror it in `docs/android-cli.md`, README, and
   `/android-forge-add-library`'s library → tier table.
 - **Autoloop material** — lockstep: `commands/android-forge-next-increment.md`, `agents/android-loop-*.md`,
-  `agents/android-spec-critic.md`, `overlay/autoloop/`, `scripts/issues.sh`, `docs/autoloop.md`. The issue form's field
+  `agents/android-spec-critic.md`, `overlay/autoloop/`, `scripts/issues.sh`, `docs/autoloop.md`. `merge-guard.sh` is a
+  bash launcher + an embedded python3 program (stdlib, ≥ 3.8) that lexes shell commands; validate every change with a
+  hook-JSON harness under `/bin/bash` 3.2 and bash 5 (bypasses must DENY in the enforce modes, the loop's own commands
+  ALLOW, `log` never denies) and keep text the loop posts in quoted-heredoc files (`--body-file`, `git commit -F`). The issue form's field
   labels (`### Problem`, `Acceptance criteria`, `Out of scope`, `Notes`, `Depends on`, `Needs a human first`,
   `Change name`) are parsed by `issues.sh`, the loop workers and `/android-forge-refine`; work too big for one PR is
   a parent issue with GitHub sub-issues (`gh issue create --parent`) — the queue skips any issue that has sub-issues,
@@ -177,8 +191,12 @@ Canonical text: `docs/architecture.md`, `docs/stack.md`, `docs/testing.md`. Enco
 - Other string contracts: `// android-forge:feature-modules` and `// android-forge:core-data-deps` markers;
   `// Scenario: <name>` test tags; the "android-forge project rules" line the agents/doctor look for; `TODO(android-forge)`.
 - Docs are the source of truth and ship via GitHub `main` (scaffolded CLAUDE.md links them).
-- Never push to GitHub, create remotes, or enable branch protection from a command without the user's explicit yes in
-  that session.
+- Never push to GitHub or create a remote from a command without the user's explicit yes in that session
+  (`/android-forge-init` asks before creating and pushing the repo; the autonomous loop pushes because the user
+  installed and launched it). Never enable branch protection from a command — the user sets it up.
+- Validating a command's shell blocks: stub `gh` by absolute path or assert `command -v gh` hits the stub — under
+  `zsh -f`, macOS `/etc/zshenv`'s path_helper puts `/opt/homebrew/bin` back in front, and init's last block creates
+  and pushes a real repo.
 
 ## Shared lineage with kmp-forge
 

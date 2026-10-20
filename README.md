@@ -25,9 +25,9 @@ docs and versions go through the Android CLI too.
 ```
 
 Needs the Android CLI (`/android-forge-doctor` checks and tells you how to install it), a JDK 17+ for Gradle,
-`envsubst`, `python3`, `curl` (toolchain pinning, `/android-forge-bump-stack`) and `perl` (both ship with macOS and most
-Linux distributions), and optionally `gh` and `openspec` — plus `jq` once the autonomous build loop is installed
-(its merge guard needs it).
+`envsubst`, `python3` ≥ 3.8 (the issue queue and the autoloop's merge guard), `curl` (toolchain pinning,
+`/android-forge-bump-stack`) and `perl` (both ship with macOS and most Linux distributions), and optionally `gh` and
+`openspec` — plus `jq` once the autonomous build loop is installed (`/android-forge-add-autoloop` needs it).
 
 ## Slash commands
 
