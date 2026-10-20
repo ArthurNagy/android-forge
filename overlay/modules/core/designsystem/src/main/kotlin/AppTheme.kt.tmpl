@@ -1,5 +1,6 @@
 package ${BASE_PACKAGE}.core.designsystem
 
+import android.annotation.SuppressLint
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -16,7 +17,11 @@ import ${BASE_PACKAGE}.core.model.ThemeMode
  *
  * Composables consume MaterialTheme.colorScheme / MaterialTheme.typography and the
  * AppSpacing / AppDimens tokens — never hard-coded colors, `.sp` or `.dp` literals.
+ *
+ * ObsoleteSdkInt is suppressed because one template serves minSdk 29–33: the SDK_INT check is needed at
+ * 29/30 and "obsolete" — a Lint error under warningsAsErrors — from 31 on.
  */
+@SuppressLint("ObsoleteSdkInt")
 @Composable
 fun AppTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,

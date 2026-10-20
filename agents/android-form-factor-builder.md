@@ -31,7 +31,8 @@ You add **one** form factor to an android-forge project. Inputs:
 - `car_app_category` — `auto`/`automotive` only: `poi` · `iot` · `weather` · `navigation` (templated, both
   platforms — renders `:car`) · `messaging` (templated, **Android Auto only**; Google's templated messaging is a labs
   category, publishable to internal and closed testing tracks only) · `media` or `parked` (recipes, no `:car`). When
-  `:car` already exists its manifest's category wins.
+  `:car` already exists its manifest's category wins — after step 2's messaging check, which comes first: `automotive`
+  with `messaging` (passed or in `:car`) always stops.
 - `gate` — `run` (default) or `skip`: `/android-forge-init` may pass `skip`, since its step 9 formats, records every
   golden and runs the gate once for the whole new project.
 
@@ -93,13 +94,13 @@ skill (installed in step 5).
    [ -f car/src/main/AndroidManifest.xml ] && grep -oE 'androidx\.car\.app\.category\.[A-Z_]+' car/src/main/AndroidManifest.xml
    grep -E '^androidMinSdk' gradle/libs.versions.toml
    ```
-   Stop and say what exists when the form factor is already there: its module (`wear`, `tv`, `widgets` → `:widget`,
-   `glasses`), `:automotive` (`automotive`), `:app` linking `:car` or carrying the Auto meta-data (`auto`), the
-   manifest line (`xr`, `desktop`), the `media3-cast` catalog entry (`cast`). `:car` present without the side you're
-   adding (Auto ↔ AAOS): don't re-render it — do only the missing side, with the category printed above.
-   `automotive` with a `MESSAGING` `:car` or `car_app_category: messaging` → stop: templated messaging is Android
-   Auto only. `tv` with `androidMinSdk` above 31: carry on, and warn in the report that TV ready (TV-PS) wants 31 or
-   lower.
+   First, before anything else: `automotive` with `car_app_category: messaging` or a `MESSAGING` `:car` → stop:
+   templated messaging is Android Auto only (the recipe blocks refuse it too). Then stop and say what exists when the
+   form factor is already there: its module (`wear`, `tv`, `widgets` → `:widget`, `glasses`), `:automotive`
+   (`automotive`), `:app` linking `:car` or carrying the Auto meta-data (`auto`), the manifest line (`xr`, `desktop`),
+   the `media3-cast` catalog entry (`cast`). `:car` present without the side you're adding (Auto ↔ AAOS): don't
+   re-render it — do only the missing side, with the category printed above. `tv` with `androidMinSdk` above 31: carry
+   on, and warn in the report that TV ready (TV-PS) wants 31 or lower.
 3. **Render + wire** — the form factor's recipe below (each block starts with the preamble).
 4. **CLAUDE.md** (Edit tool) — under `## Form factors`, one bullet for the form factor (what it is, its module or
    manifest piece, the quality tier it ships at — its page's Quality section), unless a bullet there already names it;
@@ -121,9 +122,10 @@ skill (installed in step 5).
    (`<module>/src/test/screenshots/`).
 7. **Report**: form factor, modules/manifest changes, catalog keys, skill tier, CLAUDE.md lines added (or "already
    there"), gate result (`exit=` and the tail if red, or "skipped"), the emulator command (`bash <plugin>/scripts/avd.sh
-   ensure <ff>`, `android emulator start "$(bash <plugin>/scripts/avd.sh name <ff>)"`, the launch command — Android Auto:
-   the Desktop Head Unit; glasses: a glasses AVD paired with a host phone in Android Studio's Pairing Assistant), any
-   warning from step 2, and the form factor's next step from its page.
+   ensure <avd-ff>`, `android emulator start "$(bash <plugin>/scripts/avd.sh name <avd-ff>)"`, the launch command —
+   `<avd-ff>` is the form factor itself, except `widgets` → `phone`; no emulator for `auto` (the Desktop Head Unit —
+   the steps from `cars.md`) or `cast` (a real Cast device); glasses: a glasses AVD paired with a host phone in Android
+   Studio's Pairing Assistant), any warning from step 2, and the form factor's next step from its page.
 
 ## Recipes
 
@@ -163,6 +165,8 @@ once, for whichever side comes first (skip this block when step 2 found `:car`):
 ```bash
 <preamble>
 : "${CAR_APP_CATEGORY:?car_app_category is required for :car}"
+[[ "${FORM_FACTOR}" == automotive && "${CAR_APP_CATEGORY}" == MESSAGING ]] \
+    && { echo "✗ templated messaging is Android Auto only — not rendering :car for automotive"; exit 1; }
 bash "${AO}" render-module car "${FFD}/cars/car" "${TARGET}/car" "${BASE_PACKAGE_PATH}"
 bash "${AO}" patch-libs "${TARGET}" "${FFD}/cars/libs.versions.toml.additions"
 bash "${AO}" patch-settings "${TARGET}" "car"
@@ -177,6 +181,9 @@ fi
 
 ```bash
 <preamble>
+# Templated messaging is Android Auto only: refuse a messaging category, passed or already in :car.
+{ [[ "${CAR_APP_CATEGORY}" == MESSAGING ]] || grep -qF 'androidx.car.app.category.MESSAGING' car/src/main/AndroidManifest.xml 2>/dev/null; } \
+    && { echo "✗ templated messaging is Android Auto only — no :automotive"; exit 1; }
 bash "${AO}" render-module automotive "${FFD}/cars/automotive" "${TARGET}/automotive" "${BASE_PACKAGE_PATH}"
 bash "${AO}" patch-settings "${TARGET}" "automotive"
 ```
@@ -246,15 +253,16 @@ No module, no dependency. Paste `${FFD}/xr/app-manifest-snippet.xml` (`android.s
 `required="false"`) into `app/src/main/AndroidManifest.xml` as a direct child of `<manifest>`. Tier `xr`. **Record**
 nothing. After the gate, check every merged `<uses-feature>` is not required:
 `aapt2 dump badging app/build/outputs/apk/debug/app-debug.apk | grep uses-feature` (aapt2 lives under
-`$(android info sdk)/build-tools/<newest>/`). The differentiated tier (spatial panels) is product work —
+`$(android info sdk)/build-tools/<newest>/`) — only `uses-feature-not-required` lines, except a required
+`android.hardware.faketouch` while `desktop`'s touchscreen line is absent (implied, and fine for XR). The differentiated tier (spatial panels) is product work —
 `docs/form-factors/xr.md`.
 
 ### `desktop` — Googlebook / ChromeOS readiness (same APK)
 
 No module, no dependency. Paste `${FFD}/desktop/app-manifest-snippet.xml` (`android.hardware.touchscreen`,
 `required="false"`) into `app/src/main/AndroidManifest.xml` as a direct child of `<manifest>`, then, after the gate,
-run the same `aapt2 dump badging … | grep uses-feature` check as `xr` (every line `uses-feature-not-required`, plus the
-implied `faketouch`). The caption-bar tint is already in the scaffold's `MainActivity`. Tier `desktop`. **Record**
+run the same `aapt2 dump badging … | grep uses-feature` check as `xr` (every line `uses-feature-not-required`; no
+`faketouch` line remains once the touchscreen isn't required). The caption-bar tint is already in the scaffold's `MainActivity`. Tier `desktop`. **Record**
 nothing. Keyboard/pointer polish is per feature — `docs/form-factors/desktop.md`.
 
 ### `cast` — Google Cast sender

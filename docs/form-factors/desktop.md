@@ -33,7 +33,8 @@ Added by `/android-forge-add-form-factor desktop`: the manifest line below, the 
    (`useLightCaptionBar`, `APPEARANCE_LIGHT_CAPTION_BARS`); content avoids the bar because `safeDrawing` insets
    include `WindowInsets.captionBar`.
 3. Check the merged result: `aapt2 dump badging app/build/outputs/apk/debug/app-debug.apk | grep uses-feature`
-   — only `uses-feature-not-required` lines (plus the implied `faketouch`).
+   — only `uses-feature-not-required` lines. (Before this line, `aapt2` lists `uses-feature: …faketouch` — the
+   requirement a required touchscreen implies; with it, no `faketouch` line remains.)
 
 ## What android-forge already gives you
 

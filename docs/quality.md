@@ -16,6 +16,8 @@ factor's emulator. Sources: Android's quality guidelines (`android docs search "
 | Wear OS | one Wear app quality checklist (apps, tiles, watch faces) — every applicable item | every applicable app item | [wear.md](form-factors/wear.md#quality) |
 | Android XR headsets | **XR compatible** (mobile / large-screen) → XR differentiated | compatible (same APK) | [xr.md](form-factors/xr.md#quality) |
 | XR display / AI glasses | none published yet (preview) | android-forge's working bar from the glasses docs | [glasses.md](form-factors/glasses.md#quality) |
+| Home-screen widgets | Tier 3 Low quality → **Tier 2 Standard** → Tier 1 Differentiated | Standard | [widgets.md](form-factors/widgets.md#quality) |
+| Google Cast (sender) | no Play tier; the Apps Experience Program's Cast guideline | `AEP-CS-GAA` + `AEP-CS-GAB`, from the first media slice | [cast.md](form-factors/cast.md#quality) |
 
 The `CLAUDE.md` § Form factors bullet of each form factor names the tier it ships at.
 

@@ -4,9 +4,10 @@
     <!-- Marks the APK as a Wear OS app for Play. Never required="false": one APK for phone + watch isn't supported. -->
     <uses-feature android:name="android.hardware.type.watch" />
 
+    <!-- No android:allowBackup: backup is on by default, and from minSdk 31 Lint rejects the deprecated attribute
+         (DataExtractionRules). Exclude data with dataExtractionRules / fullBackupContent, as :app does. -->
     <application
         android:name=".MainApplication"
-        android:allowBackup="true"
         android:icon="@mipmap/wear_ic_launcher"
         android:label="@string/wear_app_name"
         android:roundIcon="@mipmap/wear_ic_launcher"

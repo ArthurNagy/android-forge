@@ -26,3 +26,13 @@ it is added by the slice that needs it, following the **`media3-cast-integration
 
 Cast needs real hardware; the `android-qa` agent reports Cast scenarios as unverified (`ERROR`) — check them by hand
 on a Cast device on the same network. Local playback around it is testable as usual (Media3 test utilities, Robolectric).
+
+## Quality
+
+Play publishes no quality tier for Cast senders. android-forge's bar is Google's Cast guideline for media apps in the
+Apps Experience Program (`android docs fetch kb://android/distribute/aep/aep-req-cast-support`), met by the first media
+slice — adding the form factor alone (catalog + skill) has nothing to check yet:
+- `AEP-CS-GAA` Cast through Media3: the Cast button is visible in the player UI and connects to a Cast device.
+- `AEP-CS-GAB` Output Switcher: the media notification's and lock screen's device chip moves playback correctly when
+  the output route changes (built into Media3's `MediaSession`).
+- The phone app around it stays Adaptive ready ([quality.md](../quality.md#adaptive-ready-every-project)).

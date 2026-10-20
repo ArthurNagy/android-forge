@@ -59,7 +59,7 @@ The gate uploads a `reports` artifact even when it fails (Lint HTML, test report
 | Red step | Fix |
 |---|---|
 | `spotlessCheck` | `./gradlew spotlessApply`; a compose-rules finding needs a code change, not a reformat |
-| `lint` | Lint warnings are errors — fix the finding; a baseline entry or `@Suppress` is not a fix |
+| `lint` | Lint warnings are errors — fix the finding; a baseline entry or `@Suppress` is not a fix. A fixed finding still reported locally (seen after a manifest edit: AGP kept the old report) → `./gradlew :<module>:clean`, then re-run |
 | `coverageVerify` — a test failed | read the test report; fix the code or the test that encodes the wrong expectation |
 | `coverageVerify` — below 85% | add tests for the new code (ViewModel, use case, repository); never widen the excludes |
 | Roborazzi "differs from" / lacks its golden | an intended new or changed screen → `./gradlew recordRoborazziDebug`, look at the PNGs, commit them; an unintended diff → fix the UI |
@@ -68,7 +68,7 @@ The gate uploads a `reports` artifact even when it fails (Lint HTML, test report
 
 ## Mirror CI locally before pushing
 
-The CI gate (see `overlay/ci/pr.yml.tmpl`) runs, in order: `spotlessCheck`, `lint`, `coverageVerify -Proborazzi.test.verify=true` (every module's unit tests + screenshot verification + the 75% JaCoCo gate), `assembleDebug`. Mirror it locally with the auto-fix variant before every push:
+The CI gate (see `overlay/ci/pr.yml.tmpl`) runs, in order: `spotlessCheck`, `lint`, `coverageVerify -Proborazzi.test.verify=true` (every module's unit tests + screenshot verification + the 85% JaCoCo gate), `assembleDebug`. Mirror it locally with the auto-fix variant before every push:
 
 ```bash
 ./gradlew spotlessApply && ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true > "${TMPDIR:-/tmp}/gate.log" 2>&1; rc=$?

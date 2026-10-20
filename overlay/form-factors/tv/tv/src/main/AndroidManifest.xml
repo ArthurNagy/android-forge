@@ -11,9 +11,10 @@
         android:name="android.hardware.touchscreen"
         android:required="false" />
 
+    <!-- No android:allowBackup: backup is on by default, and from minSdk 31 Lint rejects the deprecated attribute
+         (DataExtractionRules). Exclude data with dataExtractionRules / fullBackupContent, as :app does. -->
     <application
         android:name=".MainApplication"
-        android:allowBackup="true"
         android:banner="@drawable/tv_banner"
         android:icon="@mipmap/tv_ic_launcher"
         android:label="@string/tv_app_name"

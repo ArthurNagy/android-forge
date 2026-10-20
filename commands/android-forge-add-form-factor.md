@@ -66,7 +66,7 @@ Templated categories render `:car`; media and parked follow the recipes in
 ✓ Catalog: <keys> · Android skills: <tier> installed in .claude/skills/
 ✓ CLAUDE.md § Form factors updated
 ✓ Gate: green | red (output)
-✓ Emulator: <AVD> created/started, screenshot <path> | skipped (run: bash <plugin>/scripts/avd.sh ensure <ff>)
+✓ Emulator: <AVD> created/started, screenshot <path> | skipped (run: bash <plugin>/scripts/avd.sh ensure <avd-form-factor>) | none (auto: the Desktop Head Unit · cast: a real Cast device)
 
 Next: <form-factor-specific next step — e.g. Wear: build the watch UI with the wear-compose-m3 skill; TV: D-pad
 focus paths; cars: the category's quality checklist> — https://github.com/arthurnagy/android-forge/blob/main/docs/form-factors/<page>
