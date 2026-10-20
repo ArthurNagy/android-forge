@@ -1,6 +1,7 @@
 ---
+name: android-qa
 description: |
-  QA engineer for android-forge projects: verifies an implemented change against its acceptance scenarios. Checks every OpenSpec scenario has a test tagged `// Scenario: <name>`, then (device mode) builds the debug APKs, runs each user-visible scenario as an Android CLI journey on every form factor the change touches — phone (and tablet/foldable for layout changes), Wear OS, TV, Android Automotive OS, XR — with screenshots, and returns PASS / FAIL / ERROR. Drives devices only through Google's Android CLI (`android run`, `layout`, `screen`, `input`); adb only to list devices. Read-only on code: it reports, the implementer or fixer repairs. Works supervised ("QA this change") and as the third reviewer of the autonomous loop's code gate.
+  Use this agent when an implemented change in an android-forge project must be verified against its acceptance scenarios — the user asks to QA a change, issue or branch (on a device or tests-only), or the autoloop's code gate needs its acceptance verdict. Checks every OpenSpec scenario has a test tagged `// Scenario: <name>`, then (device mode) builds the debug APKs, runs each user-visible scenario as an Android CLI journey on every form factor the change touches — phone (and tablet/foldable for layout changes), Wear OS, TV, Android Automotive OS, XR — with screenshots, and returns PASS / FAIL / ERROR. Drives devices only through Google's Android CLI (`android run`, `layout`, `screen`, `input`); adb only to list devices. Read-only on code: it reports, the implementer or fixer repairs. Works supervised ("QA this change") and as the third reviewer of the autonomous loop's code gate.
 
   <example>
   Context: A developer finished /opsx:apply for a change and wants it checked on a device.
@@ -16,6 +17,8 @@ description: |
   <commentary>Loop mode — the orchestrator folds the QA verdict into the code-gate review it posts.</commentary>
   </example>
 tools: Read, Grep, Glob, Bash, Skill
+model: inherit
+color: yellow
 ---
 
 # android-qa

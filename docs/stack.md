@@ -119,9 +119,11 @@ wherever one exists** — Google's docs, samples and Android skills then apply d
 
 ### Quality gates
 - **Android Lint** — `warningsAsErrors`, dependency-freshness checks off (bump-stack's job).
+- **Slack's compose-lints** (`com.slack.lint.compose:compose-lint-checks`) — `lintChecks` on every Compose
+  module, so `lint` also checks Compose usage (ADR 0007).
 - **Spotless + ktlint + compose-rules** (`io.nlopez.compose.rules:ktlint`) — `spotlessCheck` in CI.
 - **JaCoCo** (AGP `enableUnitTestCoverage`) aggregated at the root: `./gradlew coverageVerify` fails
-  below 75% line coverage. Kover is avoided until its AGP 9 issues close (ADR 0008).
+  below 85% line coverage. Kover is avoided until its open AGP 9 / flaky-verify issues close (ADR 0008).
 - **detekt is not used**: detekt < 2.0 forces AGP 9's built-in Kotlin off; revisit at detekt 2.0 stable (ADR 0007).
 
 ### Toolchain

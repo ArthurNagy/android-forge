@@ -76,7 +76,7 @@ Every scaffolded project ships with these 9, documenting the locked-stack ration
 - `0004-nav3.md` — why androidx Nav 3 (api keys, `@IntoSet` entries) over Navigation 2 / Compose Destinations
 - `0005-result-domain-error.md` — why kotlin-result (Result<V, E>) + sealed DomainError over Arrow / exceptions
 - `0006-dispatcher-provider.md` — why inject DispatcherProvider
-- `0007-lint-over-detekt.md` — why Android Lint + ktlint + compose-rules, without detekt (AGP 9)
+- `0007-lint-over-detekt.md` — why Android Lint + compose-lints, ktlint + compose-rules, without detekt (AGP 9)
 - `0008-jacoco.md` — why JaCoCo through AGP over Kover (AGP 9)
 - `0009-app-module-per-form-factor.md` — why Wear / TV / AAOS get their own app modules
 

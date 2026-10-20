@@ -19,7 +19,13 @@ Distribution: self-contained marketplace (`.claude-plugin/marketplace.json`, `so
 
 ## Commands
 
+The scripts need `android` (Google's Android CLI), `envsubst` (gettext), `jq`, `python3`, `perl`, `curl` and `gh` ≥ 2.94;
+the scaffolds need JDK 17 and 21 toolchains (`/android-forge-doctor` checks the rest).
+
 ```bash
+# Load this checkout as the plugin for one session (try commands/agents/skills without publishing)
+claude --plugin-dir .
+
 # Render a template in isolation (only OVERLAY_VARS are substituted — see scripts/apply-overlay.sh)
 BASE_PACKAGE=com.foo.app APP_NAME=Foo envsubst '${BASE_PACKAGE} ${APP_NAME}' < overlay/app/src/main/kotlin/MainActivity.kt.tmpl
 
@@ -133,11 +139,13 @@ Canonical text: `docs/architecture.md`, `docs/stack.md`, `docs/testing.md`. Enco
   `jdk.internal.access` export — set by the conventions); fakes over mocks; Orbit harness; ViewModels built outside
   `setContent`.
 - **Gate**: `spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true` (Lint warnings = errors;
-  ktlint + compose-rules; JaCoCo ≥ 75% aggregated by `android-forge.root`).
+  Slack compose-lints; ktlint + compose-rules; JaCoCo ≥ 85% aggregated by `android-forge.root`).
 
 ## Conventions for editing this repo
 
-- Conventional Commits; releases tagged from `main`; changelog by git-cliff.
+- Conventional Commits; releases tagged from `main`. `CHANGELOG.md` is hand-written (Keep a Changelog — git-cliff is
+  for scaffolded projects, there is no root `cliff.toml`). A release bumps `version` in **both**
+  `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`.
 - **zsh-safe shell in every prompt**: the Bash tool may run zsh. Brace variables (`"${FEATURE_NAME}:api"` — an unbraced
   `$FEATURE_NAME:a…` is a zsh modifier and silently mangles the path) and quote every path (the user's projects folder
   contains a space).
@@ -148,8 +156,8 @@ Canonical text: `docs/architecture.md`, `docs/stack.md`, `docs/testing.md`. Enco
   command that renders it (init step 2; add-feature / add-form-factor / add-autoloop). Unset vars render as "".
 - **Changing a locked-stack rule** — update in lockstep: `docs/<area>.md` (canonical), `agents/android-reviewer.md`,
   `agents/android-feature-builder.md`, `agents/android-migrator.md`, the layer skill (examples must keep compiling —
-  re-validate them in a scratch project), the templates under `overlay/`, and `overlay/openspec/config.yaml.tmpl` if it
-  names the rule.
+  re-validate them in a scratch project), the templates under `overlay/`, and `overlay/openspec/config.yaml.tmpl` /
+  the "Rules the reviewer enforces" list in `overlay/root/CLAUDE.md.tmpl` if they name the rule.
 - **Catalog**: every alias a convention plugin looks up (`catalog.findLibrary("…")`) must exist in
   `overlay/gradle/libs.versions.toml.additions.tmpl`; version keys there double as floors; `scripts/fetch-latest-versions.sh`
   lists the same keys for bump-stack.
@@ -161,9 +169,10 @@ Canonical text: `docs/architecture.md`, `docs/stack.md`, `docs/testing.md`. Enco
 - **Autoloop material** — lockstep: `commands/android-forge-next-increment.md`, `agents/android-loop-*.md`,
   `agents/android-spec-critic.md`, `overlay/autoloop/`, `scripts/issues.sh`, `docs/autoloop.md`. The issue form's field
   labels (`### Problem`, `Acceptance criteria`, `Out of scope`, `Notes`, `Depends on`, `Needs a human first`,
-  `Change name`) are parsed by `issues.sh`, the loop workers and `/android-forge-refine`; the `ready` label is applied
-  only by a human (merge-guard denies it); the `### 🤖 <gate> — round r/3 — <VERDICT>` review header is shared by the
-  orchestrator, its resume jq and `merge-guard.sh`; the hook command in `overlay/autoloop/settings.json` stays quoted;
+  `Change name`) are parsed by `issues.sh`, the loop workers and `/android-forge-refine`; work too big for one PR is
+  a parent issue with GitHub sub-issues (`gh issue create --parent`) — the queue skips any issue that has sub-issues,
+  no label involved; the `ready` label is applied only by a human (merge-guard denies it); the
+  `### 🤖 <gate> — round r/3 — <VERDICT>` review header is shared by the orchestrator, its resume jq and `merge-guard.sh`; the hook command in `overlay/autoloop/settings.json` stays quoted;
   bump `merge-guard.sh`'s `# version:` on every change.
 - Other string contracts: `// android-forge:feature-modules` and `// android-forge:core-data-deps` markers;
   `// Scenario: <name>` test tags; the "android-forge project rules" line the agents/doctor look for; `TODO(android-forge)`.

@@ -59,7 +59,7 @@ If `[wrapper] gradle` is newer than the version in `gradle/wrapper/gradle-wrappe
 ./gradlew wrapper --gradle-version <latest> --distribution-type bin
 ```
 
-Never go below android-forge's floor (Gradle 9.8.1 — `pin-toolchain`; AGP 9.4.1 and the other floors in `overlay/gradle/libs.versions.toml.additions.tmpl`).
+Never go below android-forge's floor (Gradle 9.8.1 — `pin-toolchain`; AGP 9.4.1 and the other floors in `${CLAUDE_PLUGIN_ROOT}/overlay/gradle/libs.versions.toml.additions.tmpl`).
 
 ### 6. Build to verify
 

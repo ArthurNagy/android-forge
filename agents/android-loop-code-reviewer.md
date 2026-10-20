@@ -1,4 +1,5 @@
 ---
+name: android-loop-code-reviewer
 description: |
   Phase-4 correctness gate for the android-forge autonomous build loop. Runs /code-review high --comment <pr> against the open code PR, posts inline findings, then classifies each finding as blocking or non-blocking and returns a compact verdict — failing closed (ERROR) when it cannot establish the PR's diff. Never merges, never fixes. Invoked by /android-forge-next-increment alongside android-reviewer — not for general use.
 
@@ -9,6 +10,8 @@ description: |
   <commentary>Loop Phase 4 — the correctness half of the code gate; the orchestrator merges its verdict with android-reviewer's (conventions) and android-qa's (acceptance).</commentary>
   </example>
 tools: Read, Grep, Glob, Bash, Skill
+model: inherit
+color: blue
 ---
 
 # android-loop-code-reviewer

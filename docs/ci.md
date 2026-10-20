@@ -11,8 +11,8 @@ Runs on every PR to `main`; required by branch protection. One Ubuntu job:
 | Step | Command | Fails when |
 |---|---|---|
 | Format | `./gradlew spotlessCheck` | ktlint or a compose-rules check fails (`spotlessApply` fixes formatting; compose-rules findings need a code change) |
-| Lint | `./gradlew lint` | any Android Lint warning (warnings are errors; dependency-freshness checks are off) |
-| Tests + screenshots + coverage | `./gradlew coverageVerify -Proborazzi.test.verify=true` | a local test fails, a screenshot differs from (or lacks) its golden, or aggregated line coverage < 75% |
+| Lint | `./gradlew lint` | any Android Lint warning, Slack compose-lints included (warnings are errors; dependency-freshness checks are off) |
+| Tests + screenshots + coverage | `./gradlew coverageVerify -Proborazzi.test.verify=true` | a local test fails, a screenshot differs from (or lacks) its golden, or aggregated line coverage < 85% |
 | Assemble | `./gradlew assembleDebug` | any app module (`:app`, `:wear`, `:tv`, `:automotive`) fails to build |
 
 Then `coverageReport` runs and the reports (JaCoCo HTML, Lint HTML, test reports, Roborazzi diffs) are

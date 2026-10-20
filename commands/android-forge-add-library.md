@@ -10,14 +10,16 @@ Android-first option wherever one exists); anything else comes from Maven Centra
 
 ## Arguments
 
+Query: `$ARGUMENTS`
+
 - **`<search-query>`**: free-form (`"camera"`, `"background work"`, `"date picker"`), or exact coordinates
-  (`androidx.camera:camera-compose`).
+  (`androidx.camera:camera-compose`). Empty → ask in a plain message which capability the user needs.
 
 ## Flow
 
 ### 1. Is it already decided?
 
-Check `docs/stack.md` (plugin) for the concern first — networking, persistence, images, DI, logging, crash
+Check `${CLAUDE_PLUGIN_ROOT}/docs/stack.md` for the concern first — networking, persistence, images, DI, logging, crash
 reporting, background work, media, camera, security, form factors are already locked or have a documented opt-in.
 If the query maps to one (e.g. "http client" → Retrofit + OkHttp in `:core:network`, "database" → Room 3 via the
 `data-layer` skill's First table recipe, "wear app" → `/android-forge-add-form-factor wear`), say so and follow that
@@ -35,7 +37,7 @@ android docs fetch kb://…                        # names the artifacts + curre
 - Anything else: Maven Central's search (`curl -s "https://search.maven.org/solrsearch/select?q=<keyword>&rows=10&wt=json"` —
   use it only to find coordinates; its version field lags, versions come from step 3).
 
-Present up to 5 candidates with `AskUserQuestion` (coordinates, what it is, Jetpack/Google vs third-party, stable or
+Present up to 4 candidates with `AskUserQuestion` (its per-question limit; "Other" lets the user name another) (coordinates, what it is, Jetpack/Google vs third-party, stable or
 not). The user picks one.
 
 ### 3. Latest stable version
@@ -46,8 +48,8 @@ sorted by version, purely numeric releases only:
 
 ```bash
 GROUP="<group>"; ARTIFACT="<artifact>"; GROUP_PATH="${GROUP//.//}"
-latest_stable() {  # $1 = repository base URL → newest purely numeric version, or ""
-  curl -sfL "$1/${GROUP_PATH}/${ARTIFACT}/maven-metadata.xml" 2>/dev/null \
+latest_stable() {  # ${1} = repository base URL → newest purely numeric version, or ""
+  curl -sfL "${1}/${GROUP_PATH}/${ARTIFACT}/maven-metadata.xml" 2>/dev/null \
     | grep -oE '<version>[^<]+</version>' | sed 's/<[^>]*>//g' \
     | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -V | tail -1
 }
@@ -66,7 +68,7 @@ Kebab-case library alias, camelCase version key, matching the catalog's style:
 LIB_KEY="$(printf '%s' "${ARTIFACT}" | tr '[:upper:]' '[:lower:]' | tr '._' '--')"
 grep -qE "^${LIB_KEY}[[:space:]]*=" gradle/libs.versions.toml \
   && LIB_KEY="$(printf '%s' "${GROUP##*.}" | tr '[:upper:]' '[:lower:]' | tr '._' '--')-${LIB_KEY}"
-VERSION_KEY="$(printf '%s' "${LIB_KEY}" | awk -F- '{printf "%s", $1; for (i = 2; i <= NF; i++) printf "%s", toupper(substr($i, 1, 1)) substr($i, 2)}')"
+VERSION_KEY="$(printf '%s' "${LIB_KEY}" | awk -F- '{printf "%s", $(1); for (i = 2; i <= NF; i++) printf "%s", toupper(substr($i, 1, 1)) substr($i, 2)}')"
 ```
 
 Edit `gradle/libs.versions.toml`: `[versions] <VERSION_KEY> = "<VERSION>"` (reuse a sibling's `version.ref` for the same

@@ -77,7 +77,7 @@ Numbers are sequential. Never reuse a number. Never reorder.
 - `0004-nav3.md` — why androidx Navigation 3 (api/impl keys, Hilt `@IntoSet` entries) over Navigation 2 / Compose Destinations
 - `0005-result-domain-error.md` — why kotlin-result (Result<V, E>) + sealed DomainError over exceptions / Arrow
 - `0006-dispatcher-provider.md` — why inject DispatcherProvider over using Dispatchers.IO directly
-- `0007-lint-over-detekt.md` — why Android Lint + ktlint + compose-rules, without detekt (AGP 9)
+- `0007-lint-over-detekt.md` — why Android Lint + compose-lints, ktlint + compose-rules, without detekt (AGP 9)
 - `0008-jacoco.md` — why JaCoCo through AGP over Kover (AGP 9)
 - `0009-app-module-per-form-factor.md` — why Wear / TV / AAOS get their own app modules
 
@@ -140,9 +140,9 @@ GitHub issues are the **single source of work** — no Jira, no Linear, no secon
 ### Lifecycle
 
 1. **File** — an idea, a bug, a raw request (anyone's). Use the forms in `.github/ISSUE_TEMPLATE/`.
-2. **Refine** — `/android-forge-refine` (the `android-product-owner` agent drafts, you pick what gets filed; rules in the `backlog-issue-authoring` skill) or by hand. Shape it into one change that fits one PR: **Problem**, **Acceptance criteria** (WHEN … THEN …, one per line — each becomes a spec scenario and a test), **Out of scope**, optional **Depends on**, **Needs a human first**, **Change name**. Too big → label it `epic` and split it into slice issues, each starting its **Notes** with `Part of #<epic>` (not **Depends on** — the epic stays open, so the queue would wait on it forever). An outsider's issue is raw intake: re-file the refined version as your own and close the original with a link.
+2. **Refine** — `/android-forge-refine` (the `android-product-owner` agent drafts, you pick what gets filed; rules in the `backlog-issue-authoring` skill) or by hand. Shape it into one change that fits one PR: **Problem**, **Acceptance criteria** (WHEN … THEN …, one per line — each becomes a spec scenario and a test), **Out of scope**, optional **Depends on**, **Needs a human first**, **Change name**. Too big → keep it as the **parent issue** and split the work into GitHub **sub-issues**, one per PR (`gh issue create --parent <n>`; never via **Depends on** — the parent stays open, so the queue would wait on it forever). The queue skips any issue that has sub-issues; GitHub shows the parent's progress on the board. An outsider's issue is raw intake: re-file the refined version as your own and close the original with a link.
 
-   **Epics get an architect.** When a refine pass involves an epic, the `android-architect` agent reads the code, ADRs and specs and fits the epic into the codebase: which types and modules each slice adds or reuses, the technical dependency order (with one enabling `chore` slice when infrastructure must land first), technical **Notes** and **Out of scope** lines per slice, risks to clear first, and ADR drafts for decisions with real alternatives. The ADRs you pick are written to `docs/DECISIONS/` uncommitted — review and commit them before approving the slices that cite them — and the design is posted on the epic. Supervised only: the autonomous loop never runs it. The slice's **Notes** reach `/opsx:propose` as design guidance.
+   **Design-heavy work gets an architect.** When a refine pass involves a parent issue — or a single issue the product owner marks `design: needed` because it adds a module, a data source or library, a form factor or a cross-cutting concern — the `android-architect` agent reads the code, ADRs and specs and fits the work into the codebase: which types and modules each issue adds or reuses, the technical dependency order (with one enabling `chore` issue when infrastructure must land first), technical **Notes** and **Out of scope** lines per issue, risks to clear first, and ADR drafts for decisions with real alternatives. The ADRs you pick are written to `docs/DECISIONS/` uncommitted — review and commit them before approving the issues that cite them — and the design is posted on the parent (or the single issue). Supervised only: the autonomous loop never runs it. Each issue's **Notes** reach `/opsx:propose` as design guidance.
 3. **Approve** — a human labels it `ready` (plus `priority:high` / `priority:low` if it should jump or trail the queue). **Only a human applies `ready`.** Claude files and refines issues but never approves them; with the autonomous loop installed, the merge guard enforces that.
 4. **Work** — `in-progress` while someone (or the loop) works it. One name for everything: the OpenSpec change is `<issue>-<kebab>` and its branches are `spec/<that name>` / `feat/<that name>` (`fix/…` for a bug) — the loop treats two different names for one issue as a conflict.
 5. **Close** — the PR body says `Fixes #<issue>`; merging closes it.
@@ -155,7 +155,6 @@ Created by `/android-forge-init` (when it creates the GitHub repo) or `bash <plu
 |---|---|
 | `ready` | Approved for work — the backlog. Human-applied only. |
 | `in-progress` | Being worked (the loop sets and clears it) |
-| `epic` | Too big for one change; never worked directly — its slices are |
 | `priority:high` / `priority:low` | Work before / after unlabeled issues (then oldest first) |
 | `no-spec` | A `feat:` PR that deliberately ships without an OpenSpec change (see below) |
 | `bug` · `enhancement` · `chore` · `adr` | Type — the issue forms pre-apply them |

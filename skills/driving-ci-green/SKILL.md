@@ -23,8 +23,9 @@ Still `0` after the loop → the workflow is not triggering (missing `pr.yml`, a
 **2. Watch.**
 
 ```bash
-gh pr checks <pr> --watch --fail-fast --interval 20 >/dev/null 2>/tmp/ci-watch.err; rc=$?
-echo "exit=$rc"; grep -q "no checks reported" /tmp/ci-watch.err && echo "NOT REGISTERED — back to step 1"
+err="${TMPDIR:-/tmp}/ci-watch-<pr>.err"   # per PR: parallel loop workers must not share it
+gh pr checks <pr> --watch --fail-fast --interval 20 >/dev/null 2>"${err}"; rc=$?
+echo "exit=${rc}"; grep -q "no checks reported" "${err}" && echo "NOT REGISTERED — back to step 1"
 ```
 
 Run it with a Bash `timeout` of `600000` (10 min). Exit meanings:
@@ -50,13 +51,33 @@ gh run view "$run" --log-failed 2>&1 | tail -100
 
 Never run `gh run view --log-failed` unpiped. Always `| tail -100`; widen to `tail -300` only if the first 100 lines genuinely do not contain the error. If `$run` is empty, no run on the head commit has failed — re-check `gh pr checks <pr>` (a failing check may come from an external status, not a workflow run).
 
+The gate uploads a `reports` artifact even when it fails (Lint HTML, test reports, JaCoCo, Roborazzi diffs):
+`gh run download "$run" -n reports -D "${TMPDIR:-/tmp}/ci-reports-<pr>"`, then read only the file the log names.
+
+### Red step → fix
+
+| Red step | Fix |
+|---|---|
+| `spotlessCheck` | `./gradlew spotlessApply`; a compose-rules finding needs a code change, not a reformat |
+| `lint` | Lint warnings are errors — fix the finding; a baseline entry or `@Suppress` is not a fix |
+| `coverageVerify` — a test failed | read the test report; fix the code or the test that encodes the wrong expectation |
+| `coverageVerify` — below 85% | add tests for the new code (ViewModel, use case, repository); never widen the excludes |
+| Roborazzi "differs from" / lacks its golden | an intended new or changed screen → `./gradlew recordRoborazziDebug`, look at the PNGs, commit them; an unintended diff → fix the UI |
+| `assembleDebug` | compile error — usually a module dependency or a missing catalog alias |
+| `spec-link` | a `feat:` PR touching `src/main/` without an OpenSpec change: add the change, or the `no-spec` label when it deliberately has no spec-visible behavior |
+
 ## Mirror CI locally before pushing
 
 The CI gate (see `overlay/ci/pr.yml.tmpl`) runs, in order: `spotlessCheck`, `lint`, `coverageVerify -Proborazzi.test.verify=true` (every module's unit tests + screenshot verification + the 75% JaCoCo gate), `assembleDebug`. Mirror it locally with the auto-fix variant before every push:
 
 ```bash
-./gradlew spotlessApply && ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true 2>&1 | tail -80
+./gradlew spotlessApply && ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true > "${TMPDIR:-/tmp}/gate.log" 2>&1; rc=$?
+tail -80 "${TMPDIR:-/tmp}/gate.log"; echo "gate exit=${rc}"
 ```
+
+Read the exit code, not the tail: piping Gradle straight into `tail` reports `tail`'s status, so a red build looks
+green. A change that adds or intentionally changes a screen runs `./gradlew recordRoborazziDebug` first and commits
+the new goldens.
 
 `spotlessApply` auto-fixes formatting (CI runs the check-only `spotlessCheck`). Iterate until this is clean — a push with a locally-red build wastes a CI cycle. Do not weaken the gate to pass it: no lowering the JaCoCo threshold or widening its excludes, no deleting or `@Ignore`-ing a test, no Lint baseline entry or `@Suppress` to silence a real finding, no re-recording a screenshot golden to make an unintended UI change pass.
 

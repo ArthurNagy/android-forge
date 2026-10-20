@@ -41,13 +41,13 @@ When you "STOP + escalate": leave the repo in a safe state (no half-merged branc
 | 2b / 4b · Fix | `android-forge:android-loop-fixer` | `RESULT / CI / APPLIED / UNADDRESSED` |
 | 0b · Queue empty | `android-forge:android-product-owner` | `RESULT` + drafted issues (filed by you, never `ready`) |
 
-Pass each worker the `issue` number and the `slug`, plus `claude_plugin_root` = `${CLAUDE_PLUGIN_ROOT}` — the workers read the issue themselves (`gh issue view <issue> --json title,body,labels`); its Problem / Acceptance criteria / Out of scope sections (a bug report: What happened? / Acceptance criteria) are the slice's goal and binding boundaries, and its Notes are design guidance (an epic's slices carry the architect's technical notes from `/android-forge-refine`). Pass `local-gate` (from the loop configuration) to the implementer and the fixer; pass `pr`, `branch`, and `round` to the gates and the fixer. If a worker returns `RESULT: FAILED`, its `FAILURE:` line is your escalation cause — do not retry it blind.
+Pass each worker the `issue` number and the `slug`, plus `claude_plugin_root` = `${CLAUDE_PLUGIN_ROOT}` — the workers read the issue themselves (`gh issue view <issue> --json title,body,labels`); its Problem / Acceptance criteria / Out of scope sections (a bug report: What happened? / Acceptance criteria) are the slice's goal and binding boundaries, and its Notes are design guidance (an issue `/android-forge-refine` designed carries the architect's technical notes there). Pass `local-gate` (from the loop configuration) to the implementer and the fixer; pass `pr`, `branch`, and `round` to the gates and the fixer. If a worker returns `RESULT: FAILED`, its `FAILURE:` line is your escalation cause — do not retry it blind.
 
 ## Flow
 
 ### 0. Precheck and resume
 
-1. **Read the loop configuration** from `openspec/AUTOLOOP.md`'s `## Loop configuration` section: `local-gate`, `spec-workflow`, `ready-approvers`, `queue-empty-refine`, `qa`, `qa-device`, `kill-switch`, and the `### Queue-empty handoff` block. Missing file or missing keys → fail-safe defaults: ready-approvers empty (only this account), queue-empty-refine `off`, qa `off`, qa-device `auto`, kill-switch `openspec/STOP`, local-gate `./gradlew spotlessApply && ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true`, handoff = "label more issues `ready`, or stop".
+1. **Read the loop configuration** from `openspec/AUTOLOOP.md`'s `## Loop configuration` section: `local-gate`, `spec-workflow`, `ready-approvers`, `queue-empty-refine`, `qa`, `qa-device`, `kill-switch`, and the `### Queue-empty handoff` block. Missing file → the loop isn't installed: stop as in § Notes. Missing keys → fail-safe defaults: ready-approvers empty (only this account), queue-empty-refine `off`, qa `off`, qa-device `auto`, kill-switch `openspec/STOP`, local-gate `./gradlew spotlessApply && ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true`, handoff = "label more issues `ready`, or stop".
 2. If the kill-switch file exists → kill-switch halt.
 3. **Working tree.** `git fetch origin --prune`, then `git status --porcelain`:
    - **Clean** → continue.
@@ -66,7 +66,7 @@ Pass each worker the `issue` number and the `slug`, plus `claude_plugin_root` = 
    ```bash
    bash "${CLAUDE_PLUGIN_ROOT}/scripts/issues.sh" next --approvers "<ready-approvers>"
    ```
-   It prints one JSON object (it resumes an open `in-progress` issue first; otherwise the highest-priority, oldest `ready` issue that is not an `epic`, whose author and `ready`-labeler are this account or an approver, that nothing open blocks, and that is not already implemented):
+   It prints one JSON object (it resumes an open `in-progress` issue first; otherwise the highest-priority, oldest `ready` issue that is not a parent issue (one with sub-issues), whose author and `ready`-labeler are this account or an approver, that nothing open blocks, and that is not already implemented):
    - `"status": "error"` or `"conflict"` → STOP + escalate with its `reason`.
    - `"status": "paused"` → the `in-progress` issue (this loop's current slice) can't be worked right now — a human removed `ready`, or a dependency reopened. Do **not** start another issue (that would leave two half-done slices). Print a `⏸ LOOP PAUSED — #<issue>` block with its `reason`, then tell `/loop` to stop. Not an escalation: the human resumes by relabeling it `ready`, or drops it by removing `in-progress`.
    - `"status": "next"` → take `issue`, `title`, `slug` (`<issue>-<kebab>`, reused from any earlier attempt) and `preconditions`. Non-empty `preconditions` (the issue's **Needs a human first** section: credentials, a URL) are a **precondition, not a task**: check them before doing anything. If unmet → STOP + escalate immediately, before Phase 1.
@@ -75,13 +75,13 @@ Pass each worker the `issue` number and the `slug`, plus `claude_plugin_root` = 
      openspec archive <name> --yes          # once per finished change
      git add -- openspec && git commit -m "docs(openspec): archive <name…>" && git push origin main
      ```
-     **Queue-empty refinement** (only when `queue-empty-refine: on`): spawn `android-forge:android-product-owner` with `mode: gaps`, `max: 3`, `claude_plugin_root`. On `RESULT: OK`, file each `action: create` draft in its listed order (skip `replace` drafts — re-filing someone's issue is the human's call), replacing every `draft:<j>` with the number draft *j* got, giving a draft with an `epic:` line a first **Notes** line `Part of #<epic number>` (as `/android-forge-refine` does — never put the epic in Depends on), and strip `ready` from the labels should it ever appear:
+     **Queue-empty refinement** (only when `queue-empty-refine: on`): spawn `android-forge:android-product-owner` with `mode: gaps`, `max: 3`, `claude_plugin_root`. On `RESULT: OK`, file each `action: create` draft in its listed order (skip `replace` drafts — re-filing someone's issue is the human's call), replacing every `draft:<j>` with the number draft *j* got, filing a draft with a `parent:` line as a sub-issue of that parent (`gh issue create … --parent <parent number>`, as `/android-forge-refine` does — never put the parent in Depends on), and strip `ready` from the labels should it ever appear:
      ```bash
      gh issue create --title "<title>" --label "<labels>" --body-file <scratch file with the draft body>
      ```
      Any other result → note it in the block below; it is not an escalation.
 
-     Print a `🏁 QUEUE EMPTY` block containing the configured **Queue-empty handoff** verbatim, the `skipped` list (ready issues the queue passed over, and why — blocked, untrusted, epic), and any issues just drafted with the command that approves them — `gh issue edit <n…> --add-label ready`, **for the human to run**. Then tell `/loop` to stop and wait for the human. Never label anything `ready` yourself.
+     Print a `🏁 QUEUE EMPTY` block containing the configured **Queue-empty handoff** verbatim, the `skipped` list (ready issues the queue passed over, and why — blocked, untrusted, parent issue), and any issues just drafted with the command that approves them — `gh issue edit <n…> --add-label ready`, **for the human to run**. Then tell `/loop` to stop and wait for the human. Never label anything `ready` yourself.
 5. **Derive the phase to resume at — never guess from memory.** A prior iteration may have been interrupted, compacted, or crashed between any two steps. The repo, GitHub, and OpenSpec are the only sources of truth. Query by **head branch and every state** (a plain `--search "<slug>"` misses branch names, and `--state open` misses a PR merged just before a crash):
    ```bash
    gh pr list --head "spec/<slug>" --state all --json number,state,isCrossRepository,author --limit 10
@@ -222,4 +222,4 @@ Decision needed: <the specific human judgment required>
 
 - This command assumes `/android-forge-add-autoloop` has been run: OpenSpec initialized (`/opsx:*` commands present), AUTOLOOP.md seeded, the issue labels created, merge guard installed. If any of that is missing, stop and point the user at `/android-forge-add-autoloop`.
 - Launch: `/loop /android-forge-next-increment`. One invocation = one increment; `/loop` provides the repetition.
-- Steering is all on GitHub: label an issue `ready` to queue it, `priority:high` / `priority:low` to reorder, remove `ready` to pause it (on the `in-progress` issue that pauses the whole loop — `⏸ LOOP PAUSED`, no other slice starts meanwhile; relabel to resume, or remove `in-progress` to drop it), `epic` to keep it out of the queue. Create the configured kill-switch file (`kill-switch:` in `openspec/AUTOLOOP.md`, default `openspec/STOP` — gitignored) for an emergency stop, delete it to resume.
+- Steering is all on GitHub: label an issue `ready` to queue it, `priority:high` / `priority:low` to reorder, remove `ready` to pause it (on the `in-progress` issue that pauses the whole loop — `⏸ LOOP PAUSED`, no other slice starts meanwhile; relabel to resume, or remove `in-progress` to drop it), split it into sub-issues to keep the parent out of the queue (its sub-issues are worked instead). Create the configured kill-switch file (`kill-switch:` in `openspec/AUTOLOOP.md`, default `openspec/STOP` — gitignored) for an emergency stop, delete it to resume.

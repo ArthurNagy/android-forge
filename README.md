@@ -13,7 +13,7 @@ and Google's own tooling.
 `android-forge` creates the base project with **Google's Android CLI** (`android create`), raises it to a tested
 toolchain floor (AGP 9.4 with built-in Kotlin, Gradle 9.8, compile/target SDK 37), then overlays: convention plugins,
 the `:core:*` + `:feature:*:{api,impl}` module shape, a working Hilt → DataStore → use case → Orbit slice, the gates
-(Lint, ktlint + compose-rules, JaCoCo 75%, Roborazzi screenshots), CI, product docs and ADRs — and installs Google's
+(Lint + compose-lints, ktlint + compose-rules, JaCoCo 85%, Roborazzi screenshots), CI, product docs and ADRs — and installs Google's
 **Android agent skills** into the project, tiered by the form factors and capabilities it uses. Devices, emulators,
 docs and versions go through the Android CLI too.
 
@@ -37,7 +37,7 @@ optionally `gh` and `openspec`.
 - `/android-forge-add-library <query>` — find a Jetpack/Google (or Maven) library, add it to the catalog and module, install its skill tier
 - `/android-forge-bump-stack` — refresh the catalog against the latest stable versions (Maven metadata + `android studio version-lookup`)
 - `/android-forge-spec` — author `docs/MVP_SPEC.md`
-- `/android-forge-refine <idea | #issues | --gaps>` — product-owner pass: workable backlog issues (+ architect pass on epics); you approve with `ready`
+- `/android-forge-refine <idea | #issues | --gaps>` — product-owner pass: workable backlog issues (+ an architect pass on parent issues and issues that need design); you approve with `ready`
 - `/android-forge-doctor` — Android CLI, SDK, system images, emulators, JDKs, floors, skills, hooks, workflow
 - `/android-forge-add-autoloop` — install the autonomous build loop (OpenSpec, GitHub-issue queue, merge-guard)
 - `/android-forge-next-increment` — run ONE autonomous increment on the next `ready` issue; wrap with `/loop`
@@ -78,7 +78,7 @@ See [docs/android-cli.md](docs/android-cli.md).
 | Images · logging · time | Coil 3 · Timber · java.time |
 | i18n | Android resources with per-module prefixes, per-app languages |
 | Testing | JUnit 4 + Robolectric + Orbit test + Turbine + Compose UI Test v2 + Roborazzi (phone + tablet goldens) |
-| Gates | Android Lint (warnings = errors) · Spotless/ktlint + compose-rules · JaCoCo ≥ 75% |
+| Gates | Android Lint + Slack compose-lints (warnings = errors) · Spotless/ktlint + compose-rules · JaCoCo ≥ 85% |
 | Toolchain | AGP ≥ 9.4.1 (built-in Kotlin), Gradle ≥ 9.8.1, Kotlin 2.4, KSP2, compile/target SDK 37 |
 | Performance (opt-in) | Baseline Profiles + Macrobenchmark (`:benchmarks`) |
 | Crash reporting | Play Vitals by default; Firebase Crashlytics or Sentry Android opt-in |

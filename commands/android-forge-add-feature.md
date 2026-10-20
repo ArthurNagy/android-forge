@@ -11,6 +11,8 @@ joins it with a single Gradle dependency; its entries reach `NavDisplay` through
 
 ## Arguments
 
+Arguments: `$ARGUMENTS`
+
 - **`<feature-name>`**: lowercase kebab-case or a single word (`gallery`, `auth`, `photo-detail`). Module paths
   `:feature:<name>:api|impl`, package `<base>.feature.<pkg>.{api,impl}` where `<pkg>` drops dashes
   (`photodetail`), resource prefix `<name with underscores>_` (`photo_detail_`).

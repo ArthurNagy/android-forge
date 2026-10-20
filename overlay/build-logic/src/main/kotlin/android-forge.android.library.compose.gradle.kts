@@ -2,6 +2,7 @@
  * Android library + Jetpack Compose (Compose BOM, Material 3, tooling) + the screen-test stack:
  * Robolectric, Compose UI Test and Roborazzi screenshot tests, all as local unit tests
  * (`./gradlew testDebugUnitTest`; record goldens with `recordRoborazziDebug`, CI verifies them).
+ * Slack's compose-lints add Compose checks to Android Lint (warnings are errors here too).
  */
 plugins {
     id("android-forge.android.library")
@@ -37,6 +38,7 @@ dependencies {
     "implementation"(lib("androidx-compose-ui-tooling-preview"))
     "debugImplementation"(lib("androidx-compose-ui-tooling"))
     "debugImplementation"(lib("androidx-compose-ui-test-manifest"))
+    "lintChecks"(lib("compose-lint-checks"))
 
     "testImplementation"(lib("robolectric"))
     "testImplementation"(lib("androidx-test-ext-junit"))

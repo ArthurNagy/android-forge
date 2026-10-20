@@ -16,7 +16,7 @@ The overlay then adds:
 
 - **build-logic/** — precompiled convention plugins (`android-forge.android.application`,
   `.android.library[.compose]`, `.jvm.library`, `.feature.api`, `.feature.impl`, `.hilt`, `.room`,
-  `.spotless`, `.root`) carrying SDK levels, Lint, Spotless/ktlint + compose-rules, JaCoCo and the
+  `.spotless`, `.root`) carrying SDK levels, Lint + compose-lints, Spotless/ktlint + compose-rules, JaCoCo and the
   test stack.
 - **:core:*** — `model` · `domain` · `data` · `datastore` · `designsystem` · `ui` · `navigation` ·
   `testing` (Google's modularization shape; `:core:network` with the network opt-in).
@@ -35,8 +35,8 @@ reads `:a` as a path modifier) and quote every path (it may contain spaces).
 
 ### 1. Gather project parameters
 
-Use `AskUserQuestion` (at most 4 questions per call, 4 options per question — split as below).
-Skip anything the user already stated.
+Skip anything the user already stated. Ask 1–2 in a plain message (they are free text); ask 3–10 with
+`AskUserQuestion` — at most 4 questions per call and 4 options per question, split as below.
 
 1. **App name** — PascalCase, no spaces (e.g. `Framefit`, `Cadenza`). The project lands in `<parent>/<APP_NAME>`;
    the parent is the current directory unless the user named one (ask when the current directory is itself a project).
@@ -45,8 +45,8 @@ Skip anything the user already stated.
 3. **minSdk** — `26` (Recommended: `java.time` and adaptive icons without compat code), `24`, `28`, `29`.
 4. **Extra devices** (multi-select; phones, tablets and foldables are always in): Wear OS · TV ·
    Cars · XR. Follow-ups only for what was picked: Cars → *Android Auto*, *Android Automotive OS*,
-   or both, plus the app category (templated: POI / IoT / weather / navigation / messaging · media ·
-   parked: video / games / browser); XR → *headset*, *display/AI glasses*, or both.
+   or both, plus the app category in two questions (kind: Templated · Media · Parked — video / games / browser;
+   Templated → POI · IoT · Weather · Navigation, messaging via "Other"); XR → *headset*, *display/AI glasses*, or both.
 5. **Extra surfaces** (multi-select): Googlebook/ChromeOS desktop polish · Google Cast (sender) ·
    home-screen widgets.
 6. **Code-wired opt-ins** (multi-select): Network (Retrofit 3 + OkHttp 5 → `:core:network`) ·
@@ -251,8 +251,10 @@ bash "${AO}" pin-toolchain "${TARGET}"
   `dependencies { }` add `implementation(libs.androidx.profileinstaller)` and
   `baselineProfile(project(":benchmarks"))`.
 - **Notes-only opt-ins** (Crashlytics, Sentry, Firebase App Distribution, gradle-play-publisher):
-  nothing is wired — list them in the report with their docs (`docs/observability.md`,
-  `docs/release.md`); each needs secrets or console setup only the user can do.
+  nothing is wired — list them in the report with their docs
+  (https://github.com/arthurnagy/android-forge/blob/main/docs/observability.md,
+  https://github.com/arthurnagy/android-forge/blob/main/docs/release.md); each needs secrets or console setup only
+  the user can do.
 
 ### 6. Form factors
 
@@ -305,7 +307,7 @@ mkdir -p .git/hooks
 cp .android-forge-pre-commit.sh .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 git add -A
-git commit -q -m "chore: scaffold project vian android-forge"
+git commit -q -m "chore: scaffold project via android-forge"
 ```
 
 Then ask via `AskUserQuestion` whether to **create the GitHub repo and push now** (default: yes,
@@ -314,7 +316,7 @@ private). Only on an explicit yes:
 ```bash
 gh repo create "<APP_NAME>" --private --source=. --remote=origin
 git push -u origin main
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/issues.sh" labels   # ready, in-progress, epic, priority:*, no-spec, chore, adr
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/issues.sh" labels   # ready, in-progress, priority:*, no-spec, chore, adr
 ```
 
 If `gh` is not authenticated, surface `! gh auth login` instead of failing. Never create a public
@@ -335,7 +337,7 @@ repo. On a no: print the commands for later.
 
 Next:
   1. Open in Android Studio, or run it: android emulator start <avd> && android run --apks=app/build/outputs/apk/debug/app-debug.apk
-  2. Enable branch protection on main (see docs/git-conventions.md)
+  2. Enable branch protection on main (see https://github.com/arthurnagy/android-forge/blob/main/docs/git-conventions.md)
   3. /android-forge-spec — fill out docs/MVP_SPEC.md
   4. /android-forge-refine --gaps — draft the first backlog issues; approve with: gh issue edit <n…> --add-label ready
   5. /android-forge-add-feature <name> — your first feature (it can take over the start destination)

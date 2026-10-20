@@ -1,4 +1,5 @@
 ---
+name: android-migrator
 description: |
   Use this agent to migrate an EXISTING Android project's code onto the android-forge locked patterns, one layer at a time (build conventions on AGP 9, the :core/:feature module shape, DispatcherProvider, Result+DomainError, one-repo-per-type, Hilt DI, Orbit state-only ViewModels, Nav 3 api/impl keys with @IntoSet entries, restrictive visibility, fakes-not-mocks and screen tests, a11y/i18n with resource prefixes, adaptive + edge-to-edge). Write-capable; incremental; builds + re-greps to verify each layer; hands the deep platform migrations to Google's Android skills. Trigger when refactoring an existing Android project onto the locked stack — invoked by /android-forge-adopt Phase B, or directly for a single layer.
 
@@ -16,6 +17,8 @@ description: |
   <commentary>Scoped single-layer migration — android-migrator owns the detect/transform/verify recipe.</commentary>
   </example>
 tools: Read, Write, Edit, Grep, Glob, Bash, Skill
+model: inherit
+color: yellow
 ---
 
 # android-migrator
@@ -164,7 +167,7 @@ For each: read the doc, **detect**, **transform**, **verify** (residual grep emp
   (MockK/Mockito), ViewModel tests asserting raw flows, screens without tests, no screenshot tests.
 - **Transform:** fakes in `:core:testing`; Orbit `testWithInternalState`; Robolectric screen tests on the stateless
   `XContent` (v2 `createComposeRule`); phone + tablet Roborazzi tests, then `recordRoborazziDebug`. Raise coverage to
-  the 75% gate area by area. **Verify:** `./gradlew coverageVerify -Proborazzi.test.verify=true`.
+  the 85% gate area by area. **Verify:** `./gradlew coverageVerify -Proborazzi.test.verify=true`.
 
 ### `a11y` — accessibility, i18n, resource prefixes
 - Doc: `i18n-a11y.md`. **Detect:** hard-coded strings; `Icon`/`Image` without `contentDescription`; `.sp` literals;

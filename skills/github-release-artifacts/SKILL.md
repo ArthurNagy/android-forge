@@ -1,6 +1,6 @@
 ---
 name: github-release-artifacts
-description: Ship signed release artifacts for an android-forge project (its CLAUDE.md says "android-forge project rules") — the v* tag workflow that attaches every app module's AAB/APK (:app, :wear, :tv, :automotive) to a GitHub Release, upload-key signing secrets, per-module versionCode offsets, R8 mappings, pre-release checks (play-policy-insights, r8-analyzer, Baseline Profile), and graduating to Firebase App Distribution or per-form-factor Play tracks via gradle-play-publisher. Use when setting up or debugging release CI or signing, bumping versions and cutting a release, or planning distribution.
+description: This skill should be used in an android-forge project (its CLAUDE.md says "android-forge project rules") when cutting or tagging a release, bumping versionCode/versionName, setting up or debugging the v* release workflow that attaches every app module's AAB/APK to a GitHub Release, upload-key signing secrets or a signed release build, keeping R8 mappings, running pre-release checks (play-policy-insights, r8-analyzer, Baseline Profile), or moving to Firebase App Distribution or per-form-factor Play tracks.
 ---
 
 # Release artifacts — android-forge default distribution

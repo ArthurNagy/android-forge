@@ -29,9 +29,9 @@ modules, templates, build logic, QA and review rebuilt for Android.
   working DataStore → repository → use case → Orbit ViewModel slice (the stored theme mode).
 - **Build logic**: precompiled conventions `android-forge.{android.application, android.library[.compose],
   jvm.library, feature.api, feature.impl, hilt, room, spotless, root}`; AGP 9.4 built-in Kotlin; JDK 21 test launcher +
-  Robolectric SDK pin; root `unitTests` / `coverageReport` / `coverageVerify` (JaCoCo ≥ 75%, Robolectric-run Compose
+  Robolectric SDK pin; root `unitTests` / `coverageReport` / `coverageVerify` (JaCoCo ≥ 85%, Robolectric-run Compose
   counted).
-- **Gates**: Android Lint (warnings = errors), Spotless + ktlint + compose-rules, JaCoCo, Roborazzi screenshot
+- **Gates**: Android Lint (warnings = errors) with Slack's compose-lints, Spotless + ktlint + compose-rules, JaCoCo, Roborazzi screenshot
   verification (phone + tablet goldens committed in `src/test/screenshots/`). CI runs
   `spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true`; release builds every app module.
 - **Form factors** — `/android-forge-add-form-factor` + the `android-form-factor-builder` agent: Googlebook/desktop,
@@ -51,11 +51,24 @@ modules, templates, build logic, QA and review rebuilt for Android.
 - `/android-forge-add-library` discovers through `android docs` + Google Maven + Maven Central and installs a library's
   skill tier; `/android-forge-bump-stack` cross-checks with `android studio version-lookup`.
 - ADRs 0001–0009 (Orbit, Hilt, modules, Nav 3, Result, DispatcherProvider, Lint over detekt, JaCoCo, app module per
-  form factor).
+  form factor) — 0003 spells out what `:core:model`, `:core:domain`, `:core:data` and the storage/network modules each
+  hold; 0007 and 0008 cite the open detekt 2.0 / Kover issues that keep them out.
+- **Parent issues instead of epics** (diverges from kmp-forge): work too big for one PR stays a parent issue split into
+  GitHub sub-issues (`gh issue create --parent`, gh ≥ 2.94); `issues.sh next` skips any issue with sub-issues — no
+  `epic` label. The `android-architect` designs parent issues and single issues the product owner marks
+  `design: needed` (a new module, data source or library, form factor, or cross-cutting concern).
+- **Layer skills** (`domain-layer`, `data-layer`, `presentation-layer`): rules and a recipe index in `SKILL.md`, the
+  compile-checked recipes in `references/`.
 
 ### Validated
-- `android create` (Android CLI 1.0.16625370) + the init steps into a path with a space; the full gate green on the
-  bare scaffold (79.6% coverage) and after `photo-detail` (kebab) + `gallery` features, the network and benchmarks
+- At the 85% gate, after the PR review fixes: the bare scaffold at 99.1% line coverage (the new `AppThemeTest` covers
+  the theme no other scaffold test reached) and 97.0% after `photo-detail`; `:wear` + `:tv` at 97.4%; `:car` +
+  `:automotive` + `:widget` + `:glasses` + the XR and desktop manifest lines at 93.2% — that project's
+  `AppNavigationTest` crashed with the glasses entry point on Home (`isProjectedDeviceConnected` needs a dispatcher,
+  which a composition's context lacks under the Compose test rule) until `LaunchOnGlassesButton` took the lifecycle
+  scope's context. Slack compose-lints fails `lint` on a composable without a modifier parameter.
+- At the earlier 75% gate: `android create` (Android CLI 1.0.16625370) + the init steps into a path with a space; the
+  full gate green on the bare scaffold (79.6% coverage) and after `photo-detail` (kebab) + `gallery` features, the network and benchmarks
   opt-ins, the Room First table recipe, and a Photo slice built from the three layer skills' code (43 tests, 86.6%
   coverage).
 - On emulators through the Android CLI: launch, navigation through `@IntoSet` entries, rotation and process-death

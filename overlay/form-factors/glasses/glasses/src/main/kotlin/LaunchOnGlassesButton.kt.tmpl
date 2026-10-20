@@ -9,15 +9,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.xr.projected.ProjectedContext
 import androidx.xr.projected.experimental.ExperimentalProjectedApi
-import kotlinx.coroutines.CoroutineScope
 import timber.log.Timber
+import kotlin.coroutines.CoroutineContext
 
 /**
  * The phone-side entry to the glasses experience, for :app to place in a top app bar, as a FAB or on
@@ -29,9 +30,13 @@ import timber.log.Timber
 fun LaunchOnGlassesButton(modifier: Modifier = Modifier) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) return
     val context = LocalContext.current
-    // The composition's main-thread dispatcher runs the connection listener: no Dispatchers.* here.
-    val scope = rememberCoroutineScope()
-    val connected by remember(context) { projectedDeviceConnected(context, scope) }.collectAsStateWithLifecycle(initialValue = false)
+    // The lifecycle scope's main-thread dispatcher runs the connection listener (no Dispatchers.* here).
+    // Not rememberCoroutineScope(): a composition's context need not carry a dispatcher (it doesn't under
+    // the Compose test rule), and isProjectedDeviceConnected requires one.
+    val callbackContext = LocalLifecycleOwner.current.lifecycleScope.coroutineContext
+    val connected by remember(context, callbackContext) {
+        projectedDeviceConnected(context, callbackContext)
+    }.collectAsStateWithLifecycle(initialValue = false)
     LaunchOnGlassesButtonContent(connected = connected, onClick = { context.startGlassesActivity() }, modifier = modifier)
 }
 
@@ -51,8 +56,8 @@ internal fun LaunchOnGlassesButtonContent(
 @RequiresApi(Build.VERSION_CODES.BAKLAVA)
 private fun projectedDeviceConnected(
     context: Context,
-    scope: CoroutineScope,
-) = ProjectedContext.isProjectedDeviceConnected(context, scope.coroutineContext)
+    callbackContext: CoroutineContext,
+) = ProjectedContext.isProjectedDeviceConnected(context, callbackContext)
 
 @OptIn(ExperimentalProjectedApi::class)
 @RequiresApi(Build.VERSION_CODES.BAKLAVA)

@@ -10,10 +10,12 @@ into `:feature:<feature>:impl`, and the feature's existing entry builder gains a
 
 ## Arguments
 
+Arguments: `$ARGUMENTS`
+
 - **`<feature-name>`**: an existing feature (`gallery`).
 - **`<screen-name>`**: kebab-case (`photo-detail`) → `PhotoDetail` for class names.
 
-Ask via `AskUserQuestion` if missing, plus: does the key carry an argument (`photoId: String`)?
+Ask via `AskUserQuestion` if missing (offer the existing `feature/*/` names as the options), plus: does the key carry an argument (`photoId: String`)?
 
 ## Flow
 
@@ -42,7 +44,7 @@ Ask via `AskUserQuestion` if missing, plus: does the key carry an argument (`pho
    prefix) instead of creating a second table, and point the new screen and tests at it.
    Do **not** create a second entry module — the feature already has one.
 4. **Key argument?** Make the key a `data class` and give the ViewModel `@AssistedInject` + an `@AssistedFactory`
-   (see the `presentation-layer` skill § ViewModel); the entry creates it with
+   (see the `presentation-layer` skill's ViewModel recipe, `references/viewmodel.md`); the entry creates it with
    `hiltViewModel<VM, VM.Factory>(creationCallback = { it.create(key) })`.
 5. **Entry**: in the feature's `<Feature>Entries.kt`, add `entry<<Screen>Key> { <Screen>Screen(onNavigateBack = navigator.backOrNull()) }`
    (with `ListDetailSceneStrategy.detailPane()` metadata when it is the detail of a list in this feature).

@@ -120,7 +120,7 @@ else
     cp /tmp/aforge-openspec/config.yaml "$TARGET/openspec/config.yaml" && echo "added: openspec/config.yaml"
 fi
 
-# The work queue's labels (ready, in-progress, epic, priority:*, no-spec, chore, adr) — idempotent
+# The work queue's labels (ready, in-progress, priority:*, no-spec, chore, adr) — idempotent
 (cd "$TARGET" && bash "${CLAUDE_PLUGIN_ROOT}/scripts/issues.sh" labels)
 
 # Merge guard → .claude/hooks/
@@ -166,7 +166,8 @@ gh issue edit <n1> <n2> … --add-label ready
 The reference wiring is `/tmp/aforge-autoloop/settings.json`. **Never blind-overwrite an existing settings file:**
 
 - `"$TARGET/.claude/settings.json"` **absent** → `cp /tmp/aforge-autoloop/settings.json "$TARGET/.claude/settings.json"`.
-- **Present** → show `git diff --no-index`, then merge with the Edit tool, additively: create the `hooks` / `PreToolUse` keys if missing; append the merge-guard matcher block to any existing `PreToolUse` array. If a merge-guard entry is already wired, make it match the reference **exactly** — `matcher` (`Bash|Write|Edit|MultiEdit|NotebookEdit|mcp__.*`), the quoted `command`, and `timeout` — and change nothing else. (Pre-v2 installs wired an unquoted `${CLAUDE_PROJECT_DIR}/.claude/hooks/merge-guard.sh`: on any path containing a space the shell splits it, the hook exits 127, Claude Code treats that as non-blocking, and the guard silently never runs.)
+- **Present** → show `git diff --no-index`, then merge with the Edit tool, additively: create the `hooks` / `PreToolUse` keys if missing; append the merge-guard matcher block to any existing `PreToolUse` array. If a merge-guard entry is already wired, make it match the reference **exactly** — `matcher` (`Bash|Write|Edit|MultiEdit|NotebookEdit|mcp__.*`), the quoted `command`, and `timeout` — and change nothing else. (Pre-v2 installs wired an unquoted `$CLAUDE_PROJECT_DIR/.claude/hooks/merge-guard.sh` — braced in the file; written
+unbraced here because Claude Code expands the braced form in command text: on any path containing a space the shell splits it, the hook exits 127, Claude Code treats that as non-blocking, and the guard silently never runs.)
 
 Validate the result — a malformed settings.json disables ALL hooks:
 
@@ -226,7 +227,7 @@ Expect `exit=0` twice, no output from (1), and two new log lines (`caller=main`,
 ✓ OpenSpec: <initialized | already present> (/opsx:propose, /opsx:apply verified)
 ✓ openspec/AUTOLOOP.md: loop configuration + queue-empty handoff + ready-approvers
 ✓ openspec/config.yaml: android-forge project rules <added | merged | already present>
-✓ Issue labels: ready, in-progress, epic, priority:high|low, no-spec, chore, adr
+✓ Issue labels: ready, in-progress, priority:high|low, no-spec, chore, adr
 ✓ Work queue: <N issues filed | none yet>
 ✓ Merge guard: .claude/hooks/merge-guard.sh, mode=<mode>, audit line verified
 ✓ Hook wiring: .claude/settings.json <created | merged> (jq-valid)

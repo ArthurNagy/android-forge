@@ -89,6 +89,7 @@ declare -a coords=(
     "com.diffplug.spotless:spotless-plugin-gradle:spotless:maven-central:stable"
     "com.pinterest.ktlint:ktlint-cli:ktlint:maven-central:stable"
     "io.nlopez.compose.rules:ktlint:composeRules:maven-central:stable"
+    "com.slack.lint.compose:compose-lint-checks:composeLints:maven-central:stable"
     "org.jacoco:org.jacoco.core:jacoco:maven-central:stable"
 )
 

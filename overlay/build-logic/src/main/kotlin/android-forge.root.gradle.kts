@@ -9,7 +9,7 @@
  * 2. `./gradlew unitTests` runs every module's local tests (debug unit tests of Android modules,
  *    `test` of JVM modules) — `testDebugUnitTest` alone would skip the JVM modules.
  * 3. Owns the coverage gate: `./gradlew coverageVerify` aggregates JaCoCo data from every module
- *    (except :core:testing, which only holds test doubles) and fails below 75% line coverage;
+ *    (except :core:testing, which only holds test doubles) and fails below 85% line coverage;
  *    `./gradlew coverageReport` writes the HTML/XML report to build/reports/jacoco/coverageReport/.
  *    New modules are picked up automatically — nothing to register.
  */
@@ -104,13 +104,13 @@ tasks.register<JacocoReport>("coverageReport") {
 
 tasks.register<JacocoCoverageVerification>("coverageVerify") {
     group = "verification"
-    description = "Fails when aggregated line coverage drops below 75%."
+    description = "Fails when aggregated line coverage drops below 85%."
     aggregateCoverage()
     violationRules {
         rule {
             limit {
                 counter = "LINE"
-                minimum = "0.75".toBigDecimal()
+                minimum = "0.85".toBigDecimal()
             }
         }
     }

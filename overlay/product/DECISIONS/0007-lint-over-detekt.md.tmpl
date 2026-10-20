@@ -1,4 +1,4 @@
-# 0007. Static analysis: Android Lint + ktlint + compose-rules, without detekt
+# 0007. Static analysis: Android Lint + compose-lints, ktlint + compose-rules, without detekt
 
 Date: ${SCAFFOLD_DATE}
 Status: Accepted
@@ -11,12 +11,18 @@ formatting that never drifts. The project builds on AGP 9 with built-in Kotlin.
 Alternatives considered:
 - **detekt 1.23** — complexity and smell rules; its Gradle plugin needs `android.builtInKotlin=false` (and
   `android.newDsl=false`) on AGP 9, which would undo built-in Kotlin. Rejected for now.
-- **detekt 2.0** (`dev.detekt`) — supports built-in Kotlin, but is still alpha.
+- **detekt 2.0** (`dev.detekt`) — supports built-in Kotlin, but is still alpha (`2.0.0-alpha.6`, August
+  2026): rule IDs and config keys still change between alphas, and it analyzes with its own embedded
+  Kotlin compiler (2.4.10 in alpha.6), so a Kotlin bump can outrun it and break the gate — a blocking
+  check in CI and the autonomous loop. Rejected until 2.0 is stable.
 
 ## Decision
 
 - **Android Lint** on every module (`com.android.lint` on JVM modules), `warningsAsErrors = true`;
   dependency-freshness checks disabled (`/android-forge-bump-stack` owns versions).
+- **Slack's compose-lints** (`com.slack.lint.compose:compose-lint-checks`) as `lintChecks` on every
+  Compose module — Compose checks with Lint's type information (Material 2 APIs in a Material 3 app,
+  unstable parameters, modifier reuse). They overlap with compose-rules; a finding both report is fixed once.
 - **Spotless + ktlint** with the **compose-rules** ruleset (`io.nlopez.compose.rules:ktlint`) — formatting
   plus Compose conventions (modifier parameters, state hoisting, effect keys).
 - Revisit detekt when 2.0 is stable: supersede this ADR and add it through build-logic.
@@ -24,6 +30,6 @@ Alternatives considered:
 ## Consequences
 
 - Easier: one less tool fighting AGP 9; Lint catches Android-specific bugs detekt can't; compose-rules
-  covers Compose API conventions at format time.
+  covers Compose API conventions at format time and compose-lints at Lint time.
 - Harder: no cyclomatic-complexity or long-method warnings — the `android-reviewer` agent and code review
   carry that.

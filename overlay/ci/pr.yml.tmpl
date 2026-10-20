@@ -29,7 +29,7 @@ jobs:
         run: ./gradlew spotlessCheck
       - name: Android Lint
         run: ./gradlew lint
-      - name: Unit tests + screenshot verification + coverage gate (JaCoCo, 75%)
+      - name: Unit tests + screenshot verification + coverage gate (JaCoCo, 85%)
         run: ./gradlew coverageVerify -Proborazzi.test.verify=true
       - name: Assemble debug (every app module)
         run: ./gradlew assembleDebug

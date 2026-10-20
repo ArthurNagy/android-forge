@@ -23,11 +23,26 @@ Alternatives considered:
 
 ## Decision
 
-- `:core:model` and `:core:domain` are JVM modules (entities; use cases, repository interfaces, `DomainError`,
-  `DispatcherProvider`). `:core:data` implements the interfaces over `:core:datastore` / `:core:database` /
-  `:core:network`. `:core:designsystem`, `:core:ui`, `:core:navigation`, `:core:testing` are shared.
+Clean-architecture layering: `:core:domain` is the inner layer (business rules and the interfaces they
+need), `:core:data` and the UI modules are outer layers that depend on it — never the other way round.
+
+- `:core:model` (JVM) — the app's types: entities and value types (`Photo`, `ThemeMode`). No behavior
+  beyond what a value carries, no dependencies.
+- `:core:domain` (JVM, `api` on `:core:model`) — the business rules: use cases, repository **interfaces**,
+  `DomainError`, `DispatcherProvider`.
+- `:core:model` stays separate from `:core:domain` so low-level modules can share the types without
+  seeing the rules: `:core:designsystem` themes from `ThemeMode`, `:core:datastore` / `:core:database`
+  store entities — none of them can call a use case or implement a repository interface.
+- `:core:data` implements the domain's repository interfaces and binds them with Hilt: it depends on
+  `:core:domain` (`api` — the interfaces it implements) and on the storage/network modules it builds
+  them with (`implementation` — `:core:datastore`, and `:core:database` / `:core:network` once opted
+  in). Those modules are tools: each wraps one source (DataStore, Room, Retrofit) and knows nothing of
+  repositories (`:core:network` sees `:core:domain` only for the `DomainError` its `catchNetwork`
+  returns). `:core:designsystem`, `:core:ui`, `:core:navigation`, `:core:testing` are shared.
 - Each feature is `:feature:<name>:api` (Nav 3 keys only) + `:feature:<name>:impl` (internal screens,
   ViewModels, state, strings, an `@IntoSet` entry builder). An impl may depend on other features' `api`.
+- **ViewModels call use cases, never repositories** — the domain layer is the presentation layer's only
+  entry point, so every rule a screen relies on lives (and is tested) in one place.
 - **Stricter than Google:** a feature impl depends on `:core:domain`, never on `:core:data` (or the storage/
   network modules). Only app modules depend on `:core:data`.
 - One app module per device type (`:app`, `:wear`, `:tv`, `:automotive`) — see ADR 0009.
@@ -37,7 +52,8 @@ Alternatives considered:
 - Easier: Google's docs, samples and skills apply directly; features navigate to each other without the app
   changing; every feature has the same shape, testable against fakes of domain interfaces; JVM modules
   build fast and can't touch Android APIs.
-- Harder: more modules (two per feature) and a use case even where a ViewModel could read a repository
-  directly.
+- Harder: more modules (two per feature), and a pass-through use case where a screen only reads a
+  repository — the price of keeping the domain the single entry point (Google's guide makes the domain
+  layer optional; here it is not).
 - Reviewer enforces: the dependency rules in docs/architecture.md, `internal` screens/ViewModels/state,
   keys only in `api` modules, `resourcePrefix` on every Android module.

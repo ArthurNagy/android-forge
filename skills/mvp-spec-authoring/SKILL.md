@@ -1,11 +1,13 @@
 ---
 name: mvp-spec-authoring
-description: Author docs/MVP_SPEC.md for an android-forge project — interactive interview structure, section templates, and what makes a spec good vs vague. Use in an android-forge project (its CLAUDE.md says "android-forge project rules") when writing or revising the MVP spec, turning a product idea or brain dump into one, or when /android-forge-spec runs.
+description: This skill should be used in an android-forge project (its CLAUDE.md says "android-forge project rules") when writing or revising docs/MVP_SPEC.md — defining v1 scope, must-haves, out-of-scope items, key user flows and success metrics, turning a product idea or brain dump into a spec, or when /android-forge-spec runs. Not for backlog issues (backlog-issue-authoring) or architecture decisions (adr-authoring).
 ---
 
 # MVP Spec authoring
 
-`docs/MVP_SPEC.md` is the single source of truth for product scope in an android-forge project. Claude reads it on every session for context. It should be short enough to scan in 60 seconds, specific enough that someone could ship v1 from it alone.
+`docs/MVP_SPEC.md` is the single source of truth for product scope in an android-forge project. The project's CLAUDE.md links it, and `/android-forge-refine --gaps` drafts backlog issues from its Must-haves and flows (the architect reads § Critical technical considerations) — so write each Must-have so it can become one or more issues. It should be short enough to scan in 60 seconds, specific enough that someone could ship v1 from it alone. State the form factors explicitly (e.g. "phones and tablets in v1; Wear OS companion → Out of scope").
+
+It is **not** an OpenSpec spec, and the two don't overlap: `openspec/specs/` records what the app does **today**, one capability at a time, and grows with each merged change; `docs/MVP_SPEC.md` records what v1 is **meant** to be and why. Keep behavior detail (scenarios, edge cases) out of it — that belongs in the OpenSpec change for the issue. Keep the template's opening comment, which says this to whoever opens the file.
 
 ## Structure (in this order)
 
@@ -41,7 +43,7 @@ One paragraph describing the *primary* persona. Add secondary personas only if t
 
 One line. Mention price points if known.
 
-✓ "Freemium with one-time premium unlock ($4.99–$9.99). Free tier: 4 images/batch + ads. Premium: unlimited + color palettes + gradients."
+✓ "Freemium with one-time premium unlock (USD 4.99–9.99). Free tier: 4 images/batch + ads. Premium: unlimited + color palettes + gradients."
 
 ✗ "Maybe subscription, maybe one-time, TBD."
 
@@ -88,7 +90,7 @@ Non-obvious constraints that shape architecture or scope. Examples:
 ✓ "Batch processing target: <30s for 4 images of 24MP"
 ✓ "Offline-only — no backend in v1"
 ✓ "Image processing must not block UI thread"
-✓ "Must run on Android API 24+"
+✓ "Must run on Android API 26+"
 
 ✗ "Use clean architecture" (architectural opinion, lives in ADRs)
 ✗ "Performant code" (no decision content)
@@ -99,7 +101,7 @@ How will you know v1 succeeded? Pick 2–4 specific metrics.
 
 ✓ "Day-7 retention ≥ 30% (industry baseline ~25%)"
 ✓ "Free→Premium conversion ≥ 3% within 14 days"
-✓ "App Store rating ≥ 4.4 after first 500 reviews"
+✓ "Play Store rating ≥ 4.4 after first 500 reviews"
 
 ✗ "Users love it" (unmeasurable)
 

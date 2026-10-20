@@ -1,6 +1,7 @@
 ---
+name: android-feature-builder
 description: |
-  Use this agent to generate a complete feature on the android-forge locked stack — a :feature:<name>:api module (Nav 3 key) and a :feature:<name>:impl module (Compose screen + @HiltViewModel Orbit ViewModel + state + Hilt @IntoSet entry builder + strings + ViewModel, screen and phone/tablet screenshot tests). Trigger whenever a new feature needs scaffolding in an android-forge project, whether invoked via /android-forge-add-feature or when the user asks for a new feature by name.
+  Use this agent to generate a complete feature on the android-forge locked stack — a :feature:<name>:api module (Nav 3 key) and a :feature:<name>:impl module (Compose screen + @HiltViewModel Orbit ViewModel + state + Hilt @IntoSet entry builder + strings + ViewModel, screen and phone/tablet screenshot tests). Trigger whenever a new feature needs scaffolding in an android-forge project, whether invoked via /android-forge-add-feature or when the user asks for a new feature by name. Not for a screen inside an existing feature (/android-forge-add-screen) or a device module (android-form-factor-builder).
 
   <example>
   Context: User runs the add-feature command.
@@ -16,6 +17,8 @@ description: |
   <commentary>New feature requested — android-feature-builder owns generation on the locked stack.</commentary>
   </example>
 tools: Read, Write, Edit, Grep, Glob, Bash
+model: inherit
+color: green
 ---
 
 # android-feature-builder

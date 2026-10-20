@@ -1,6 +1,6 @@
 ---
 name: backlog-issue-authoring
-description: Write or refine a GitHub issue for an android-forge project so it can enter the backlog — Problem, WHEN/THEN acceptance criteria, Out of scope, Depends on, Needs a human first, Change name; slicing epics into one-PR issues; priority labels. Use in an android-forge project (its CLAUDE.md says "android-forge project rules") when filing a feature, bug or chore issue, turning an idea or a vague issue into a workable one, splitting an epic, or when /android-forge-refine or the android-product-owner agent drafts issues. Never applies the `ready` label.
+description: Write or refine a GitHub issue for an android-forge project so it can enter the backlog — Problem, WHEN/THEN acceptance criteria, Out of scope, Depends on, Needs a human first, Change name; splitting bigger work into a parent issue with one-PR sub-issues; priority labels. Use in an android-forge project (its CLAUDE.md says "android-forge project rules") when filing a feature, bug or chore issue, turning an idea or a vague issue into a workable one, splitting work too big for one PR, or when /android-forge-refine or the android-product-owner agent drafts issues. Never applies the `ready` label.
 ---
 
 # Backlog issue authoring — android-forge style
@@ -9,7 +9,7 @@ In an android-forge project, GitHub issues are the single source of work: open i
 
 ## The one rule about `ready`
 
-**Never apply `ready`.** It is how a human approves work. File and refine issues freely, add `priority:*` / `epic` / type labels when asked, but finish by telling the human which issues to promote — and give them the command to run themselves:
+**Never apply `ready`.** It is how a human approves work. File and refine issues freely, add `priority:*` / type labels when asked, but finish by telling the human which issues to promote — and give them the command to run themselves:
 
 ```
 gh issue edit 41 42 43 --add-label ready
@@ -65,7 +65,7 @@ Empty optional sections render as `_No response_`; omit them or leave that marke
 ✓ `WHEN the app restarts THEN the last picked theme is applied before the first frame`
 ✗ `Theme works correctly` (not checkable) · ✗ `Store the theme in DataStore` (implementation)
 
-**Size: one change, one PR.** Roughly ≤ 5 acceptance criteria and one feature (its `:api` + `:impl`, plus the `:core:domain` / `:core:data` it needs). Bigger → it is an **epic**: label it `epic`, keep its Problem, and list its slices as separate issues, each independently shippable and ordered so each **Depends on** only the ones before it. Slice by user-visible outcome (vertical: domain → data → UI for one behavior), never by layer ("all the domain models" is not a slice). Link each slice to its epic with a first **Notes** line `Part of #<epic>` — never with **Depends on**: an epic stays open, and the queue skips an issue while anything it depends on is open. In `/android-forge-refine` the `android-architect` agent then fits an epic into the codebase: it fixes the technical order, may add one enabling `chore` slice for infrastructure (the first Room table, a new form factor, extracting a module), appends technical **Notes** and **Out of scope** lines to each slice, and drafts the ADRs the epic needs.
+**Size: one change, one PR.** Roughly ≤ 5 acceptance criteria and one feature (its `:api` + `:impl`, plus the `:core:domain` / `:core:data` it needs). Bigger → it is a **parent issue**: keep its Problem as the whole outcome and split the work into GitHub **sub-issues** (`gh issue create --parent <n>`, or `gh issue edit <sub> --parent <n>` for an existing one), each independently shippable and ordered so each **Depends on** only the ones before it. Slice by user-visible outcome (vertical: domain → data → UI for one behavior), never by layer ("all the domain models" is not a sub-issue). Never put the parent in a sub-issue's **Depends on**: a parent stays open, and the queue skips an issue while anything it depends on is open — it skips the parent itself too, since its sub-issues are the work. In `/android-forge-refine` the `android-architect` agent then fits the work into the codebase — for a parent, and for a single issue that adds a module, a data source or library, a form factor or a cross-cutting concern: it fixes the technical order, may add one enabling `chore` issue for infrastructure (the first Room table, a new form factor, extracting a module), appends technical **Notes** and **Out of scope** lines to each issue, and drafts the ADRs the work needs.
 
 **Out of scope** is binding for whoever implements it — use it to stop scope creep you can foresee ("no sync across devices", "no new feature module", ":core:domain stays untouched").
 

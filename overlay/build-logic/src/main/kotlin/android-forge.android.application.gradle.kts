@@ -104,6 +104,8 @@ dependencies {
     "implementation"(lib("androidx-compose-ui-tooling-preview"))
     "debugImplementation"(lib("androidx-compose-ui-tooling"))
     "debugImplementation"(lib("androidx-compose-ui-test-manifest"))
+    // Slack's compose-lints: Compose checks in Android Lint (warnings are errors).
+    "lintChecks"(lib("compose-lint-checks"))
 
     // Shared doubles + robolectric.properties (the Robolectric SDK pin) on every module's local tests.
     "testImplementation"(project(":core:testing"))

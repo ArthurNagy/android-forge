@@ -116,8 +116,11 @@ values.
 ```bash
 [[ -d openspec ]] && openspec --version && node --version
 grep -q "android-forge project rules" openspec/config.yaml 2>/dev/null && echo "android-forge rules present"
-gh label list --limit 200 --json name --jq '[.[].name] | map(select(. == "ready" or . == "in-progress" or . == "epic" or . == "no-spec"))'
+gh --version | head -1
+gh label list --limit 200 --json name --jq '[.[].name] | map(select(. == "ready" or . == "in-progress" or . == "no-spec"))'
 ```
+
+- `gh` < 2.94 → ✗: the work queue reads GitHub sub-issues (`--parent`, `subIssuesSummary`). Remediation: `brew upgrade gh`.
 
 - `openspec/` present → `openspec` ≥ 1.14. Remediation: `brew upgrade openspec` / `npm install -g @fission-ai/openspec@latest`.
 - `openspec/config.yaml` without android-forge's rules → ⚠, merge `${CLAUDE_PLUGIN_ROOT}/overlay/openspec/config.yaml.tmpl`.

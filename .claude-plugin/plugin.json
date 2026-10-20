@@ -4,7 +4,6 @@
   "description": "Scaffold and guide pure-Android Jetpack Compose apps — phones, tablets and foldables by default; opt-in Wear OS, TV, Android Auto, Android Automotive OS, XR, Googlebook/desktop, Cast and widgets. Drives Google's Android CLI (android create, emulators, devices, docs, skills), overlays a locked stack (Hilt, Orbit, Navigation 3 api/impl features, Room, Retrofit), CI, product workflow, an autonomous build loop and release plumbing.",
   "author": {
     "name": "Arthur Nagy",
-    "email": "arthur.93.nagy@gmail.com",
     "url": "https://github.com/arthurnagy"
   },
   "homepage": "https://github.com/arthurnagy/android-forge",

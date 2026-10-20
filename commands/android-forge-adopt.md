@@ -75,8 +75,9 @@ without an answer), `SPEC_WORKFLOW` (copy init's `if … fi` block verbatim, sin
 source "${TMPDIR:-/tmp}/android-forge-adopt.env"; : "${TARGET:?}" "${BASE_PACKAGE:?}"
 OVERLAY="${CLAUDE_PLUGIN_ROOT}/overlay"; SH="${CLAUDE_PLUGIN_ROOT}/scripts/apply-overlay.sh"
 copy_new() {   # copy only if absent; otherwise show the diff for a hand-merge
-    if [[ -e "$2" ]]; then echo "=== exists, not replaced — diff (existing ← → android-forge): $2"; git --no-pager diff --no-index "$2" "$1" || true
-    else mkdir -p "$(dirname "$2")" && cp "$1" "$2" && echo "added: $2"; fi
+    # Positional params stay braced: Claude Code replaces bare dollar-digit tokens in command text with the user's arguments.
+    if [[ -e "${2}" ]]; then echo "=== exists, not replaced — diff (existing ← → android-forge): ${2}"; git --no-pager diff --no-index "${2}" "${1}" || true
+    else mkdir -p "$(dirname "${2}")" && cp "${1}" "${2}" && echo "added: ${2}"; fi
 }
 
 # Secrets hygiene
@@ -133,7 +134,8 @@ green only after the `build` and `tests` layers.
 
 ### 6. Phase B — audit
 
-Invoke **`android-forge:android-reviewer`** over the whole codebase (every module) and aggregate its findings. Turn them into a
+Invoke **`android-forge:android-reviewer`** in audit mode — one call per module, all in a single message ("Audit
+<module path> — whole tree, findings tagged by migrator layer") — and aggregate the per-layer counts. Turn them into a
 **dependency-ordered work-list** — the layer keys map 1:1 to the `android-migrator`'s `layer` input:
 
 1. `build` — AGP 9 + built-in Kotlin + KSP (via the `agp-9-upgrade` skill), `build-logic` conventions, the catalog
@@ -147,7 +149,7 @@ Invoke **`android-forge:android-reviewer`** over the whole codebase (every modul
 8. `nav` — Navigation 3 keys + `@IntoSet` entries (from Navigation 2 / fragments; XML screens go through the
    `migrate-xml-views-to-jetpack-compose` skill first — each screen is its own step).
 9. `visibility` — `internal` everything that isn't cross-module API; `State.Initial`, no defaults.
-10. `tests` — fakes, Orbit harness, Robolectric screen tests, phone + tablet goldens, the 75% gate.
+10. `tests` — fakes, Orbit harness, Robolectric screen tests, phone + tablet goldens, the 85% gate.
 11. `a11y` — strings with module prefixes, descriptions, typography, start/end.
 12. `adaptive` — no orientation locks, window-size layouts, list-detail scenes, edge-to-edge.
 
@@ -164,7 +166,7 @@ After the `build` layer, and after every later one:
 ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true
 ```
 
-(`coverageVerify` will fail below 75% until the `tests` layer — say so; don't lower the bound.) Run the app on an
+(`coverageVerify` will fail below 85% until the `tests` layer — say so; don't lower the bound.) Run the app on an
 emulator (`android emulator start …`, `android run --apks=…`) after `hilt` and `nav`.
 
 ### 8. Report

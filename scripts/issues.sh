@@ -4,17 +4,17 @@
 #
 # Usage (run from the project root — gh resolves the repo from `origin`):
 #   issues.sh labels [--repo OWNER/REPO]
-#       Create the workflow labels the queue relies on (ready, in-progress, epic,
-#       priority:high, priority:low, no-spec, chore, adr). Idempotent: existing labels are
-#       left exactly as they are.
+#       Create the workflow labels the queue relies on (ready, in-progress, priority:high,
+#       priority:low, no-spec, chore, adr). Idempotent: existing labels are left exactly as they are.
 #
 #   issues.sh next [--approvers login1,login2] [--repo OWNER/REPO]
 #       Pick the issue the build loop works next and print ONE JSON object on stdout.
 #       Read-only. The selection rules are code, not model judgment:
 #         1. An open `in-progress` issue is resumed first (two of them → "conflict"; one that is no
 #            longer workable → "paused", so a half-done slice is never abandoned for another).
-#         2. Otherwise the open `ready` issues, minus `epic`s, ordered priority:high →
-#            unlabeled → priority:low, then oldest issue number first.
+#         2. Otherwise the open `ready` issues, minus parent issues (any issue with GitHub
+#            sub-issues — its sub-issues are the work), ordered priority:high → unlabeled →
+#            priority:low, then oldest issue number first.
 #         3. A candidate is TRUSTED only if its author AND whoever last applied `ready` are the
 #            authenticated account (the account the loop runs as) or one of --approvers.
 #            Anyone can open an issue on a public repo, and an issue form can auto-apply labels
@@ -35,7 +35,7 @@
 #         {"status":"conflict","reason":"…"}
 #         {"status":"error","reason":"…"}            (exit 1)
 #
-# Requires: gh (authenticated), git, python3.
+# Requires: gh ≥ 2.94 (authenticated; sub-issue fields), git, python3.
 
 set -euo pipefail
 
@@ -79,7 +79,6 @@ cmd_labels() {
     done <<'LABELS'
 ready|0E8A16|Approved for work: the build loop's queue. A human applies this, never Claude.
 in-progress|FBCA04|Being worked on (the build loop sets and clears this)
-epic|5319E7|Too big for one change: split into slice issues first
 priority:high|B60205|Worked before unlabeled issues
 priority:low|C5DEF5|Worked after unlabeled issues
 no-spec|D4C5F9|feat PR that deliberately ships without an OpenSpec change
@@ -150,11 +149,16 @@ try:
     if not me:
         raise RuntimeError("could not resolve the authenticated GitHub login")
     trusted = {me.lower()} | {a.strip().lower() for a in approvers_arg.split(",") if a.strip()}
-    fields = "number,title,body,labels,author"
+    fields = "number,title,body,labels,author,subIssuesSummary"
 
     def listing(label):
-        raw = gh("issue", "list", *rflag, "--state", "open", "--label", label,
-                 "--limit", "200", "--json", fields)
+        try:
+            raw = gh("issue", "list", *rflag, "--state", "open", "--label", label,
+                     "--limit", "200", "--json", fields)
+        except RuntimeError as e:
+            if "subIssuesSummary" in str(e):
+                raise RuntimeError("gh 2.94+ is required for sub-issue fields (brew upgrade gh): %s" % e)
+            raise
         return json.loads(raw or "[]")
 
     def label_names(issue):
@@ -239,8 +243,8 @@ try:
     def vet(issue):
         """Return a skip reason, or None when the issue may be worked."""
         labels = {l.lower() for l in label_names(issue)}
-        if "epic" in labels:
-            return "epic: split it into slice issues"
+        if ((issue.get("subIssuesSummary") or {}).get("total") or 0) > 0:
+            return "parent issue: its sub-issues are worked, not the parent"
         if "ready" not in labels:
             return "not labeled ready (paused or not yet approved)"
         author = (issue.get("author") or {}).get("login", "")

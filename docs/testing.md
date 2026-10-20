@@ -132,7 +132,7 @@ class GalleryScreenTest {
 ## Coverage
 
 `./gradlew coverageVerify` aggregates JaCoCo data from every module's local tests (Robolectric-run
-Compose code counts) and fails below **75% line coverage**; `./gradlew coverageReport` writes
+Compose code counts) and fails below **85% line coverage**; `./gradlew coverageReport` writes
 `build/reports/jacoco/coverageReport/html/`. Excluded as generated or wiring-only: Compose singletons,
 serializers, Hilt modules (`*Module`), `MainApplication`/`MainActivity`, feature `api` modules and
 `*EntriesKt`, `DomainError`, design tokens, `RealDispatcherProvider`. Hilt/Dagger-generated Java is never

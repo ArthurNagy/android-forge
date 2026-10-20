@@ -24,10 +24,15 @@ scaffold time). Phones, tablets and foldables are always in — they are the ada
 
 ## Arguments
 
-`<form-factor>` — one of the above. Missing → ask via `AskUserQuestion`. For `auto` / `automotive` also ask the **car
-app category** (unless `:car` already exists): templated — `poi`, `iot`, `weather`, `navigation`, `messaging`
-(Car App Library); `media` (Media3 `MediaLibraryService`, no `:car`); `parked` (video / games / browser running while
-parked). Templated categories render `:car`; media and parked follow the recipes in `docs/form-factors/cars.md`.
+Arguments: `$ARGUMENTS`
+
+`<form-factor>` — one of the above. Missing → ask via `AskUserQuestion`, which takes at most 4 options per question:
+first **Kind** — Wear OS · TV · Cars · Other surface; then Cars → Android Auto · Android Automotive OS, Other
+surface → XR headset · Display glasses · Desktop · Widgets (`cast` arrives through the free-text "Other").
+For `auto` / `automotive` also ask the **car app category** (unless `:car` already exists), in two questions: kind —
+Templated (Car App Library) · Media (Media3 `MediaLibraryService`, no `:car`) · Parked (video / games / browser
+running while parked); Templated → `poi` · `iot` · `weather` · `navigation` (`messaging` via "Other"). Templated
+categories render `:car`; media and parked follow the recipes in `${CLAUDE_PLUGIN_ROOT}/docs/form-factors/cars.md`.
 
 ## Flow
 
@@ -39,7 +44,8 @@ parked). Templated categories render `:car`; media and parked follow the recipes
    the catalog and settings, edits `:app` where needed, installs the form factor's Android skill tier, updates
    `CLAUDE.md` § Form factors, runs the gate, and reports.
 3. **Emulator** — the `avd.sh` form factor is the argument itself, except `widgets` → `phone`; skip this step for
-   `auto` (Desktop Head Unit, manual — print the steps from `docs/form-factors/cars.md`) and `cast` (real hardware).
+   `auto` (Desktop Head Unit, manual — print the steps from `${CLAUDE_PLUGIN_ROOT}/docs/form-factors/cars.md`) and
+   `cast` (real hardware).
    Ask via `AskUserQuestion` whether to create the emulator now (it downloads a system image, often 1–4 GB). On yes:
    ```bash
    bash "${CLAUDE_PLUGIN_ROOT}/scripts/avd.sh" ensure <avd-form-factor>
@@ -56,11 +62,14 @@ parked). Templated categories render `:car`; media and parked follow the recipes
 ✓ Emulator: <AVD> created/started, screenshot <path> | skipped (run: bash <plugin>/scripts/avd.sh ensure <ff>)
 
 Next: <form-factor-specific next step — e.g. Wear: build the watch UI with the wear-compose-m3 skill; TV: D-pad
-focus paths; cars: the category's quality checklist> — docs/form-factors/<ff>.md
+focus paths; cars: the category's quality checklist> — https://github.com/arthurnagy/android-forge/blob/main/docs/form-factors/<ff>.md
 ```
+
+(`auto` / `automotive` → `cars.md`.)
 
 ## Notes
 
 - Form-factor app modules (`:wear`, `:tv`, `:automotive`) share the `applicationId`, depend on
   `:core:model`/`:core:domain`/`:core:data`, and never on phone UI modules. They ship to their own Play track.
-- Each form factor has a quality tier to meet — see `docs/quality.md` and its page under `docs/form-factors/`.
+- Each form factor has a quality tier to meet — see `${CLAUDE_PLUGIN_ROOT}/docs/quality.md` and its page under
+  `${CLAUDE_PLUGIN_ROOT}/docs/form-factors/`.

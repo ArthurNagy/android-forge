@@ -7,7 +7,7 @@ android-forge project rules apply here (the plugin's agents and skills check for
 ## Product
 - **Name:** ${APP_NAME}
 - **Application ID / base package:** ${BASE_PACKAGE}
-- **minSdk:** ${MIN_SDK} · compileSdk / targetSdk 37
+- **minSdk:** ${MIN_SDK} · compileSdk / targetSdk: `androidCompileSdk` / `androidTargetSdk` in `gradle/libs.versions.toml`
 - **One-liner:** ${APP_TAGLINE}
 - **Spec:** [docs/MVP_SPEC.md](docs/MVP_SPEC.md)
 - **Figma:** ${FIGMA_URL}
@@ -27,6 +27,16 @@ Features: ${FEATURE_LIST}
 Jetpack Compose + Material 3 (adaptive) · Hilt · Orbit MVI (state-only) · Navigation 3 (api/impl features, Hilt `@IntoSet` entries) · kotlin-result `Result<T, DomainError>` · DataStore · Coil 3 · Timber · java.time · kotlinx-serialization · Android resources · JUnit 4 + Robolectric + Roborazzi · JaCoCo · Lint + Spotless/ktlint + compose-rules.
 
 Optional in this project: ${OPTIONAL_LIBS}.
+
+## Rules the reviewer enforces (full text in the plugin docs below)
+- A feature `impl` depends only on `:core:{domain,model,ui,designsystem,navigation}` and other features' `:api` —
+  never `:core:data`, storage/network modules or another `impl`. Nav keys live in `:api`.
+- Hilt constructor injection; `@HiltViewModel`; entries contributed with `@IntoSet`. Screens get lambdas, never the Navigator.
+- Orbit state-only: no `postSideEffect` — one-shot events are consumable state slots (`pendingNavigation`,
+  `pendingMessage`) cleared by `onXConsumed()`.
+- `Result<T, DomainError>`; exceptions stop at `catchNetwork { }` / `catchStorage { }`. No `Dispatchers.*` — inject `DispatcherProvider`.
+- `internal` by default; a library module's resource keys carry its `resourcePrefix`; no orientation/resizability locks.
+- Tests: fakes over mocks, phone + tablet goldens per screen, `// Scenario: <name>` on each acceptance test.
 
 ## Work & spec workflow
 ${SPEC_WORKFLOW}
@@ -61,8 +71,9 @@ this project's form factors and capabilities): `adaptive`, `navigation-3`, `edge
 `navigation-event`, `testing-setup`, `jetpack-compose-performance`, `android-profiler`, the two security
 auditors, `r8-analyzer`, `play-policy-insights`, … They load when the work matches — use them.
 
-To check a change against its acceptance scenarios on a device (journeys + screenshots on each form
-factor it touches), ask for the `android-qa` agent after `/opsx:apply`.
+Before committing, ask for the `android-reviewer` agent to audit the diff against the rules above. To check a
+change against its acceptance scenarios on a device (journeys + screenshots on each form factor it touches), ask
+for the `android-qa` agent after `/opsx:apply`.
 
 Prefer android-forge slash commands over hand-rolled scaffolding:
 `/android-forge-add-feature`, `/android-forge-add-screen`, `/android-forge-add-form-factor`, `/android-forge-add-library`, `/android-forge-bump-stack`, `/android-forge-spec`, `/android-forge-refine`, `/android-forge-doctor`, `/android-forge-add-autoloop`.

@@ -87,6 +87,8 @@ consumer. **Not** `kotlin.Result` (single-param, `Throwable`-only). ADR 0005.
 Entities and value types shared by domain, data and UI: `data class Photo(val id: PhotoId, val title: String)`,
 `@JvmInline value class PhotoId(val value: String)`, enums like `ThemeMode`. **No default values** —
 construct explicitly, so every call site states its intent and a new field surfaces everywhere.
+It is its own module so the low-level modules (`:core:designsystem`, `:core:datastore`, `:core:database`) can use the
+types without seeing use cases or repository interfaces (ADR 0003).
 
 ### `:core:data` (+ `:core:datastore`, `:core:database`, `:core:network`)
 - Repository **implementations** — `internal class OfflineFirstPhotoRepository @Inject constructor(...)` —
