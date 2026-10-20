@@ -10,7 +10,8 @@ Skill: `adaptive` (`scripts/skills.sh` tier `desktop`) — `mediaQuery { pointer
 Grid/FlexBox, Nav 3 scenes.
 
 Added by `/android-forge-add-form-factor desktop`: the manifest line below, the `desktop` skill tier, the
-`medium_desktop` emulator on request, and the form-factor line in `CLAUDE.md`.
+`desktop_medium` emulator on request (the Android CLI's `medium_desktop` profile), and the form-factor line in
+`CLAUDE.md`.
 
 ## Recipe (Edit steps on `:app`)
 
@@ -46,7 +47,8 @@ ViewModels and saveable back stacks), phone + tablet goldens.
   Ctrl+F, Esc) via `Modifier.onPreviewKeyEvent`; publish them in the Keyboard Shortcuts Helper
   (`Activity.onProvideKeyboardShortcuts`).
 - **Pointer**: hover states on every interactive element, right-click context menus, pointer icons
-  (`Modifier.pointerHoverIcon`), precise targets — branch with `mediaQuery { pointerPrecision == Fine }`.
+  (`Modifier.pointerHoverIcon`), scrollbars, text selection by double/triple click, precise targets — branch with
+  `mediaQuery { pointerPrecision == Fine }`.
 - **Windows**: state survives free-form resizing; multi-instance where it fits the product
   (`FLAG_ACTIVITY_NEW_TASK` + `PROPERTY_SUPPORTS_MULTI_INSTANCE_SYSTEM_UI`, never `singleInstance`);
   drag and drop in and out of the app; widgets ([widgets.md](widgets.md)) show on the Googlebook desktop.
@@ -63,4 +65,7 @@ ViewModels and saveable back stacks), phone + tablet goldens.
 
 ## Quality
 
-Adaptive ready plus the desktop experience items — see [quality.md](../quality.md).
+Adaptive ready — the checklist in [quality.md](../quality.md#adaptive-ready-every-project), whose keyboard, mouse,
+trackpad and multi-window items matter most here — plus, on interactive screens, the desktop experience items in
+§ Desktop quality above (keyboard parity is android-forge's baseline; the rest is per feature), and the manifest: no
+required `uses-feature` (touchscreen, camera, telephony, …), checked with `aapt2 dump badging`.

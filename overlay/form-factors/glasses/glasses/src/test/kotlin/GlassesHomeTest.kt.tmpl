@@ -54,6 +54,20 @@ class GlassesHomeTest {
     }
 
     @Test
+    fun onAndroid16TheButtonWaitsDisabledForGlasses() {
+        composeRule.setContent { LaunchOnGlassesButton() }
+
+        composeRule.onNodeWithText(context.getString(R.string.glasses_launch)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun theAppLevelButtonIsHiddenWhileNoGlassesAreConnected() {
+        composeRule.setContent { LaunchOnGlassesButton(hideWhileDisconnected = true) }
+
+        composeRule.onNodeWithText(context.getString(R.string.glasses_launch)).assertDoesNotExist()
+    }
+
+    @Test
     @Config(sdk = [35])
     fun belowAndroid16ThereIsNoLaunchButton() {
         composeRule.setContent { LaunchOnGlassesButton() }

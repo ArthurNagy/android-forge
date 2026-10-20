@@ -21,13 +21,19 @@ import timber.log.Timber
 import kotlin.coroutines.CoroutineContext
 
 /**
- * The phone-side entry to the glasses experience, for :app to place in a top app bar, as a FAB or on
- * its start screen (display-glasses skill). Enabled only while display glasses are connected, and
+ * The phone-side entry to the glasses experience. Enabled only while display glasses are connected, and
  * absent below Android 16: watching for a projected device needs API 36. It starts [GlassesActivity]
  * on the glasses' display — never on the phone.
+ *
+ * :app places it on a surface it owns for good — by default over its navigation host in MainActivity
+ * with [hideWhileDisconnected], so it shows up only while glasses are connected and survives a feature
+ * taking over the start destination; in a top app bar or a menu it can stay visible and disabled instead.
  */
 @Composable
-fun LaunchOnGlassesButton(modifier: Modifier = Modifier) {
+fun LaunchOnGlassesButton(
+    modifier: Modifier = Modifier,
+    hideWhileDisconnected: Boolean = false,
+) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) return
     val context = LocalContext.current
     // The lifecycle scope's main-thread dispatcher runs the connection listener (no Dispatchers.* here).
@@ -37,6 +43,7 @@ fun LaunchOnGlassesButton(modifier: Modifier = Modifier) {
     val connected by remember(context, callbackContext) {
         projectedDeviceConnected(context, callbackContext)
     }.collectAsStateWithLifecycle(initialValue = false)
+    if (hideWhileDisconnected && !connected) return
     LaunchOnGlassesButtonContent(connected = connected, onClick = { context.startGlassesActivity() }, modifier = modifier)
 }
 

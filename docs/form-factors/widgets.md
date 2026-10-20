@@ -13,13 +13,15 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/apply-overlay.sh" patch-libs "${TARGET}" "${
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/skills.sh" install "${TARGET}" widgets
 ```
 
-One edit: `implementation(project(":widget"))` in `app/build.gradle.kts`. The receiver's manifest merges into `:app`.
+One edit: `implementation(project(":widget"))` after the `:core:navigation` line in `app/build.gradle.kts`. The
+receiver's manifest merges into `:app`.
 
 The template ships `HomeWidget` (`GlanceAppWidget`, `SizeMode.Exact`), the public `HomeWidgetReceiver`, a stateless
 `HomeWidgetContent` (Glance `Scaffold` + `TitleBar` + body; tapping opens the app through its launch intent, resolved at
 runtime so `:widget` never depends on `:app`), a Glance `@Preview`, `res/xml/widget_home_info.xml` (with
-`tools:targetApi="s"` for the Android 12+ attributes), a picker `previewLayout`, strings with the `widget_` prefix, and
-`HomeWidgetTest` (`runGlanceAppWidgetUnitTest`).
+`tools:targetApi="s"` for the Android 12+ attributes), a picker `previewLayout` (Android 12+) and a static
+`previewImage` (`widget_home_preview_image`, for older pickers — replace it with an image of the real widget),
+strings with the `widget_` prefix, and `HomeWidgetTest` (`runGlanceAppWidgetUnitTest`).
 
 ## Building widgets
 

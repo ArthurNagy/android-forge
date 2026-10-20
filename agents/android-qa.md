@@ -98,12 +98,12 @@ From the files the change touches (`git diff --name-only origin/main...HEAD` in 
 | `app/`, `feature/*/impl/`, `core/ui/`, `core/designsystem/` | phone — **plus tablet and foldable** when a screen's layout changed (`*Screen.kt`, `*Content`, adaptive code, scene metadata) |
 | `wear/` | Wear OS; tiles/widgets via `android run --type TILE|WEAR_WIDGET` |
 | `tv/` | TV — D-pad navigation |
-| `automotive/`, `car/` | Android Automotive OS |
+| `automotive/`; `car/` when the project has `automotive/` (the AAOS host renders the same templates as Auto's) | Android Automotive OS |
 | XR code in `:app` (spatial panels, `xr` packages) | XR headset — plus the phone, since it's the same APK |
-| `glasses/` | display glasses + its paired phone |
+| `glasses/`, the glasses entry point in `:app` | display glasses on a glasses AVD paired with its host phone — only when the human has paired and started that pair (both in `adb devices -l`); otherwise the Auto/Cast row |
 | `widget/` | phone — only when the widget is already on its home screen (the CLI can't long-press to place it); not placed → that scenario is `ERROR` "place the widget by hand, then re-run" |
 | desktop-specific code (keyboard shortcuts, hover, multi-window) | desktop |
-| Android Auto-only behavior (templated screens on the head unit) · Cast | **cannot run here** — list under BLOCKING as unverified → `ERROR` with cause "needs the Desktop Head Unit / a Cast device; verify by hand" |
+| `car/` in an Auto-only project (no `automotive/`), Auto-only behavior in any project · Cast · glasses without a running paired pair | **cannot run here** — list under BLOCKING as unverified → `ERROR` with cause "needs the Desktop Head Unit / a Cast device / display glasses paired with a host phone (Android Studio's Pairing Assistant — `avd.sh` can't pair them); verify by hand" |
 
 Core-only changes with user-visible scenarios run on the phone.
 
@@ -116,13 +116,17 @@ Core-only changes with user-visible scenarios run on the phone.
   (`avd.sh name tablet` / `foldable`).
 - **Other form factors**: `android emulator start "$(bash <claude_plugin_root>/scripts/avd.sh name wear)"` (returns once
   booted); a running emulator of that type counts. Missing → that form factor is `ERROR` (see Hard rules).
+  Glasses: never boot them yourself — a glasses AVD works only paired with a host phone, and only a paired pair the
+  human already started counts (install `:app`'s APK on the host phone, start the experience from it, read the
+  glasses' screen with `--device=<glasses serial>`).
 
 `adb devices -l` lists serials (state `device` only). Record each choice for the `DEVICES` line.
 
 ### 5. Build, locate, install
 
 ```bash
-./gradlew assembleDebug 2>&1 | tail -20
+LOG="${TMPDIR:-/tmp}/android-qa-assemble.log"
+./gradlew assembleDebug > "${LOG}" 2>&1; rc=$?; tail -20 "${LOG}"; echo "exit=${rc}"   # Gradle's exit code, not tail's
 android describe --project_dir=. 2>&1 | grep -E "^Task:|APK:"      # each app module's debug APK path
 ```
 
@@ -163,7 +167,8 @@ Interact through selectors, not coordinates, wherever the layout has the element
 Form-factor notes: on **TV**, launch with `android run --apks=<apk> --device=<s> --activity=MainActivity` (a
 leanback-only launcher fails the CLI's component check otherwise); focus must be visible on the element you act on
 (check `state` contains `FOCUSED` before pressing center); on a TV AVD not made by `avd.sh` Play Protect blocks the CLI's
-instrumentation ("Unsafe app blocked" dialog) — report it as an ERROR telling the human to recreate it with `avd.sh ensure tv`; on **Wear**, check round-screen clipping in the screenshot; on **AAOS**, driving-restriction
+instrumentation ("Unsafe app blocked" dialog) — report it as an ERROR telling the human to run `avd.sh ensure tv` (creates and prepares `tv_1080p`), or
+`avd.sh prepare tv` if it is `tv_1080p`; on **Wear**, check round-screen clipping in the screenshot; on **AAOS**, driving-restriction
 behavior can't be simulated — say so; on **tablet/foldable**, check the list-detail panes appear side by side where
 the design says.
 

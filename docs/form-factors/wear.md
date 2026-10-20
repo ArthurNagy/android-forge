@@ -20,7 +20,8 @@ No edits to `:app`. The template ships `MainApplication` (`@HiltAndroidApp`), `M
 `WearApp` (Wear M3 `MaterialTheme` + `AppScaffold`), a home screen (`ScreenScaffold` + `TransformingLazyColumn`) with an
 Orbit `WearHomeViewModel` that reads and writes the stored theme mode through `:core:domain` use cases (proving the
 shared graph works on the watch), strings with the `wear_` prefix, and tests: Orbit ViewModel tests, a screen test, and
-Roborazzi goldens on `WearOSLargeRound` / `WearOSSmallRound` (fixed `TimeSource`, so the clock never changes them).
+Roborazzi goldens on `WearOSLargeRound` / `WearOSSmallRound` / `WearOSSquare` (fixed `TimeSource`, so the clock never
+changes them).
 
 ## Manifest and build essentials
 
@@ -31,8 +32,10 @@ Roborazzi goldens on `WearOSLargeRound` / `WearOSSmallRound` (fixed `TimeSource`
 - `android:taskAffinity=""` on the launcher activity (Lint `WearRecents`); a second launcher activity (a tile's or a
   notification's target) gets its own affinity.
 - `android:icon` + `android:roundIcon` (adaptive, with a monochrome layer).
-- `minSdk = 30` (Wear OS 3, the oldest version the quality guidelines test); Wear Compose M3 1.7 needs compileSdk 37
+- minSdk 30 (Wear OS 3, the oldest version the quality guidelines test) — or the project's when higher: an app
+  module can't go below the libraries it links (`maxOf(30, androidMinSdk)`). Wear Compose M3 1.7 needs compileSdk 37
   and AGP ≥ 9.1.
+- `proguard-rules.pro` beside the build file (release builds run R8, like every app module).
 - `versionCode` starts at `100_000_001` (unique across the listing — see [release.md](../release.md)).
 
 ## Building watch UI
@@ -61,5 +64,17 @@ selectors. Check round-edge clipping in screenshots. Data Layer scenarios need a
 
 ## Quality
 
-Wear app quality (core): standalone behavior, round-screen layouts, `TimeText`, swipe-to-dismiss, ambient where
-relevant, 64-bit, target API — see [quality.md](../quality.md).
+Wear OS has one checklist, and Play may reject an app that misses any applicable item
+(`android docs fetch kb://android/docs/quality-guidelines/wear-app-quality`). For apps (✓ = the template meets it):
+- Visual: `WO-V1` follows the user's font size without overlap or clipping · `WO-V2` touch targets ≥ 48dp ✓ ·
+  `WO-V3` swipe-to-dismiss on almost every screen (the Nav 3 swipe-dismissable scene strategy) · `WO-V5` state
+  survives leaving the foreground and back navigation · `WO-V6` the launcher shows the right icon and name ✓ ·
+  `WO-V8` a scroll bar while scrolling ✓ · `WO-V13` black background ✓ · `WO-V14` text ≥ 12sp (essential) / 10sp ·
+  `WO-V15` the startup splash is the 48dp launcher icon on black · `WO-V16` content fits round and square screens,
+  nothing overlapping or cut off, at least a 192dp circle (round + square goldens).
+- Behavior: `WO-V4` long-running work shows an `OngoingActivity` / Live Update · `WO-P1` Play's target API ·
+  `WO-P2` installs, launches and completes tasks without crashing · `WO-P5` a non-standalone app's phone side
+  connects · `WO-P6` never asks for a username or password on the watch.
+- Play: 64-bit (required from September 15, 2026) · `WO-G5` 1:1 screenshots of the app only, no device frames ·
+  `WO-G7` same package and signing key as the phone app ✓ (shared applicationId).
+- Tiles (when added): `WO-V9` a signed-out state that prompts sign-in · `WO-V10` a tile preview.

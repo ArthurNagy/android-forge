@@ -44,4 +44,5 @@ phone|tablet|foldable`. On the foldable, screenshots need the multi-display fix-
 
 ## Quality
 
-Adaptive ready — see [quality.md](../quality.md).
+Adaptive ready — the checklist (configuration continuity, multi-window, keyboard/mouse/stylus basics) is in
+[quality.md](../quality.md#adaptive-ready-every-project), the one place it lives.

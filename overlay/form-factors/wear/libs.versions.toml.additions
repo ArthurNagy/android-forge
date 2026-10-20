@@ -3,7 +3,7 @@
 # [versions] value is raised to this floor, never lowered).
 #
 # Wear Compose Material 3 1.7.x needs compileSdk >= 37 and AGP >= 9.1 (AAR metadata) and minSdk >= 25;
-# the :wear module sets minSdk 30 (Wear OS 3). Never use the mobile androidx.compose.material3 here.
+# the :wear module sets minSdk 30 (Wear OS 3) or the project's when higher. Never use the mobile androidx.compose.material3 here.
 
 [versions]
 wearCompose = "1.7.1"

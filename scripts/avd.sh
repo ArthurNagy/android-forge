@@ -3,7 +3,8 @@
 # Emulators per form factor, for QA journeys and manual checks. The Android CLI's
 # `android emulator create` only knows phone / tablet / desktop profiles, so every other form factor
 # is created with the SDK's avdmanager from a hardware profile + a system image that
-# `android sdk install` downloads. AVDs are named after their hardware profile; `android emulator
+# `android sdk install` downloads. AVDs are named after their hardware profile (except the CLI's desktop AVD,
+# `desktop_medium`); `android emulator
 # start <name>` boots any of them.
 #
 # This table is the source of truth for form factor → AVD; docs/android-cli.md mirrors it.

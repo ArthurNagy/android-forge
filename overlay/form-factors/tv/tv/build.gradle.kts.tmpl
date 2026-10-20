@@ -11,7 +11,8 @@ android {
     resourcePrefix = "tv_"
     defaultConfig {
         applicationId = "${BASE_PACKAGE}"
-        // minSdk: the project's (tv-material needs 23).
+        // minSdk: the project's (tv-material needs 23). TV ready (TV-PS) wants 31 or lower: a project on 33
+        // misses many Android TV devices.
         // Play needs a version code unique across every APK of the listing: keep the TV's apart from :app's.
         versionCode = 200_000_001
         versionName = "0.1.0"

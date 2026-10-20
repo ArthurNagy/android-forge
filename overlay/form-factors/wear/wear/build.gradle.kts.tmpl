@@ -11,8 +11,9 @@ android {
     resourcePrefix = "wear_"
     defaultConfig {
         applicationId = "${BASE_PACKAGE}"
-        // Wear OS 3 (API 30) is the oldest Wear OS Play's quality guidelines test against (Wear Compose M3 needs 25).
-        minSdk = 30
+        // Wear OS 3 (API 30) is the oldest Wear OS Play's quality guidelines test against (Wear Compose M3 needs 25);
+        // a project floor above it wins (an app module can't go below the libraries it links).
+        minSdk = maxOf(30, libs.versions.androidMinSdk.get().toInt())
         // Play needs a version code unique across every APK of the listing: keep the watch's apart from :app's.
         versionCode = 100_000_001
         versionName = "0.1.0"

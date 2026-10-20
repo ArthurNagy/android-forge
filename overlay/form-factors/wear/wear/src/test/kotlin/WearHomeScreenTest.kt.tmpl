@@ -2,7 +2,8 @@ package ${BASE_PACKAGE}.wear
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertIsNotSelected
-import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -56,11 +57,16 @@ class WearHomeScreenTest {
         val viewModel = WearHomeViewModel(ObserveThemeModeUseCase(repository), SetThemeModeUseCase(repository))
         composeRule.setContent { WearApp { WearHomeScreen(viewModel = viewModel) } }
 
-        composeRule.onNodeWithTag("wear:theme:DARK").assertIsSelected()
+        waitUntilSelected("wear:theme:DARK")
         composeRule.onNodeWithTag("wear:theme:LIGHT").performClick()
 
-        composeRule.onNodeWithTag("wear:theme:LIGHT").assertIsSelected()
+        waitUntilSelected("wear:theme:LIGHT")
         composeRule.onNodeWithTag("wear:theme:DARK").assertIsNotSelected()
+    }
+
+    /** Orbit reduces off the main thread, which the compose rule doesn't wait for: wait for the state instead. */
+    private fun waitUntilSelected(tag: String) {
+        composeRule.waitUntil { composeRule.onAllNodes(hasTestTag(tag) and isSelected()).fetchSemanticsNodes().isNotEmpty() }
     }
 
     @Test
@@ -72,6 +78,14 @@ class WearHomeScreenTest {
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.WearOSSmallRound)
     fun smallRound() {
+        composeRule.setContent { Golden() }
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    /** Square watches too: nothing cut off by the screen edges or overlapping (WO-V16). */
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.WearOSSquare)
+    fun square() {
         composeRule.setContent { Golden() }
         composeRule.onRoot().captureRoboImage()
     }

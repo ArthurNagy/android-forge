@@ -97,4 +97,15 @@ the 2D UI everywhere else.
 
 ## Quality
 
-XR compatible (mobile / large-screen app) by default; XR differentiated is product work — see [quality.md](../quality.md).
+**Android XR compatible** — what every android-forge app is by default
+(`android docs fetch kb://android/docs/quality-guidelines/android-xr/index`):
+- Core app quality (minus the fold/unfold UI items) and the accessibility guidelines (contrast, labels).
+- No required feature XR devices lack — the `aapt2 … | grep uses-feature` check above: only
+  `uses-feature-not-required` lines, plus the implied `faketouch`.
+- Runs full screen in a panel — not in compatibility mode, not letterboxed — and works with XR's input: eye tracking
+  with gestures or raycast hands, plus basic keyboard, mouse, trackpad and game controller.
+- "XR compatible large screen" is an Adaptive optimized or differentiated app (it runs at 1024×720dp; rotation and
+  folding don't apply); the Play Console must not opt the app out of XR.
+
+**XR differentiated** (product work): at least one XR-specific feature or piece of content (tier 2 above), with the
+Home Space ↔ Full Space toggle once the app goes Full Space.

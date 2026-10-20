@@ -4,7 +4,8 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotSelected
-import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -55,11 +56,16 @@ class TvHomeScreenTest {
         val viewModel = TvHomeViewModel(ObserveThemeModeUseCase(repository), SetThemeModeUseCase(repository))
         composeRule.setContent { TvHomeScreen(viewModel = viewModel) }
 
-        composeRule.onNodeWithTag("tv:theme:DARK").assertIsSelected()
+        waitUntilSelected("tv:theme:DARK")
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionCenter) } // the focused first card: Light
 
-        composeRule.onNodeWithTag("tv:theme:LIGHT").assertIsSelected()
+        waitUntilSelected("tv:theme:LIGHT")
         composeRule.onNodeWithTag("tv:theme:DARK").assertIsNotSelected()
+    }
+
+    /** Orbit reduces off the main thread, which the compose rule doesn't wait for: wait for the state instead. */
+    private fun waitUntilSelected(tag: String) {
+        composeRule.waitUntil { composeRule.onAllNodes(hasTestTag(tag) and isSelected()).fetchSemanticsNodes().isNotEmpty() }
     }
 
     @Test

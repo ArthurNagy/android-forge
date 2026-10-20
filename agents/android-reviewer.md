@@ -133,7 +133,7 @@ over it.
 - 🟡 `DomainError` declared as a `Throwable`; an error type not extending `DomainError` (an area's errors are
   `sealed interface XError : DomainError.Typed`); a typed error that renames a built-in case.
 - 🟡 A feature re-wording built-in `DomainError` cases instead of `:core:ui`'s `toMessage()`.
-- 🟡 `DomainError.Network.Http` built from a 404 that means "not there" — return `null` → `NotFound`.
+- 🟡 A data source that turns an HTTP 404 into `null` or its own exception — `catchNetwork` already maps 404 → `NotFound`.
 - 🟡 `.get()!!` / `unwrap()` / `getOrThrow()` on a `Result`; `onSuccess`/`onFailure` (🟢 nit — deprecated in 2.x).
 
 ### Navigation (blocking)
@@ -143,7 +143,8 @@ over it.
 - 🔴 The app referencing a feature's screen/ViewModel, or listing features in `AppNavigation` — features contribute
   entries via `@IntoSet` `EntryProviderInstaller`s.
 - 🟡 Back-stack mutation outside the `Navigator`; a `Navigator` passed into a screen or ViewModel instead of lambdas.
-- 🟡 A root entry wired with a non-null `onNavigateBack` (use `navigator.backOrNull()`).
+- 🟡 A root entry wired with a non-null `onNavigateBack` (use `navigator.backOrNull(key)`, with the key the entry
+  receives).
 - 🟡 An assisted ViewModel given a `= hiltViewModel()` default in its screen (no `creationCallback` → runtime crash);
   it must be a required parameter built in the entry.
 - 🟡 Legacy `BackHandler` on new code — use `NavigationBackHandler` (navigation-event).
@@ -160,7 +161,24 @@ over it.
   (it hides the app on devices without it — TV, Chromebooks, cars). `android.hardware.touchscreen` must be
   `required="false"` in `:tv`.
 - 🟡 A `:wear` / `:tv` / `:automotive` module depending on phone UI modules (`:core:designsystem`, `:core:ui`, phone
-  features) — form-factor apps share `:core:model`/`:core:domain`/`:core:data` only.
+  features) or importing mobile Material 3 (`androidx.compose.material3`) — form-factor apps share
+  `:core:model`/`:core:domain`/`:core:data` only and use their own components (Wear Compose Material 3,
+  `androidx.tv.material3`, car templates).
+
+Form-factor manifests (`docs/form-factors/<ff>.md`, `cars.md` for Auto/AAOS) — 🔴, since Play rejects or hides the
+app:
+- 🔴 `:wear` without `<uses-feature android:name="android.hardware.type.watch" />` (or with `required="false"`), or
+  without the `com.google.android.wearable.standalone` meta-data.
+- 🔴 `:tv` without a `MAIN` + `LEANBACK_LAUNCHER` activity, without `android:banner`, or requiring
+  `android.hardware.touchscreen` (missing `required="false"`).
+- 🔴 The Android Auto meta-data (`com.google.android.gms.car.application`) in `:automotive`'s or `:car`'s manifest —
+  only `:app` carries it; `:automotive` declares `com.android.automotive`.
+- 🔴 A `:car` screen using an API annotated `@RequiresCarApi(n)` with `n` above the
+  `androidx.car.app.minCarApiLevel` in `:car`'s manifest — hosts below `n` crash on it; raise the level.
+- 🔴 `androidx.car.app.category.MESSAGING` without `<uses name="notification" />` in `automotive_app_desc.xml`, or
+  in a project with `:automotive` (templated messaging is Android Auto only).
+- 🟡 `:automotive` requiring `android.hardware.wifi`, `screen.portrait`, `screen.landscape` or `camera` (explicitly
+  or implied by a permission) — Play's AAOS list wants them `required="false"`.
 
 ### Visibility (warn)
 

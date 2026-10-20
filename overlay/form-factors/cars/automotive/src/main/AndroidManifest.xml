@@ -10,7 +10,8 @@
     <uses-feature
         android:name="android.software.car.templates_host"
         android:required="true" />
-    <!-- Play's AAOS feature requirements: cars may lack these, so they must never be required. -->
+    <!-- Play's AAOS feature requirements: cars may lack these, so they must never be required (explicitly, or
+         implicitly through a permission such as CAMERA). -->
     <uses-feature
         android:name="android.hardware.wifi"
         android:required="false" />
@@ -19,6 +20,9 @@
         android:required="false" />
     <uses-feature
         android:name="android.hardware.screen.landscape"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera"
         android:required="false" />
 
     <application

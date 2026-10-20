@@ -12,7 +12,8 @@ import androidx.car.app.model.Template
 /**
  * The car app's first screen: a ListTemplate with the app name and one row — valid for every
  * templated category (POI, IoT, weather, navigation, messaging). Replace it with the category's
- * own templates (POI → PlaceListMapTemplate, IoT → GridTemplate, navigation → NavigationTemplate, …).
+ * own templates (POI → PlaceListMapTemplate, IoT → GridTemplate, navigation → NavigationTemplate,
+ * messaging → ConversationItems in this ListTemplate, …).
  *
  * The host draws the template; call [invalidate] after the data behind it changes and
  * [onGetTemplate] runs again (refreshes of the same template type don't count toward the quota).
