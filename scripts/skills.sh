@@ -64,8 +64,16 @@ cmd_tiers() {
     for t in $ALL_TIERS; do printf '%-13s %s\n' "$t" "$(tier_skills "$t")"; done
 }
 
+# Fail on an unknown tier before doing anything (tier_skills' `die` can't stop the script from inside
+# the `$(…)` of a for-list).
+require_tiers() {
+    local t
+    for t in "$@"; do tier_skills "$t" >/dev/null; done
+}
+
 cmd_install() {
     local project="$1"; shift
+    require_tiers "$@"
     command -v android >/dev/null || die "the Android CLI ('android') is not on PATH — run /android-forge-doctor"
     [[ -d "$project" ]] || die "project dir not found: $project"
     local have; have="$(installed_skills "$project")"
@@ -83,6 +91,7 @@ cmd_install() {
 
 cmd_check() {
     local project="$1"; shift
+    require_tiers "$@"
     local have missing=0; have="$(installed_skills "$project")"
     for t in "$@"; do
         for s in $(tier_skills "$t"); do

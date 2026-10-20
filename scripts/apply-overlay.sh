@@ -22,9 +22,11 @@
 #   apply-overlay.sh patch-libs <project-dir> <additions-toml-file>
 #       Merge [versions], [libraries], [plugins] entries from <additions-toml-file> into the
 #       project's gradle/libs.versions.toml. Section-aware: appends missing keys under each header
-#       (creates the header if missing). A [versions] key that already exists with a LOWER version
-#       is raised to the additions' value (android-forge's tested floor) — never downgraded; any
-#       other existing key is left as is.
+#       (creates the header if missing); a multi-line array value moves as one entry. A [versions]
+#       key that already exists with a LOWER version (or an empty one) is raised to the additions'
+#       value (android-forge's tested floor) — never downgraded; any other existing key is left as is.
+#       Ordering: 1.0.0 > 1.0.0-rc01 > 1.0.0-beta02 > 1.0.0-alpha01, numeric parts numerically.
+#       The core additions reference ${MIN_SDK}: export it (the project's minSdk) or patch-libs refuses.
 #
 #   apply-overlay.sh pin-toolchain <project-dir>
 #       Raise the Gradle wrapper to >= MIN_GRADLE (distributionUrl + distributionSha256Sum fetched
@@ -32,7 +34,7 @@
 #       >= MIN_GRADLE_HEAP_MB (Hilt/KSP + Robolectric need more than `android create`'s 2 GiB).
 #       Never downgrades. The AGP/Kotlin versions are catalog keys: patch-libs raises those.
 #
-# Required env vars when rendering .tmpl files:
+# Overlay variables (env) that .tmpl files render:
 #   APP_NAME, BASE_PACKAGE, BASE_PACKAGE_PATH, APP_TAGLINE (optional), MIN_SDK, FORM_FACTORS,
 #   BUILD_COMMANDS, MODULE_LIST, FEATURE_LIST, OPTIONAL_LIBS, FIGMA_URL, PROJECT_OVERRIDES,
 #   TIMELINE, SCAFFOLD_DATE, SPEC_WORKFLOW. For feature templates: FEATURE_NAME (kebab),
@@ -40,7 +42,10 @@
 #   For form-factor templates: CAR_APP_CATEGORY — the Car App Library category suffix in UPPERCASE (POI, IOT, WEATHER,
 #   NAVIGATION, MESSAGING; envsubst can't change case, the add-form-factor export block uppercases it).
 #   For autoloop: AUTOLOOP_HANDOFF, READY_APPROVERS, AUTOLOOP_QA.
-#   Unset variables substitute as empty strings (envsubst default).
+#   Unset variables substitute as empty strings (envsubst default) — except REQUIRED_VARS below:
+#   render / render-module / patch-libs refuse (before writing anything) when a template they are about
+#   to render references one of those and it is empty (exports lost between shell sessions), and when
+#   MIN_SDK isn't an integer or CAR_APP_CATEGORY isn't one of the Car App Library categories.
 
 set -euo pipefail
 
@@ -51,12 +56,19 @@ die() { echo "apply-overlay: $*" >&2; exit 1; }
 # release.yml's `$ANDROID_KEYSTORE_BASE64` / `$RUNNER_TEMP`, which would render as "".
 # Adding an overlay variable? Add it here AND to the export block in commands/android-forge-init.md
 # (or the add-feature / add-form-factor / add-autoloop export blocks for their templates).
+# shellcheck disable=SC2016 # literal ${VAR} names for envsubst
 OVERLAY_VARS='${APP_NAME} ${APP_TAGLINE} ${BASE_PACKAGE} ${BASE_PACKAGE_PATH} ${MIN_SDK} ${FORM_FACTORS}
 ${BUILD_COMMANDS} ${MODULE_LIST} ${FEATURE_LIST} ${OPTIONAL_LIBS} ${FIGMA_URL}
 ${PROJECT_OVERRIDES} ${TIMELINE} ${SCAFFOLD_DATE} ${SPEC_WORKFLOW}
 ${FEATURE_NAME} ${FEATURE_NAME_PKG} ${FEATURE_NAME_CAMEL} ${FEATURE_NAME_PASCAL} ${FEATURE_NAME_SNAKE}
 ${CAR_APP_CATEGORY}
 ${AUTOLOOP_HANDOFF} ${READY_APPROVERS} ${AUTOLOOP_QA}'
+
+# Variables a template may never render empty (an empty package, app name or manifest category still
+# compiles — and ships broken). The others (APP_TAGLINE, FIGMA_URL, PROJECT_OVERRIDES, TIMELINE, …) may be "".
+REQUIRED_VARS="BASE_PACKAGE APP_NAME MIN_SDK CAR_APP_CATEGORY FEATURE_NAME FEATURE_NAME_PKG
+FEATURE_NAME_PASCAL FEATURE_NAME_CAMEL FEATURE_NAME_SNAKE"
+CAR_APP_CATEGORIES="POI IOT WEATHER NAVIGATION MESSAGING"
 
 # Toolchain floor applied by pin-toolchain (`android create` may ship an older wrapper).
 # /android-forge-bump-stack moves projects beyond it; bump these when the floor itself should rise.
@@ -67,6 +79,35 @@ require_envsubst() {
     if ! command -v envsubst >/dev/null; then
         die "envsubst not found. Install via 'brew install gettext && brew link --force gettext'."
     fi
+}
+
+# Strip trailing slashes ("overlay/ci/" → "overlay/ci"): the source prefix is cut off every path
+# `find` prints, and a leftover slash would write to <dest>/<whole source path>/….
+trim_slash() {
+    local p="$1"
+    while [[ "$p" == */ && "$p" != / ]]; do p="${p%/}"; done
+    printf '%s' "$p"
+}
+
+# Die when <file> references a REQUIRED_VARS variable that is empty, or one whose value can't be right.
+check_required() {
+    local file="$1" v val hint
+    for v in $REQUIRED_VARS; do
+        # shellcheck disable=SC2016 # matches a literal ${VAR} / $VAR reference
+        grep -qE '\$(\{'"${v}"'\}|'"${v}"'([^A-Za-z0-9_]|$))' "$file" || continue
+        val="${!v:-}"
+        if [[ -z "$val" ]]; then
+            hint="export the overlay variables first (source the recipe's env file)"
+            [[ "$v" == MIN_SDK ]] && hint="export MIN_SDK=<the project's minSdk, e.g. 29>"
+            die "${v} is empty but ${file} needs it — ${hint}"
+        fi
+        case "$v" in
+            MIN_SDK) [[ "$val" =~ ^[0-9]+$ ]] || die "MIN_SDK must be an API level (an integer), got: ${val}" ;;
+            CAR_APP_CATEGORY)
+                [[ "$val" =~ ^(${CAR_APP_CATEGORIES// /|})$ ]] \
+                    || die "CAR_APP_CATEGORY must be one of: ${CAR_APP_CATEGORIES} (uppercase), got: ${val}" ;;
+        esac
+    done
 }
 
 render_file() {
@@ -84,37 +125,48 @@ render_file() {
 }
 
 cmd_render() {
-    local src_dir="$1" dest_dir="$2" no_clobber=""
+    local src_dir dest_dir no_clobber="" src_file rel dest_file
+    src_dir="$(trim_slash "$1")"; dest_dir="$(trim_slash "$2")"
     [[ "${3:-}" == "--no-clobber" ]] && no_clobber=1
     [[ -z "${3:-}" || -n "$no_clobber" ]] || die "render: unknown flag $3"
     require_envsubst
     [[ -d "$src_dir" ]] || die "source dir not found: $src_dir"
-    mkdir -p "$dest_dir"
 
-    find "$src_dir" -type f | while read -r src_file; do
-        local rel="${src_file#$src_dir/}"
-        local dest_rel="${rel%.tmpl}"
-        local dest_file="$dest_dir/$dest_rel"
+    # Every template that will be written has its required values — checked before writing anything.
+    while IFS= read -r src_file; do
+        rel="${src_file#"$src_dir"/}"
+        [[ -n "$no_clobber" && -e "$dest_dir/${rel%.tmpl}" ]] && continue
+        check_required "$src_file"
+    done < <(find "$src_dir" -type f -name '*.tmpl')
+
+    mkdir -p "$dest_dir"
+    while IFS= read -r src_file; do
+        rel="${src_file#"$src_dir"/}"
+        dest_file="$dest_dir/${rel%.tmpl}"
         render_file "$src_file" "$dest_file" "$no_clobber"
-    done
+    done < <(find "$src_dir" -type f)
 }
 
 cmd_render_module() {
-    local module_name="$1" src_dir="$2" dest_dir="$3" base_pkg_path="$4"
+    local module_name="$1" src_dir dest_dir base_pkg_path="$4" src_file rel
+    src_dir="$(trim_slash "$2")"; dest_dir="$(trim_slash "$3")"
     require_envsubst
     # Module templates are all `package ${BASE_PACKAGE}…`: an unset variable (exports lost
     # between shell sessions) would silently render `package .core.ui` into `src/.../kotlin//core/ui/`.
     [[ -n "${BASE_PACKAGE:-}" ]] || die "BASE_PACKAGE is empty — export the overlay variables first"
     [[ -n "$base_pkg_path" ]] || die "base-package-path is empty"
     [[ -d "$src_dir" ]] || die "source dir not found: $src_dir"
+    while IFS= read -r src_file; do
+        check_required "$src_file"
+    done < <(find "$src_dir" -type f -name '*.tmpl')
     mkdir -p "$dest_dir"
 
     # Package suffix → path: `core.ui` → `core/ui/`; "" → no extra segment.
     local pkg_dir="$base_pkg_path"
     [[ -n "$module_name" ]] && pkg_dir="$base_pkg_path/${module_name//.//}"
 
-    find "$src_dir" -type f | while read -r src_file; do
-        local rel="${src_file#$src_dir/}"
+    while IFS= read -r src_file; do
+        rel="${src_file#"$src_dir"/}"
         local dest_rel
         # Insert the package path after src/<sourceSet>/kotlin/ (any source set)
         if [[ "$rel" =~ ^src/([A-Za-z0-9]+)/kotlin/(.+)$ ]]; then
@@ -125,9 +177,8 @@ cmd_render_module() {
             dest_rel="$rel"
         fi
         dest_rel="${dest_rel%.tmpl}"
-        local dest_file="$dest_dir/$dest_rel"
-        render_file "$src_file" "$dest_file"
-    done
+        render_file "$src_file" "$dest_dir/$dest_rel"
+    done < <(find "$src_dir" -type f)
 }
 
 cmd_patch_settings() {
@@ -161,100 +212,161 @@ cmd_patch_libs() {
     [[ -f "$additions" ]] || die "additions file not found: $additions"
 
     require_envsubst
+    # The core additions carry `androidMinSdk = "${MIN_SDK}"`: refuse rather than write an empty floor.
+    check_required "$additions"
 
-    local tmp_additions
+    local tmp_additions rc=0
     tmp_additions="$(mktemp)"
     envsubst "$OVERLAY_VARS" < "$additions" > "$tmp_additions"
 
-    python3 - "$libs_file" "$tmp_additions" <<'PY'
+    python3 - "$libs_file" "$tmp_additions" "$additions" <<'PY' || rc=$?
 import re, sys, pathlib
 
 libs_path = pathlib.Path(sys.argv[1])
 add_path = pathlib.Path(sys.argv[2])
+add_name = sys.argv[3]
 KEY = re.compile(r'^([A-Za-z0-9._-]+|"[^"]+")\s*=')
-VERSION = re.compile(r'^(?P<key>[A-Za-z0-9._-]+)\s*=\s*"(?P<v>[^"]+)"\s*(#.*)?$')
+VERSION = re.compile(r'^(?P<key>[A-Za-z0-9._-]+)\s*=\s*"(?P<v>[^"]*)"\s*(#.*)?$')
+HEADER = re.compile(r"^\[(.+)\]\s*$")
 
-def parse_sections(text):
+def die(msg):
+    sys.exit(f"apply-overlay: patch-libs: {msg}")
+
+def depth(s):
+    # Net [ / { nesting of one line, ignoring brackets inside strings and comments.
+    d, quote, i = 0, None, 0
+    while i < len(s):
+        c = s[i]
+        if quote:
+            if c == "\\" and quote == '"':
+                i += 1
+            elif c == quote:
+                quote = None
+        elif c in "\"'":
+            quote = c
+        elif c == "#":
+            break
+        elif c in "[{":
+            d += 1
+        elif c in "]}":
+            d -= 1
+        i += 1
+    return d
+
+def parse_sections(text, name):
+    # {section: [(key | None, [lines])]}: one item per entry — every line of a multi-line array
+    # value belongs to its key's entry — or per comment / blank line (key None).
     sections = {None: []}
     current = None
-    for line in text.splitlines(keepends=False):
-        m = re.match(r"^\[(.+)\]\s*$", line)
-        if m:
-            current = m.group(1)
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        i += 1
+        h = HEADER.match(line)
+        if h:
+            current = h.group(1)
             sections.setdefault(current, [])
-        else:
-            sections.setdefault(current, []).append(line)
+            continue
+        s = line.strip()
+        m = KEY.match(s) if s and not s.startswith("#") else None
+        if not m:
+            sections.setdefault(current, []).append((None, [line]))
+            continue
+        key = m.group(1).strip('"')
+        if '"""' in line or "'''" in line:
+            die(f"{name}: multi-line string values aren't supported ({key})")
+        entry, d = [line], depth(s[m.end():])
+        while d > 0:
+            if i >= len(lines):
+                die(f"{name}: the value of {key} is never closed")
+            entry.append(lines[i])
+            d += depth(lines[i])
+            i += 1
+        sections.setdefault(current, []).append((key, entry))
     return sections
 
-def key_of(line):
-    s = line.strip()
-    if not s or s.startswith("#"):
-        return None
-    m = KEY.match(s)
-    return m.group(1).strip('"') if m else None
+QUALIFIERS = {"alpha": 1, "a": 1, "beta": 2, "b": 2, "milestone": 3, "m": 3, "rc": 4, "cr": 4}
 
 def vkey(v):
-    # Numeric-aware comparison; a pre-release part (alpha01, rc02) sorts below the release.
-    parts = []
-    for p in re.split(r"[.\-]", v):
-        parts.append((1, int(p), "") if p.isdigit() else (0, 0, p))
-    return parts
+    # 1.0.0 > 1.0.0-rc01 > 1.0.0-beta02 > 1.0.0-alpha01 > 1.0.0-dev/-SNAPSHOT (unknown qualifiers);
+    # numbers compare numerically, trailing zeros of the release part don't count (1.0 == 1.0.0), and
+    # a numeric suffix (KSP's old 2.1.0-1.0.29) ranks above the bare release.
+    tokens = re.findall(r"\d+|[a-z]+", v.lower())
+    n = 0
+    while n < len(tokens) and tokens[n].isdigit():
+        n += 1
+    release = [int(t) for t in tokens[:n]]
+    while release and release[-1] == 0:
+        release.pop()
+    key = [(2, x) for x in release]
+    key += [(2, int(t)) if t.isdigit() else (0, QUALIFIERS.get(t, 0)) for t in tokens[n:]]
+    return key + [(1, 0)]  # end marker: above any qualifier, below any further number
 
-base = parse_sections(libs_path.read_text())
-add = parse_sections(add_path.read_text())
+def flat(items):
+    return [line for _, entry in items for line in entry]
 
-# Raise existing [versions] keys to the additions' floor (never downgrade).
+base = parse_sections(libs_path.read_text(), str(libs_path))
+add = parse_sections(add_path.read_text(), add_name)
+
+# Raise existing [versions] keys to the additions' floor (never downgrade); fill empty ones.
 floors = {}
-for line in add.get("versions", []):
-    m = VERSION.match(line.strip())
+for key, entry in add.get("versions", []):
+    m = VERSION.match(entry[0].strip()) if key and len(entry) == 1 else None
     if m:
-        floors[m.group("key")] = m.group("v")
-for i, line in enumerate(base.get("versions", [])):
-    m = VERSION.match(line.strip())
-    if not m or m.group("key") not in floors:
+        if not m.group("v"):
+            die(f"{add_name}: [versions] {key} renders empty — export the overlay variable it uses")
+        floors[key] = m.group("v")
+versions = base.get("versions", [])
+for i, (key, entry) in enumerate(versions):
+    m = VERSION.match(entry[0].strip()) if key in floors and len(entry) == 1 else None
+    if not m:
         continue
-    have, floor = m.group("v"), floors[m.group("key")]
-    if vkey(have) < vkey(floor):
-        base["versions"][i] = line.replace(f'"{have}"', f'"{floor}"', 1)
-        print(f"raised: {m.group('key')} {have} -> {floor}")
+    have, floor = m.group("v"), floors[key]
+    if not have:
+        line = re.sub(r'=(\s*)""', lambda g: f'={g.group(1)}"{floor}"', entry[0], count=1)
+        print(f'repaired: {key} "" -> {floor}')
+    elif vkey(have) < vkey(floor):
+        line = entry[0].replace(f'"{have}"', f'"{floor}"', 1)
+        print(f"raised: {key} {have} -> {floor}")
+    else:
+        continue
+    versions[i] = (key, [line])
 
-for section, add_lines in add.items():
+for section, add_items in add.items():
     if section is None:
         continue
-    base_lines = base.setdefault(section, [])
-    have = {k for k in (key_of(l) for l in base_lines) if k}
-    appended = []
-    for line in add_lines:
-        k = key_of(line)
-        if k is None:
-            # keep comments/blank lines only when they precede something we append
-            appended.append(line)
+    base_items = base.setdefault(section, [])
+    have = {k for k, _ in base_items if k}
+    appended, pending = [], []
+    for key, entry in add_items:
+        if key is None:
+            pending.extend(entry)  # comments / blank lines travel with the entry after them
             continue
-        if k in have:
-            continue
-        appended.append(line)
-        have.add(k)
-    # drop comment/blank runs that ended up with nothing after them
-    while appended and key_of(appended[-1]) is None:
-        appended.pop()
+        if key not in have:
+            appended += pending + entry
+            have.add(key)
+        pending = []
+    while appended and not appended[0].strip():
+        appended.pop(0)
     if appended:
-        if base_lines and base_lines[-1].strip() != "":
-            base_lines.append("")
-        base_lines.append(f"# --- android-forge additions ({section}) ---")
-        base_lines.extend(appended)
+        if base_items and flat(base_items)[-1].strip() != "":
+            base_items.append((None, [""]))
+        base_items.append((None, [f"# --- android-forge additions ({section}) ---"]))
+        base_items.append((None, appended))
 
-out = []
-out.extend(base.pop(None, []))
-for section, lines in base.items():
+out = flat(base.pop(None, []))
+for section, items in base.items():
     if out and out[-1].strip() != "":
         out.append("")
     out.append(f"[{section}]")
-    out.extend(lines)
+    out.extend(flat(items))
 libs_path.write_text("\n".join(out).rstrip() + "\n")
 print(f"patched: {libs_path}")
 PY
 
     rm -f "$tmp_additions"
+    [[ "$rc" -eq 0 ]] || exit "$rc"
 }
 
 cmd_pin_toolchain() {

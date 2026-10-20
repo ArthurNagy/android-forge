@@ -3,6 +3,10 @@ on:
   push:
     tags: ['v*']
 
+# Read-only by default; only the job that creates the Release gets write access.
+permissions:
+  contents: read
+
 jobs:
   android:
     runs-on: ubuntu-latest

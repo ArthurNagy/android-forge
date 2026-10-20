@@ -11,8 +11,7 @@
 - Signing keystores and keystore passwords
 - API keys (Sentry DSN, Firebase, Maps, third-party services)
 - OAuth client secrets
-- Service account JSON files (Google Play, Firebase)
-- App Store Connect API key (`.p8` private key)
+- Service account JSON files — the Google Play Developer API key gradle-play-publisher publishes with, Firebase
 - Any token or credential the app uses to authenticate
 
 ## Local layout
@@ -96,31 +95,54 @@ The release step passes AGP's injected signing properties pointing at it and sig
 
 ## gitleaks (pre-commit)
 
-`.gitleaks.toml` at repo root — uses default rule set with project-specific allowlist additions if needed.
+`.gitleaks.toml` at the repo root extends gitleaks' default rules. Its allowlist skips only binary files and build
+output — text resources stay scanned: a key pasted into `res/values/strings.xml` ships in the APK, so it's
+reported like any other file. As shipped:
 
 ```toml
 [allowlist]
-description = "Common false-positive locations"
+description = "Binary resources, screenshot goldens and build outputs"
 paths = [
-    '''.*/src/[^/]+/res/values[^/]*/strings\.xml''',  # string resources
-    '''.*\.gradle\.kts''',                     # Gradle files (passwords come from props)
+    '''(^|/)src/[^/]+/res/(drawable|mipmap)[^/]*/[^/]+\.(png|webp|jpe?g|gif)$''',   # images
+    '''(^|/)src/[^/]+/res/font[^/]*/[^/]+\.(ttf|otf)$''',                         # fonts
+    '''(^|/)src/test/screenshots/.+\.png$''',                                     # Roborazzi goldens
+    '''^([^/]+/){0,3}build/''',                                                   # build outputs (a module's build/)
+    '''(^|/)gradle/wrapper/gradle-wrapper\.(jar|properties)$''',                  # Gradle wrapper
+    '''\.lock$''',                                                                # lock files
+]
+regexes = [
+    '''ANDROID_KEYSTORE_PASSWORD''',               # variable names in workflows/build files
+    '''SENTRY_DSN''',                              # variable names
+    '''GOOGLE_PLAY_SERVICE_ACCOUNT_JSON''',
 ]
 ```
 
-Pre-commit hook at `.git/hooks/pre-commit`:
+A false positive in a text file is silenced on its line with a `gitleaks:allow` comment (`// gitleaks:allow`,
+`<!-- gitleaks:allow -->`) or with a narrow path entry — never by allowlisting a whole directory such as `res/`.
+
+The hook ships as `.android-forge-pre-commit.sh` (committed, so a fresh clone can reinstall it) and
+`/android-forge-init` copies it to `.git/hooks/pre-commit` (executable):
 
 ```bash
 #!/usr/bin/env bash
+# Installed at .git/hooks/pre-commit by /android-forge-init.
+# Set SKIP_GITLEAKS=1 to bypass for an emergency commit (rotate any leaked secret afterward).
 set -euo pipefail
-if ! command -v gitleaks >/dev/null; then
-    echo "gitleaks not installed: brew install gitleaks (or skip via SKIP_GITLEAKS=1)"
+
+if [[ "${SKIP_GITLEAKS:-}" == "1" ]]; then
     exit 0
 fi
-[[ "${SKIP_GITLEAKS:-}" == "1" ]] && exit 0
-gitleaks protect --staged --config .gitleaks.toml
+
+if ! command -v gitleaks >/dev/null; then
+    echo "warning: gitleaks not installed; install with: brew install gitleaks"
+    echo "         skipping secret scan for this commit."
+    exit 0
+fi
+
+gitleaks protect --staged --config .gitleaks.toml --no-banner --redact
 ```
 
-`/android-forge-init` installs both `.gitleaks.toml` and the hook (making it executable).
+Reinstall after a clone: `cp .android-forge-pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`.
 
 ## GitHub server-side scanning
 

@@ -11,7 +11,9 @@
 # Every emitted key is the [versions] key an android-forge project actually uses:
 # the toolchain keys come from `android create`'s generated catalog
 # (androidGradlePlugin, kotlin, androidxComposeBom, androidxLifecycle, nav3Core, …),
-# the rest from overlay/gradle/libs.versions.toml.additions.tmpl.
+# the rest from overlay/gradle/libs.versions.toml.additions.tmpl and the form factors'
+# overlay/form-factors/*/libs.versions.toml.additions — keep this list in sync with every [versions]
+# key there except the SDK levels (androidCompileSdk/TargetSdk/MinSdk aren't Maven artifacts).
 #
 # Usage:
 #   fetch-latest-versions.sh [json|toml]    (default: toml)
@@ -56,6 +58,7 @@ declare -a coords=(
     "org.robolectric:robolectric:robolectric:maven-central:stable"
     "com.google.truth:truth:truth:maven-central:stable"
     "io.github.takahirom.roborazzi:roborazzi:roborazzi:maven-central:stable"
+    "javax.inject:javax.inject:javaxInject:maven-central:stable"
     # --- opt-ins (present only when the project selected them; bump-stack ignores absent keys) ---
     "com.squareup.retrofit2:retrofit:retrofit:maven-central:stable"
     "com.squareup.okhttp3:okhttp:okhttp:maven-central:stable"

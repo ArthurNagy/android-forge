@@ -3,6 +3,10 @@ on:
   pull_request:
     branches: [main]
 
+# The gate runs the PR's code: read-only token.
+permissions:
+  contents: read
+
 concurrency:
   group: pr-${{ github.ref }}
   cancel-in-progress: true

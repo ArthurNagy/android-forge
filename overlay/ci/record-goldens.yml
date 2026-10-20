@@ -1,0 +1,36 @@
+name: Record goldens
+# Manual (Actions → Record goldens → Run workflow, on your branch): re-records every Roborazzi golden on
+# Linux, the OS pr.yml verifies them on — Robolectric's rendering can differ slightly between macOS and
+# Linux. Download the `goldens` artifact, unzip it at the repository root, review the PNGs, commit them.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: record-goldens-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Same JDKs as pr.yml: the JVM modules' toolchain is 17; Gradle and the Android modules' local
+      # tests run on 21.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      # setup-gradle v6 accepts Gradle's Terms of Use — see pr.yml; pin `@v5` to opt out.
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Record screenshots (Roborazzi)
+        run: ./gradlew recordRoborazziDebug
+      - uses: actions/upload-artifact@v7
+        with:
+          name: goldens
+          path: '**/src/test/screenshots/**/*.png'
+          if-no-files-found: error

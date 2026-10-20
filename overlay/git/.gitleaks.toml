@@ -4,14 +4,17 @@ title = "android-forge default gitleaks config"
 [extend]
 useDefault = true
 
+# Only binary files and build output are skipped. Text resources stay scanned — a key pasted into
+# res/values/strings.xml (or any res/ XML) ships in the APK.
 [allowlist]
-description = "Common false-positive locations for Android projects"
+description = "Binary resources, screenshot goldens and build outputs"
 paths = [
-    '''.*/src/[^/]+/res/.*''',                     # Android resources (strings, drawables, screenshots)
-    '''.*/src/test/screenshots/.*''',              # Roborazzi goldens
-    '''.*build/.*''',                              # Build outputs
-    '''gradle/wrapper/.*''',                       # Gradle wrapper
-    '''.*\.lock''',                                # Lock files
+    '''(^|/)src/[^/]+/res/(drawable|mipmap)[^/]*/[^/]+\.(png|webp|jpe?g|gif)$''',   # images
+    '''(^|/)src/[^/]+/res/font[^/]*/[^/]+\.(ttf|otf)$''',                         # fonts
+    '''(^|/)src/test/screenshots/.+\.png$''',                                     # Roborazzi goldens
+    '''^([^/]+/){0,3}build/''',                                                   # build outputs (a module's build/)
+    '''(^|/)gradle/wrapper/gradle-wrapper\.(jar|properties)$''',                  # Gradle wrapper
+    '''\.lock$''',                                                                # lock files
 ]
 regexes = [
     '''ANDROID_KEYSTORE_PASSWORD''',               # variable names in workflows/build files
