@@ -53,7 +53,7 @@ You exist so that the orchestrator never has to hold your working context. Every
 
    🤖 Generated with [Claude Code](https://claude.com/claude-code)
    EOF
-   gh pr create --base main --title "<the commit title>" --body-file "${TMPDIR:-/tmp}/pr-<slug>.md"
+   gh pr create --base main --title '<the commit title>' --body-file "${TMPDIR:-/tmp}/pr-<slug>.md"
    ```
    `Refs`, never `Fixes`: the docs PR must not close the issue.
 6. **Drive CI to green:** read `<claude_plugin_root>/skills/driving-ci-green/SKILL.md` and follow it exactly — wait for the PR's checks to register before watching (a watch started too early exits 1 with "no checks reported", which is *not* a failure), watch with `gh pr checks <pr> --watch --fail-fast --interval 20`, resolve the failing run's id and read it with `gh run view <run-id> --log-failed 2>&1 | tail -100` (never unpiped), fix on `spec/<slug>`, push, re-watch. Two cycles maximum.

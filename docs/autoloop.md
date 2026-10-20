@@ -18,7 +18,7 @@ The first two are useful entirely without the loop: the skill in any supervised 
 /loop /android-forge-next-increment
 ```
 
-One `/android-forge-next-increment` invocation = one full increment. `/loop` (self-paced) re-fires it after each increment. Stops on: empty queue, the kill-switch file (default `openspec/STOP`), or escalation. Per-project configuration (local gate command, backlog path, queue-empty handoff) lives in `openspec/AUTOLOOP.md`'s `## Loop configuration` section, which the orchestrator reads at Phase 0.
+One `/android-forge-next-increment` invocation = one full increment. `/loop` (self-paced) re-fires it after each increment. Stops on: empty queue, the kill-switch file (default `openspec/STOP`), or escalation. Per-project configuration (local gate command, ready approvers, QA, kill switch, queue-empty handoff) lives in `openspec/AUTOLOOP.md`'s `## Loop configuration` section, which the orchestrator reads at Phase 0.
 
 ## Why every phase runs in a subagent
 
@@ -59,22 +59,34 @@ Each gate run on a PR is a **round** (at most 3). A non-PASS verdict (`REVISE`/`
 
 Merging to `main` is the loop's one irreversible act, so "never force-merge" is also **code**: `.claude/hooks/merge-guard.sh` (installed by `/android-forge-add-autoloop`, source in `overlay/autoloop/`) runs as a `PreToolUse` hook on every Bash, Write/Edit and `mcp__*` call — the orchestrator's and every subagent's (a subagent's calls carry an `agent_id`). Independently of the model it:
 
-- **re-checks every merge** — `gh pr merge` in any flag order or wrapper (`gh pr --repo o/r merge 7`, `bash -c '…'`, `$(…)`, `xargs`), `gh api` writes to `…/pulls/<n>/merge`, GraphQL merge mutations, MCP tools named `*merge*` — against GitHub: (1) every check on the head commit concluded successfully; (2) the newest review **posted by the loop's own GitHub account** whose body starts `### 🤖 ` has `PASS` as its verdict field, **and was posted on the PR's current head commit** (a PASS that predates later pushes is stale);
-- **denies** merges by subagents, `--admin`, force-pushes or deletes of `main`, `gh api` / MCP writes that update `main` directly, and any push to `main` from the orchestrator that touches more than loop bookkeeping (`openspec/**`, the mode file — the queue-empty archive and the human's steering edits);
-- **denies applying the `ready` label** — `gh issue create|edit --label/--add-label ready`, `gh api` writes to an issue's labels, GraphQL label mutations (they carry ids, not names), MCP issue/label tools — from the orchestrator and every subagent. `ready` is how a human approves work; the loop never approves its own;
-- **denies subagents writing the guard itself** — the script, its mode file, `.claude/settings*.json`;
-- **fails closed**: every GitHub call is time-boxed so the hook always finishes inside its `timeout` (Claude Code lets a tool call through when a hook times out or exits non-zero other than 2), and in the enforce modes an unreachable GitHub, an unresolvable PR, a missing `jq`, or an internal error denies the call.
+- **re-checks every merge** — `gh pr merge` in any flag order or wrapper (`gh pr --repo o/r merge 7`, `bash -c '…'`, `timeout 60 …`, `$'gh' …`, gh aliases), `gh api` writes to `…/pulls/<n>/merge` (query strings and trailing slashes included), GraphQL merge mutations, MCP tools named `*merge*` — against GitHub: (1) every check on the head commit concluded successfully; (2) the newest review **posted by the loop's own GitHub account** whose body starts `### 🤖 ` has `PASS` as its verdict field, **and was posted on the PR's current head commit** (a PASS that predates later pushes is stale). It checks the PR and repository the command will really merge — `--repo`, `GH_REPO`, a literal `cd` — and refuses a target it cannot pin down (`gh pr merge "$(…)"`, a variable, xargs/find input);
+- **denies** merges by subagents, `--admin`, force-pushes or deletes of `main` however spelled (`-fu`, `--force-w`, `+refspec`, `--mirror`, `--prune`, or a bare `git push` that `push.default`, `remote.<r>.push` or a git alias aims at `main`), `gh api` / MCP / curl writes that update `main` directly, and any push to `main` from the orchestrator that changes more than `openspec/**` — the queue-empty archive and the human's runbook edits (a rename counts as a delete plus an add, so moving code under `openspec/` does not pass);
+- **denies applying the `ready` label** — `gh issue create|edit --label/--add-label ready`, `gh label edit … --name ready`, `gh api` writes to an issue's labels, GraphQL label mutations (they carry ids, not names), MCP issue/label tools — from the orchestrator and every subagent. `ready` is how a human approves work; the loop never approves its own;
+- **denies writing the guard itself or the runbook** — the script, its mode file, `.claude/settings*.json`, and `openspec/AUTOLOOP.md` (its `ready-approvers` decide whose issues the loop trusts, and the loop commits an uncommitted edit of it as the human's) — from **any** caller in the enforce modes, the main conversation included: through Write/Edit (paths normalised — `..`, `//`, symlinks, letter case) or Bash (redirects, `cp`/`mv`/`rm`/`chmod`/`sed -i`/…, git pathspecs such as `git restore .` or `git checkout <ref> -- openspec`, the paths of a patch `git apply`/`git am` would apply, interpreters), and a wholesale revert (`git stash`, `git reset --hard`, `git switch -f`) while the human's edit of one of them is uncommitted. Mode and runbook are policy: only the human changes them, outside Claude;
+- **denies a subagent posting a gate verdict** — a review or comment whose body starts `### 🤖`, or a review whose body it cannot read — so only the orchestrator's verdicts exist;
+- **denies what it cannot parse**: in the enforce modes a Bash command that mentions a merge, a push or ref, the GitHub API or token, a guard file or the `ready` label, but does not parse into a form the guard can check — a variable as the command (`G=gh; $G …`), code piped into a shell, inline interpreter code (`python3 -c`), an unknown wrapper around gh/git — is denied by default, as are a gh/git subcommand built at run time, `gh auth token` and `gh alias set`;
+- **fails closed**: every GitHub call is time-boxed so the hook always finishes inside its `timeout` (Claude Code lets a tool call through when a hook times out or exits non-zero other than 2), and in the enforce modes an unreachable GitHub, an unresolvable PR, non-JSON hook input, a missing `python3`, or an internal error denies the call.
+
+The guard is a bash launcher around a stdlib-only `python3` program (a shell lexer that understands quoting, `$(…)`, heredocs and the common wrappers); it needs `python3` ≥ 3.8 and `git`, and nothing else.
 
 Mode lives in `.claude/hooks/merge-guard.mode` (tracked — project policy), re-read on every invocation:
 
 | Mode | Behavior |
 |---|---|
 | `log` | Observe only; record a verdict line to `merge-guard.log` that evaluates every precondition as `enforce` would. **Install default.** |
-| `enforce-ci` | Deny any merge whose CI is not green, `--admin`, force-pushes/deletes of `main`, API ref writes, and subagent tampering. Gate reviews, callers and push contents are not evaluated — the guard as a general "Claude never merges a red PR" rule, usable without the loop. |
+| `enforce-ci` | Deny any merge whose CI is not green, `--admin`, force-pushes/deletes of `main`, API ref writes, token exposure, commands it cannot parse, and writes to the guard's files. Gate reviews, callers, push contents and `ready` labels are not evaluated — the guard as a general "Claude never merges a red PR" rule, usable without the loop. |
 | `enforce` | Everything above. Fails closed. **The loop's target mode.** |
 | `off` | Disabled. |
+| *(missing, empty or unknown)* | `enforce-ci`, with a `WARN` line in the audit log — deleting or garbling the mode file never switches the guard off. |
 
-**Trust ramp:** it installs in `log` so it cannot block a real merge before you have seen it agree with the loop. After an increment or two, `cut -f2,5,6 .claude/hooks/merge-guard.log` — every merge the loop performed should show `ALLOW`. Then `echo enforce > .claude/hooks/merge-guard.mode` and commit it. From then on the rule is enforced by the harness rather than trusted to the model — immune to compaction, to a confused subagent, and to future edits of the command body.
+**Trust ramp:** it installs in `log` so it cannot block a real merge before you have seen it agree with the loop. After an increment or two, `cut -f2,5,6 .claude/hooks/merge-guard.log` — every merge the loop performed should show `ALLOW`. Then switch it yourself, in a terminal (or with `!` in front of the command at the Claude Code prompt) — once it enforces, Claude can no longer write the mode file, and the loop never commits it:
+
+```bash
+echo enforce > .claude/hooks/merge-guard.mode
+git commit -m "chore(autoloop): enforce merge guard" -- .claude/hooks/merge-guard.mode && git push
+```
+
+From then on the rule is enforced by the harness rather than trusted to the model — immune to compaction, to a confused subagent, and to future edits of the command body.
 
 **Wiring matters.** The hook command is `bash "${CLAUDE_PROJECT_DIR}/.claude/hooks/merge-guard.sh"`, quoted: an unquoted path splits on spaces, the hook exits 127, and Claude Code treats that as a non-blocking error — the guard would silently never run. `/android-forge-add-autoloop`'s smoke check runs the guard through the exact wired command string to catch this. The script's `# version:` header is bumped on every change, so a re-run of the installer can tell a stale project copy.
 
@@ -83,7 +95,8 @@ Mode lives in `.claude/hooks/merge-guard.mode` (tracked — project policy), re-
 All work steering happens on GitHub, where you already triage:
 
 - **Add work:** file an issue and label it `ready`. **Reorder:** `priority:high` / `priority:low` (then oldest first). **Pause one:** remove `ready`. On the `in-progress` issue that pauses the whole loop (`⏸ LOOP PAUSED` — it never starts another slice meanwhile); relabel it to resume, or remove `in-progress` to drop it. **Keep a big one out:** split it into sub-issues — a parent issue is never worked, its sub-issues are.
-- **Runbook / guard mode:** edit `openspec/AUTOLOOP.md` or `.claude/hooks/merge-guard.mode` any time; the loop commits your uncommitted edits to `main` at its next Phase 0.
+- **Runbook:** edit `openspec/AUTOLOOP.md` any time, outside Claude. With the guard enforcing — Claude can't have written it — the loop commits your uncommitted edit to `main` at its next Phase 0; in `log` it can't tell your edit from a worker's, so it stops and asks you to commit it yourself.
+- **Guard mode:** edit `.claude/hooks/merge-guard.mode` any time, outside Claude; it applies to the next tool call. Commit it yourself — the loop leaves it uncommitted and says so in its report.
 - **Emergency stop:** create the kill-switch file (`kill-switch:` in `openspec/AUTOLOOP.md`, default `touch openspec/STOP`, gitignored); the loop checks it before every phase and every merge. Delete it to resume.
 - **Hard stop now:** interrupt `/loop` (Esc) or tell it to stop.
 
@@ -108,7 +121,21 @@ Per increment the loop adds `in-progress` when it starts, the docs PR says `Refs
 
 ## Installing
 
-`/android-forge-add-autoloop` — checks preconditions (git, `gh` auth + a reachable GitHub `origin`, a PR CI workflow, `jq`, `python3`, `openspec` ≥ 1.14), runs `openspec init --tools claude` if needed (plus android-forge's `openspec/config.yaml` rules), seeds `openspec/AUTOLOOP.md`, creates the issue labels, files your first slices as issues, installs the merge guard + `.claude/settings.json` wiring (smoke-tested through the wired command), gitignores the audit log and the kill switch, and appends the CLAUDE.md section. The agents and the orchestrator command ship with the plugin — nothing per-project to copy, and plugin updates reach every project.
+`/android-forge-add-autoloop` — checks preconditions (git, `gh` auth + a reachable GitHub `origin`, a PR CI workflow, `jq`, `python3` — the issue queue and the merge guard both need it — and `openspec` ≥ 1.14), runs `openspec init --tools claude` if needed (plus android-forge's `openspec/config.yaml` rules), seeds `openspec/AUTOLOOP.md`, creates the issue labels (after asking), files your first slices as issues, installs the merge guard + `.claude/settings.json` wiring (smoke-tested through the wired command), gitignores the audit log and the kill switch, and appends the CLAUDE.md section. The agents and the orchestrator command ship with the plugin — nothing per-project to copy, and plugin updates reach every project. Re-running it updates a stale guard (`# version:` header); once the guard enforces, it shows you the commands to apply the update yourself, since Claude may not write the guard's files.
+
+## Branch protection
+
+Keep **"Require a pull request before merging"** on `main` — but the loop also pushes its own bookkeeping straight to `main` (the runbook edits it commits for you at Phase 0, and the queue-empty archive of finished OpenSpec changes), so the GitHub account `gh` is authenticated as (`gh api user --jq .login`) needs to bypass that rule. Without the bypass those pushes are rejected and the loop escalates.
+
+With a **ruleset** (Settings → Rules → Rulesets → New branch ruleset, targeting the default branch):
+
+- enable *Require a pull request before merging* with **0** required approvals — the loop runs as your account, gates post comment reviews, and GitHub forbids approving your own PR;
+- enable *Require status checks to pass* (the PR gate's jobs), *Block force pushes* and *Restrict deletions*;
+- under **Bypass list**, add the role or app that account acts as — on a personal repository *Repository admin* (the owner); on an organization repository the team or role the account has — set to **Always** (*For pull requests only* still rejects the direct pushes).
+
+With **classic branch protection**, leave *Do not allow bypassing the above settings* unchecked so the repository admin can push.
+
+The bypass is not a hole for Claude: in `enforce` the merge guard lets the orchestrator push to `main` only changes confined to `openspec/**`, never forced or deleting, and never from a subagent; everything else reaches `main` through a PR with green checks and a PASS gate. It does let *you* push anything — that account is yours.
 
 ## Coexistence with supervised work
 
@@ -120,9 +147,9 @@ Direct edits remain right for: docs, formatting and build chores, and refactors 
 
 - **The gates + CI are the only barrier** between a proposal and `main` — by design, and reversible via `git revert` of any squashed PR commit. Watch the first 1–2 increments live before leaving it unattended.
 - **UI/UX slices should not auto-merge**: with `qa: device` the `android-qa` reviewer proves UI scenarios *work* on a device (journeys + screenshots), but nothing judges look and feel unattended. Keep the loop on logic/state/data slices plus functional UI; gate visual/UX slices for human review (open the PR, stop).
-- **QA runs on every form factor the change touches.** Journeys run through Google's Android CLI — phone for `:app` (plus tablet/foldable when layout changed), the watch for `:wear`, the TV for `:tv`, the AAOS emulator for `:automotive`, … — on a running emulator, else a connected physical device, else an AVD it boots or creates with `scripts/avd.sh` (`qa-device:` pins one). Android Auto (Desktop Head Unit) and Cast (real hardware) are reported as not verified, never as passed. On a physical device it touches only the app under test, never removes a differently-signed install and skips a locked phone. adb only lists devices. With no usable device it fails the gate (`ERROR`) rather than passing.
-- **Branch protection:** "require approvals" blocks the loop (GitHub forbids self-approval; gates post comment-reviews). Supported: no protection + guard in `enforce`, or required status checks with zero required approvals.
+- **QA runs on every form factor the change touches.** Journeys run through Google's Android CLI — phone for `:app` (plus tablet/foldable when layout changed), the watch for `:wear`, the TV for `:tv`, the AAOS emulator for `:automotive`, … — on a running emulator, else a connected physical device, else an existing AVD it boots (`qa-device:` pins one). It never creates one: create the form factors' AVDs beforehand with `scripts/avd.sh ensure <ff>` — a missing one is an `ERROR`, never a pass. Android Auto (Desktop Head Unit) and Cast (real hardware) are reported as not verified, never as passed. On a physical device it touches only the app under test, never removes a differently-signed install and skips a locked phone. adb only lists devices. With no usable device it fails the gate (`ERROR`) rather than passing.
+- **Branch protection:** "require approvals" blocks the loop (GitHub forbids self-approval; gates post comment-reviews). Supported: a required PR with zero approvals plus required checks and the bypass in [Branch protection](#branch-protection), or no protection with the guard in `enforce`.
 - `/loop` and `/code-review` are Claude Code features the loop depends on; `android-loop-code-reviewer` falls back to reviewing the diff itself if `/code-review` is unavailable.
 - The `### 🤖 <gate> — round r/3 — <VERDICT>` header is a contract shared by the orchestrator (posts it), its resume logic (parses it), and the merge guard (checks it) — change all three together. The guard only trusts reviews posted by the loop's own GitHub account, so another reviewer's `🤖` comment cannot pass (or block) a merge.
-- **Least privilege.** The loop's worker agents declare explicit `tools:` (no MCP connectors; the code reviewer has no Write/Edit), because they read untrusted PR, CI and code text unattended. The guard blocks *subagents* from editing its files; the main conversation can still change its mode — that is the human's lever, and a downgrade shows up in `git diff` of the tracked mode file.
-- The guard sees tool calls only. It cannot stop a human (or a CI workflow with write access) from merging, and it does not cover tools you add later under names it does not match.
+- **Least privilege.** The loop's worker agents declare explicit `tools:` (no MCP connectors; the code reviewer has no Write/Edit), because they read untrusted PR, CI and code text unattended. In the enforce modes nothing Claude runs may change the guard's files — the mode is the human's lever, changed outside Claude, and a downgrade shows up in `git diff` of the tracked mode file.
+- The guard sees tool calls only, and reads command text: it cannot see inside a script file a command runs (`bash x.sh`, `./gradlew`), it does not stop committed changes from reaching its files through branch operations (`git switch <branch>`, `git pull`, `git merge`), and a PR that changes `.claude/**` or `openspec/AUTOLOOP.md` (whose `ready-approvers` decides whose issues are trusted) is judged by the gates like any other — review such diffs yourself. It cannot stop a human (or a CI workflow with write access) from merging, and it does not cover tools you add later under names it does not match.

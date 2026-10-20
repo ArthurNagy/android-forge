@@ -20,7 +20,9 @@
 #            Anyone can open an issue on a public repo, and an issue form can auto-apply labels
 #            on behalf of its author — so a label alone proves nothing.
 #         4. A candidate is BLOCKED while any issue it depends on is still open — the
-#            "Depends on" section's #refs plus GitHub's native "blocked by" relationships.
+#            "Depends on" section's references (`#12`, `owner/repo#12`, or an issue/PR URL) plus
+#            GitHub's native "blocked by" relationships. A reference into another repository
+#            blocks unless gh can read it there and it is closed.
 #         5. Its change name (also the spec/ and feat/ branch suffix) is `<issue>-<kebab>`,
 #            reusing whatever name an earlier attempt already used (open change dir, remote
 #            branch, or a same-repo PR head by an approver with that `<issue>-` prefix), so a
@@ -152,9 +154,11 @@ try:
     fields = "number,title,body,labels,author,subIssuesSummary"
 
     def listing(label):
+        # gh pages internally; the limit only has to exceed any real queue, since the queue is
+        # ordered oldest-first and a cut listing would silently drop the oldest issues.
         try:
             raw = gh("issue", "list", *rflag, "--state", "open", "--label", label,
-                     "--limit", "200", "--json", fields)
+                     "--limit", "5000", "--json", fields)
         except RuntimeError as e:
             if "subIssuesSummary" in str(e):
                 raise RuntimeError("gh 2.94+ is required for sub-issue fields (brew upgrade gh): %s" % e)
@@ -171,26 +175,68 @@ try:
         return lines[-1].strip() if lines else ""
 
     state_cache = {}
+    cache = {"heads": None, "repo": None}
 
-    def is_open(number):
-        if number not in state_cache:
-            raw = gh("issue", "view", str(number), *rflag, "--json", "state", "--jq", ".state", check=False)
+    def this_repo():
+        """owner/repo of the queue's repository, lower-cased ("" if gh cannot tell)."""
+        if cache["repo"] is None:
+            name = repo_arg or (gh("repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner",
+                                   check=False) or "")
+            cache["repo"] = "/".join(name.strip().lower().split("/")[-2:])
+        return cache["repo"]
+
+    def ref_key(owner_repo, number):
+        """A dependency: an int for this repository, ("owner/repo", n) for another one."""
+        full = owner_repo.lower()
+        return number if full == this_repo() else (full, number)
+
+    def ref_name(ref):
+        return "#%d" % ref if isinstance(ref, int) else "%s#%d" % ref
+
+    # #12 · owner/repo#12 · https://github.com/owner/repo/issues/12 (or /pull/12, or another host)
+    REF_RE = re.compile(r"https?://([^/\s]+)/([\w.-]+)/([\w.-]+)/(?:issues|pull)/(\d+)"
+                        r"|(?<![\w/.#-])([\w.-]+)/([\w.-]+)#(\d+)"
+                        r"|(?<![\w/.#-])#(\d+)")
+
+    def depends_on(text):
+        refs = set()
+        for m in REF_RE.finditer(text):
+            if m.group(4):
+                host = m.group(1).lower()
+                owner_repo = "%s/%s" % (m.group(2), m.group(3))
+                if host in ("github.com", "www.github.com"):
+                    refs.add(ref_key(owner_repo, int(m.group(4))))
+                else:
+                    refs.add(("%s/%s" % (host, owner_repo.lower()), int(m.group(4))))
+            elif m.group(7):
+                refs.add(ref_key("%s/%s" % (m.group(5), m.group(6)), int(m.group(7))))
+            else:
+                refs.add(int(m.group(8)))
+        return refs
+
+    def is_open(ref):
+        if ref not in state_cache:
+            # The issues endpoint answers for pull requests too (merged = closed).
+            repo, number = (api_repo, ref) if isinstance(ref, int) else ref
+            raw = gh("api", "repos/%s/issues/%d" % (repo, number), "--jq", ".state", check=False)
             # Unknown / inaccessible reference → treat as open (blocked) rather than guess it is done.
-            state_cache[number] = (raw or "OPEN").strip().upper() != "CLOSED"
-        return state_cache[number]
+            state_cache[ref] = (raw or "open").strip().lower() != "closed"
+        return state_cache[ref]
 
     def open_blockers(issue, secs):
-        refs = {int(n) for n in re.findall(r"#(\d+)", secs.get("depends on", ""))}
+        refs = depends_on(secs.get("depends on", ""))
         native = gh("api", "repos/%s/issues/%d/dependencies/blocked_by" % (api_repo, issue["number"]),
-                    "--jq", '.[] | select(.state == "open") | .number', check=False)
+                    "--paginate", "--jq",
+                    '.[] | select(.state == "open") | "\\(.number) \\(.repository_url // "")"', check=False)
         for line in (native or "").splitlines():
-            if line.strip().isdigit():
-                refs.add(int(line.strip()))
-                state_cache[int(line.strip())] = True
+            parts = line.split()
+            if parts and parts[0].isdigit():
+                m = re.search(r"/repos/([^/]+/[^/]+)$", parts[1] if len(parts) > 1 else "")
+                ref = ref_key(m.group(1), int(parts[0])) if m else int(parts[0])
+                refs.add(ref)
+                state_cache[ref] = True
         refs.discard(issue["number"])
-        return sorted(n for n in refs if is_open(n))
-
-    cache = {"heads": None}
+        return sorted((r for r in refs if is_open(r)), key=lambda r: (isinstance(r, tuple), str(r)))
 
     def existing_names(number):
         """Change names already used for this issue → {"spec": [PR states], "feat": [PR states]}.
@@ -212,13 +258,17 @@ try:
             if m:
                 names.setdefault(m.group(1).strip(), {"spec": [], "feat": []})
         if cache["heads"] is None:
-            raw = gh("pr", "list", *rflag, "--state", "all", "--limit", "500",
-                     "--json", "headRefName,state,isCrossRepository,author")
-            cache["heads"] = [p for p in json.loads(raw or "[]")
-                              if not p.get("isCrossRepository")
-                              and (p.get("author") or {}).get("login", "").lower() in trusted]
+            # Every spec/ and feat/ PR ever opened, all pages: a merged PR's branch is usually deleted,
+            # so the PR is the only record of the name an earlier attempt used.
+            raw = gh("api", "--paginate", "repos/%s/pulls?state=all&per_page=100" % api_repo, "--jq",
+                     '.[] | select(.head.ref | test("^(spec|feat)/[0-9]+-")) | {head: .head.ref, '
+                     'state: (if .merged_at then "MERGED" elif .state == "open" then "OPEN" else "CLOSED" end), '
+                     'cross: ((.head.repo.full_name // "") != (.base.repo.full_name // "")), '
+                     'author: (.user.login // "")} | @json')
+            cache["heads"] = [p for p in (json.loads(l) for l in (raw or "").splitlines() if l.strip())
+                              if not p.get("cross") and p.get("author", "").lower() in trusted]
         for pr in cache["heads"]:
-            m = re.match(r"^(spec|feat)/(%s.+)$" % re.escape(prefix), pr["headRefName"])
+            m = re.match(r"^(spec|feat)/(%s.+)$" % re.escape(prefix), pr["head"])
             if m:
                 names.setdefault(m.group(2), {"spec": [], "feat": []})[m.group(1)].append(pr.get("state", ""))
         return names
@@ -255,7 +305,7 @@ try:
             return "`ready` was applied by @%s, who is not an approver" % (actor or "unknown")
         blockers = open_blockers(issue, sections(issue.get("body", "")))
         if blockers:
-            return "blocked by open " + ", ".join("#%d" % n for n in blockers)
+            return "blocked by open " + ", ".join(ref_name(r) for r in blockers)
         return None
 
     def result(issue, slug, resume, secs):
