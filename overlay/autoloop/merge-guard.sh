@@ -992,8 +992,17 @@ class Ctx(object):
         self.opaque.append(why)
         self.structural = self.structural or structural
 
-    def touch(self, w, kind, base=None):
-        self.touched.append((w, kind, base or (self.cwd if self.cwd_known else None)))
+    def touch(self, w, kind, base=""):
+        """base: the directory a relative path resolves in ("" = the shell's cwd, None = unknown)."""
+        self.touched.append((w, kind, (self.cwd if self.cwd_known else None) if base == "" else base))
+
+    def git_touch(self, w, kind, d):
+        """A path a git command writes resolves in the directory git runs in (`-C`). When that directory
+        is unknown, check it from the shell's cwd and as a path in an unknown place."""
+        if d is not None:
+            return self.touch(w, kind, d)
+        self.touch(w, kind)
+        self.touch(w, kind, None)
 
 
 class Classifier(object):
@@ -1712,15 +1721,15 @@ class Classifier(object):
         if sub == "config":
             for k, t in enumerate(lits):
                 if t in ("-f", "--file") and k + 1 < len(rest):
-                    ctx.touch(rest[k + 1], "file")
+                    ctx.git_touch(rest[k + 1], "file", d)
                 elif t is not None and t.startswith("--file="):
-                    ctx.touch(Word(t[7:]), "file")
+                    ctx.git_touch(Word(t[7:]), "file", d)
         if sub in ("diff", "log", "show", "archive", "format-patch", "bundle"):
             for k, t in enumerate(lits):
                 if t in ("-o", "--output", "--output-directory") and k + 1 < len(rest):
-                    ctx.touch(rest[k + 1], "into")
+                    ctx.git_touch(rest[k + 1], "into", d)
                 elif t is not None and t.startswith(("--output=", "--output-directory=")):
-                    ctx.touch(Word(t.split("=", 1)[1]), "into")
+                    ctx.git_touch(Word(t.split("=", 1)[1]), "into", d)
         self.git_tree(sub, rest, lits, base, cmd)
 
     def git_tree(self, sub, rest, lits, base, cmd):
@@ -1731,7 +1740,7 @@ class Classifier(object):
         pos = [a for a, t in zip(rest, lits) if t is None or not t.startswith("-")]
         if sub in ("worktree", "clone", "init"):
             for a in pos:
-                ctx.touch(a, "file")
+                ctx.git_touch(a, "file", base["dir"])
             return
         if sub == "sparse-checkout" and lits[:1] and lits[0] in ("set", "add", "init", "reapply", "disable"):
             return ctx.act("tamper", "git sparse-checkout can remove protected files from the working tree")
@@ -1774,7 +1783,7 @@ class Classifier(object):
         elif sub != "mv":
             return
         for a in pos:
-            ctx.touch(a, "tree")
+            ctx.git_touch(a, "tree", base["dir"])
         if wholesale:
             dirty = self.dirty_protected(base)
             if dirty is None:
