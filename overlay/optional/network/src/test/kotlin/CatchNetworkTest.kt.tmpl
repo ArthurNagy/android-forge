@@ -1,0 +1,54 @@
+package ${BASE_PACKAGE}.core.network
+
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import ${BASE_PACKAGE}.core.domain.DomainError
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.test.runTest
+import okhttp3.ResponseBody.Companion.toResponseBody
+import retrofit2.HttpException
+import retrofit2.Response
+import java.io.IOException
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+
+class CatchNetworkTest {
+    private fun httpError(status: Int) = HttpException(Response.error<Unit>(status, "".toResponseBody(null)))
+
+    @Test
+    fun aSuccessfulCallPassesItsValueThrough() = runTest {
+        assertEquals(Ok(42), catchNetwork { 42 })
+    }
+
+    @Test
+    fun anErrorStatusBecomesHttp() = runTest {
+        assertEquals(Err(DomainError.Network.Http(status = 503, code = null)), catchNetwork { throw httpError(503) })
+        assertEquals(Err(DomainError.Network.Http(status = 400, code = null)), catchNetwork { throw httpError(400) })
+    }
+
+    @Test
+    fun notFoundBecomesNotFound() = runTest {
+        assertEquals(Err(DomainError.NotFound), catchNetwork { throw httpError(404) })
+    }
+
+    @Test
+    fun aDroppedConnectionBecomesConnectivity() = runTest {
+        assertEquals(Err(DomainError.Network.Connectivity), catchNetwork { throw IOException("connection reset") })
+    }
+
+    @Test
+    fun anythingElseBecomesUnknown() = runTest {
+        assertEquals(Err(DomainError.Unknown("unexpected body")), catchNetwork { throw IllegalArgumentException("unexpected body") })
+    }
+
+    @Test
+    fun cancellationPropagates() = runTest {
+        assertFailsWith<CancellationException> { catchNetwork { throw CancellationException("cancelled") } }
+    }
+
+    @Test
+    fun errorsPropagate() = runTest {
+        assertFailsWith<OutOfMemoryError> { catchNetwork { throw OutOfMemoryError("out of memory") } }
+    }
+}

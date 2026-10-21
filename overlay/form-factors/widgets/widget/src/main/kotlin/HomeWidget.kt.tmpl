@@ -1,0 +1,81 @@
+package ${BASE_PACKAGE}.widget
+
+import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.glance.GlanceId
+import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
+import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
+import androidx.glance.action.Action
+import androidx.glance.action.clickable
+import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.components.Scaffold
+import androidx.glance.appwidget.components.TitleBar
+import androidx.glance.appwidget.provideContent
+import androidx.glance.preview.ExperimentalGlancePreviewApi
+import androidx.glance.preview.Preview
+import androidx.glance.semantics.contentDescription
+import androidx.glance.semantics.semantics
+import androidx.glance.text.Text
+import androidx.glance.text.TextStyle
+
+/**
+ * The home-screen widget: the app name in a title bar and a body that opens the app. A starting
+ * point — pick the closest canonical layout (glance-canonical-layouts skill) for real content.
+ */
+internal class HomeWidget : GlanceAppWidget() {
+    // Exact: the host asks for the widget at its actual size, and nothing else is kept in memory.
+    override val sizeMode: SizeMode = SizeMode.Exact
+
+    override suspend fun provideGlance(
+        context: Context,
+        id: GlanceId,
+    ) {
+        // The app's launcher activity, resolved at runtime: :widget never depends on :app.
+        val openApp = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { actionStartActivity(it) }
+        provideContent {
+            GlanceTheme { HomeWidgetContent(openApp = openApp) }
+        }
+    }
+}
+
+/** Public only because the manifest names it: Android instantiates it and Glance renders [HomeWidget]. */
+class HomeWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = HomeWidget()
+}
+
+/** Stateless widget UI — unit-tested with runGlanceAppWidgetUnitTest and previewed below. */
+@Composable
+internal fun HomeWidgetContent(
+    openApp: Action?,
+    modifier: GlanceModifier = GlanceModifier,
+) {
+    val context = LocalContext.current
+    val openLabel = context.getString(R.string.widget_home_open)
+    Scaffold(
+        modifier =
+            modifier
+                .semantics { contentDescription = openLabel }
+                .then(if (openApp != null) GlanceModifier.clickable(openApp) else GlanceModifier),
+        titleBar = {
+            TitleBar(
+                startIcon = ImageProvider(R.drawable.widget_ic_home),
+                title = context.getString(R.string.widget_home_title),
+            )
+        },
+    ) {
+        Text(text = openLabel, style = TextStyle(color = GlanceTheme.colors.onSurface))
+    }
+}
+
+// The size of a 2x2 widget on a smaller phone (widget sizing guidance).
+@OptIn(ExperimentalGlancePreviewApi::class)
+@Preview(widthDp = 172, heightDp = 234)
+@Composable
+private fun HomeWidgetPreview() {
+    GlanceTheme { HomeWidgetContent(openApp = null) }
+}

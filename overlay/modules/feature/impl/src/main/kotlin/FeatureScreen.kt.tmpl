@@ -1,0 +1,95 @@
+package ${BASE_PACKAGE}.feature.${FEATURE_NAME_PKG}.impl
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import ${BASE_PACKAGE}.core.designsystem.AppSpacing
+import ${BASE_PACKAGE}.core.ui.toMessage
+import org.orbitmvi.orbit.compose.collectAsState
+import ${BASE_PACKAGE}.core.ui.R as CoreUiR
+
+/**
+ * Entry point — wires the ViewModel and hoists its state into the stateless [${FEATURE_NAME_PASCAL}Content].
+ * Consumable event slots (pendingMessage, ...) are observed with LaunchedEffect and cleared through
+ * the matching onXConsumed() intent (pendingMessage → onMessageConsumed()). Loading starts in the
+ * ViewModel's on-create block, not here, so coming back to this screen doesn't reload it.
+ *
+ * `internal`: the app never calls this; ${FEATURE_NAME_PASCAL}Entries.kt renders it for [${FEATURE_NAME_PASCAL}Key]. [onNavigateBack]
+ * is null on the root entry (nothing to go back to), so no Back control shows.
+ */
+@Composable
+internal fun ${FEATURE_NAME_PASCAL}Screen(
+    onNavigateBack: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    viewModel: ${FEATURE_NAME_PASCAL}ViewModel = hiltViewModel(),
+) {
+    val state by viewModel.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val resources = LocalResources.current
+
+    LaunchedEffect(state.pendingMessage) {
+        val message = state.pendingMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(resources.getString(message))
+        viewModel.onMessageConsumed()
+    }
+
+    ${FEATURE_NAME_PASCAL}Content(
+        state = state,
+        snackbarHostState = snackbarHostState,
+        onNavigateBack = onNavigateBack,
+        modifier = modifier,
+    )
+}
+
+/** Stateless screen body — `internal` so screenshot and UI tests render it with any [${FEATURE_NAME_PASCAL}State]. */
+@Composable
+internal fun ${FEATURE_NAME_PASCAL}Content(
+    state: ${FEATURE_NAME_PASCAL}State,
+    snackbarHostState: SnackbarHostState,
+    onNavigateBack: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    // The SnackbarHost must be in the tree: showSnackbar() suspends until a host shows it.
+    Scaffold(modifier = modifier, snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(AppSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.md, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            when {
+                state.loading -> CircularProgressIndicator()
+
+                state.error != null -> Text(state.error.toMessage())
+
+                // TODO(android-forge): replace this placeholder with the real screen content (and drop the
+                // ${FEATURE_NAME_SNAKE}_placeholder_content string). android-reviewer flags a feature that still renders it.
+                else -> Text(stringResource(R.string.${FEATURE_NAME_SNAKE}_placeholder_content))
+            }
+            if (onNavigateBack != null) {
+                TextButton(onClick = onNavigateBack) {
+                    Text(stringResource(CoreUiR.string.core_ui_navigate_back))
+                }
+            }
+        }
+    }
+}

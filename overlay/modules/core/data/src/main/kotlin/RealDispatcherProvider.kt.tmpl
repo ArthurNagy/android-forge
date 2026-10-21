@@ -1,0 +1,18 @@
+package ${BASE_PACKAGE}.core.data
+
+import ${BASE_PACKAGE}.core.domain.DispatcherProvider
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import javax.inject.Inject
+
+/**
+ * Production dispatcher provider — the ONLY place in the app that may reference `Dispatchers.*`
+ * directly. `internal`: [DataModule] binds it to the public [DispatcherProvider] interface.
+ */
+internal class RealDispatcherProvider
+    @Inject
+    constructor() : DispatcherProvider {
+        override val main: CoroutineDispatcher get() = Dispatchers.Main
+        override val io: CoroutineDispatcher get() = Dispatchers.IO
+        override val default: CoroutineDispatcher get() = Dispatchers.Default
+    }

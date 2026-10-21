@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Provider metadata of HomeWidgetReceiver. initialLayout is Glance's loading layout; previewLayout is
+     what the widget picker shows on Android 12+, previewImage (a static drawable) what older pickers show.
+     The Android 12+ attributes (targetCell*, maxResize*, previewLayout, description) are ignored below 12,
+     which then size the widget from minWidth/minHeight. One file serves minSdk 29–33, so Lint's UnusedAttribute
+     (those attributes below 12) is ignored — tools:targetApi="s" would be ObsoleteSdkInt, an error, from minSdk 31. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:description="@string/widget_home_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:maxResizeHeight="@dimen/widget_home_max_resize_height"
+    android:maxResizeWidth="@dimen/widget_home_max_resize_width"
+    android:minHeight="@dimen/widget_home_min_height"
+    android:minResizeHeight="@dimen/widget_home_min_resize_height"
+    android:minResizeWidth="@dimen/widget_home_min_resize_width"
+    android:minWidth="@dimen/widget_home_min_width"
+    android:previewImage="@drawable/widget_home_preview_image"
+    android:previewLayout="@layout/widget_home_preview"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="@integer/widget_home_target_cell_height"
+    android:targetCellWidth="@integer/widget_home_target_cell_width"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    tools:ignore="UnusedAttribute" />

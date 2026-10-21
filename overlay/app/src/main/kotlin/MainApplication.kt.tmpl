@@ -1,0 +1,18 @@
+package ${BASE_PACKAGE}
+
+import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
+import timber.log.Timber
+
+/**
+ * Hilt's application: the singleton graph (repositories, DataStore, every feature's entry builders)
+ * lives as long as the process, so screens, services and workers share it. Registered as
+ * `android:name=".MainApplication"` in the manifest.
+ */
+@HiltAndroidApp
+class MainApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
+    }
+}

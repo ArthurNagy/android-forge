@@ -1,0 +1,79 @@
+package ${BASE_PACKAGE}.glasses
+
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.xr.projected.ProjectedContext
+import androidx.xr.projected.experimental.ExperimentalProjectedApi
+import timber.log.Timber
+import kotlin.coroutines.CoroutineContext
+
+/**
+ * The phone-side entry to the glasses experience. Enabled only while display glasses are connected, and
+ * absent below Android 16: watching for a projected device needs API 36. It starts [GlassesActivity]
+ * on the glasses' display — never on the phone.
+ *
+ * :app places it on a surface it owns for good — by default over its navigation host in MainActivity
+ * with [hideWhileDisconnected], so it shows up only while glasses are connected and survives a feature
+ * taking over the start destination; in a top app bar or a menu it can stay visible and disabled instead.
+ */
+@Composable
+fun LaunchOnGlassesButton(
+    modifier: Modifier = Modifier,
+    hideWhileDisconnected: Boolean = false,
+) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) return
+    val context = LocalContext.current
+    // The lifecycle scope's main-thread dispatcher runs the connection listener (no Dispatchers.* here).
+    // Not rememberCoroutineScope(): a composition's context need not carry a dispatcher (it doesn't under
+    // the Compose test rule), and isProjectedDeviceConnected requires one.
+    val callbackContext = LocalLifecycleOwner.current.lifecycleScope.coroutineContext
+    val connected by remember(context, callbackContext) {
+        projectedDeviceConnected(context, callbackContext)
+    }.collectAsStateWithLifecycle(initialValue = false)
+    if (hideWhileDisconnected && !connected) return
+    LaunchOnGlassesButtonContent(connected = connected, onClick = { context.startGlassesActivity() }, modifier = modifier)
+}
+
+/** Stateless button: what the tests render with each connection state. */
+@Composable
+internal fun LaunchOnGlassesButtonContent(
+    connected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Button(onClick = onClick, enabled = connected, modifier = modifier) {
+        Text(stringResource(R.string.glasses_launch))
+    }
+}
+
+@OptIn(ExperimentalProjectedApi::class)
+@RequiresApi(Build.VERSION_CODES.BAKLAVA)
+private fun projectedDeviceConnected(
+    context: Context,
+    callbackContext: CoroutineContext,
+) = ProjectedContext.isProjectedDeviceConnected(context, callbackContext)
+
+@OptIn(ExperimentalProjectedApi::class)
+@RequiresApi(Build.VERSION_CODES.BAKLAVA)
+private fun Context.startGlassesActivity() {
+    try {
+        val options = ProjectedContext.createProjectedActivityOptions(this)
+        startActivity(Intent(this, GlassesActivity::class.java), options.toBundle())
+    } catch (e: IllegalStateException) {
+        // The glasses disconnected between the last connection update and the tap.
+        Timber.w(e, "no projected display to start the glasses activity on")
+    }
+}

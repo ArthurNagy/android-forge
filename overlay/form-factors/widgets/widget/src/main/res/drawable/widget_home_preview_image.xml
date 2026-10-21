@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget picker preview below Android 12 (previewImage; 12+ shows previewLayout): a static sketch of
+     HomeWidgetContent — title bar with the home glyph, a line of body text. Replace it with a screenshot-style
+     image of the real widget once it shows app content. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp"
+    android:height="160dp"
+    android:viewportWidth="160"
+    android:viewportHeight="160">
+    <path
+        android:fillColor="#FFF3F1F7"
+        android:pathData="M24,0h112a24,24 0,0 1,24 24v112a24,24 0,0 1,-24 24h-112a24,24 0,0 1,-24 -24v-112a24,24 0,0 1,24 -24z" />
+    <path
+        android:fillColor="#FF4A4458"
+        android:pathData="M26,40v-9h6v9h7.5v-12h4.5L29,14.5 14,28h4.5v12z" />
+    <path
+        android:fillColor="#FF4A4458"
+        android:pathData="M54,22h56a5,5 0,0 1,0 10h-56a5,5 0,0 1,0 -10z" />
+    <path
+        android:fillColor="#FF79747E"
+        android:pathData="M20,66h88a4,4 0,0 1,0 8h-88a4,4 0,0 1,0 -8z" />
+</vector>

@@ -1,0 +1,34 @@
+package ${BASE_PACKAGE}.core.datastore
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.preferencesDataStoreFile
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+internal object DataStoreModule {
+    @Provides
+    @Singleton
+    fun provideUserPreferencesDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<Preferences> = PreferenceDataStoreFactory.create(
+        corruptionHandler = userPreferencesCorruptionHandler,
+        produceFile = { context.preferencesDataStoreFile("user_preferences") },
+    )
+}
+
+/**
+ * A corrupt preferences file (a crash mid-write, a bad backup restore) reads as empty — every preference
+ * back to its default — and the next write replaces it. Without it, every read and write fails from then on.
+ */
+internal val userPreferencesCorruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() }

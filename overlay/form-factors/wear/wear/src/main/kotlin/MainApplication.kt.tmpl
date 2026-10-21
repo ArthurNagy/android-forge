@@ -1,0 +1,18 @@
+package ${BASE_PACKAGE}.wear
+
+import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
+import timber.log.Timber
+
+/**
+ * The watch app's Hilt application: the same singleton graph as the phone app's (:core:data's
+ * repositories, DataStore), built in the watch's own process. Registered as `.MainApplication` in
+ * this module's manifest.
+ */
+@HiltAndroidApp
+class MainApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
+    }
+}

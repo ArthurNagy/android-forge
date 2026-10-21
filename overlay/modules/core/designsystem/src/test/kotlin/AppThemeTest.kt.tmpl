@@ -1,0 +1,84 @@
+package ${BASE_PACKAGE}.core.designsystem
+
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import ${BASE_PACKAGE}.core.model.ThemeMode
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import kotlin.test.assertEquals
+
+/**
+ * AppTheme picks its color scheme from the stored ThemeMode, the system dark setting (`night`
+ * qualifier) and dynamic color. Compared by a few roles: light and dark differ in all of them.
+ */
+@RunWith(AndroidJUnit4::class)
+class AppThemeTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    private fun assertSameColors(
+        expected: ColorScheme,
+        actual: ColorScheme,
+    ) {
+        assertEquals(expected.primary, actual.primary)
+        assertEquals(expected.background, actual.background)
+        assertEquals(expected.onSurface, actual.onSurface)
+    }
+
+    private fun themedScheme(
+        themeMode: ThemeMode,
+        dynamicColor: Boolean = false,
+    ): ColorScheme {
+        lateinit var scheme: ColorScheme
+        composeRule.setContent { AppTheme(themeMode = themeMode, dynamicColor = dynamicColor) { scheme = MaterialTheme.colorScheme } }
+        composeRule.waitForIdle()
+        return scheme
+    }
+
+    @Test
+    fun lightUsesTheLightScheme() {
+        assertSameColors(LightScheme, themedScheme(ThemeMode.LIGHT))
+    }
+
+    @Test
+    fun darkUsesTheDarkScheme() {
+        assertSameColors(DarkScheme, themedScheme(ThemeMode.DARK))
+    }
+
+    @Test
+    fun systemFollowsALightSystemSetting() {
+        assertSameColors(LightScheme, themedScheme(ThemeMode.SYSTEM))
+    }
+
+    @Test
+    @Config(qualifiers = "night")
+    fun systemFollowsADarkSystemSetting() {
+        assertSameColors(DarkScheme, themedScheme(ThemeMode.SYSTEM))
+    }
+
+    @Test
+    fun dynamicColorUsesTheWallpaperPalette() {
+        lateinit var expectedLight: ColorScheme
+        lateinit var expectedDark: ColorScheme
+        lateinit var light: ColorScheme
+        lateinit var dark: ColorScheme
+        composeRule.setContent {
+            val context = LocalContext.current
+            expectedLight = dynamicLightColorScheme(context)
+            expectedDark = dynamicDarkColorScheme(context)
+            AppTheme(themeMode = ThemeMode.LIGHT, dynamicColor = true) { light = MaterialTheme.colorScheme }
+            AppTheme(themeMode = ThemeMode.DARK, dynamicColor = true) { dark = MaterialTheme.colorScheme }
+        }
+        composeRule.waitForIdle()
+
+        assertSameColors(expectedLight, light)
+        assertSameColors(expectedDark, dark)
+    }
+}

@@ -1,0 +1,40 @@
+package ${BASE_PACKAGE}
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.navigation3.runtime.NavKey
+import kotlinx.serialization.Serializable
+
+/**
+ * Placeholder start destination until a feature owns the launch screen. Then pass that feature's key
+ * (from its `:api` module) to `rememberNavBackStack(...)` in AppNavigation.kt and delete this file, its
+ * entry there, HomeScreenTest and its goldens, and the `home_placeholder` string.
+ */
+@Serializable
+internal data object HomeKey : NavKey
+
+@Composable
+internal fun HomeScreen(modifier: Modifier = Modifier) {
+    // Surface: the theme's background and content colors, so the placeholder follows a dark ThemeMode too.
+    Surface(modifier = modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier.fillMaxSize().safeDrawingPadding(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.home_placeholder),
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}

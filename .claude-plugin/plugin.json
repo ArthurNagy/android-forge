@@ -1,0 +1,13 @@
+{
+  "name": "android-forge",
+  "version": "0.1.0",
+  "description": "Scaffold and guide pure-Android Jetpack Compose apps — phones, tablets and foldables by default; opt-in Wear OS, TV, Android Auto, Android Automotive OS, XR, Googlebook/desktop, Cast and widgets. Drives Google's Android CLI (android create, emulators, devices, docs, skills), overlays a locked stack (Hilt, Orbit state-only, Navigation 3 api/impl features, kotlin-result; Room 3 and Retrofit as opt-ins), CI, product workflow, an autonomous build loop and release plumbing.",
+  "author": {
+    "name": "Arthur Nagy",
+    "url": "https://github.com/arthurnagy"
+  },
+  "homepage": "https://github.com/arthurnagy/android-forge",
+  "repository": "https://github.com/arthurnagy/android-forge",
+  "license": "MIT",
+  "keywords": ["android", "jetpack-compose", "android-cli", "hilt", "navigation3", "wear-os", "android-tv", "android-auto", "android-xr", "scaffolding", "blueprint"]
+}

@@ -1,0 +1,30 @@
+package ${BASE_PACKAGE}.feature.${FEATURE_NAME_PKG}.impl
+
+import kotlinx.coroutines.test.runTest
+import org.orbitmvi.orbit.test.testWithInternalState
+import kotlin.test.Test
+
+class ${FEATURE_NAME_PASCAL}ViewModelTest {
+    @Test
+    fun creatingTheViewModelLoads() = runTest {
+        val viewModel = ${FEATURE_NAME_PASCAL}ViewModel()
+
+        // Orbit 12: the initial state is asserted before this block runs; the on-create block
+        // only runs when the test asks for it.
+        viewModel.testWithInternalState(this, ${FEATURE_NAME_PASCAL}State.Initial) {
+            runOnCreate()
+            expectInternalState { copy(loading = true, error = null) }
+            expectInternalState { copy(loading = false) }
+        }
+    }
+
+    @Test
+    fun pendingMessageClearsAfterConsumed() = runTest {
+        val viewModel = ${FEATURE_NAME_PASCAL}ViewModel()
+
+        viewModel.testWithInternalState(this, ${FEATURE_NAME_PASCAL}State.Initial.copy(pendingMessage = R.string.${FEATURE_NAME_SNAKE}_placeholder_content)) {
+            containerHost.onMessageConsumed()
+            expectInternalState { copy(pendingMessage = null) }
+        }
+    }
+}

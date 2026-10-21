@@ -1,0 +1,36 @@
+# 0004. Use androidx Navigation 3 with api/impl keys and Hilt-contributed entries
+
+Date: ${SCAFFOLD_DATE}
+Status: Accepted
+
+## Context
+
+Navigation must be type-safe, survive configuration changes and process death, support adaptive multi-pane
+layouts and predictive back, and let features navigate to each other without depending on each other's
+screens.
+
+Alternatives considered:
+- **Navigation 2 (Compose) with type-safe routes** — a library-owned back stack; adaptive panes and custom
+  back-stack handling are harder; Google now recommends Navigation 3 for Compose apps.
+- **Compose Destinations / Voyager / Decompose** — third-party; outside Google's guidance and skills.
+
+## Decision
+
+Use **androidx Navigation 3** (`navigation3-runtime`/`-ui`, `lifecycle-viewmodel-navigation3`,
+`adaptive-navigation3`):
+- keys are `@Serializable` `NavKey`s in each feature's `:api` module, carrying IDs only;
+- each feature `impl` contributes an `EntryProviderScope<NavKey>.(Navigator) -> Unit` through Hilt `@IntoSet`;
+- `:app` owns one saveable back stack (`rememberNavBackStack(StartKey)`), a `Navigator` over it, and a
+  `NavDisplay` with the list-detail scene strategy and per-entry ViewModel stores;
+- ViewModels never navigate: they set a consumable `pendingNavigation` slot that the screen hands to the
+  `onNavigate` lambda its entry builder supplied.
+
+## Consequences
+
+- Easier: the app module never changes when features add destinations; back stack survives process death;
+  multi-pane on large screens through entry metadata; predictive back from `NavDisplay`.
+- Harder: Navigation 3 and the material3-adaptive scene APIs are young (some are `@Experimental…`);
+  `/android-forge-bump-stack` diffs need reading.
+- Reviewer enforces: no string routes; every key `@Serializable` and in an `:api` module; no feature
+  importing another feature's `impl`; no back-stack mutation outside the `Navigator`; no
+  `ListDetailPaneScaffold` (scene strategies instead).

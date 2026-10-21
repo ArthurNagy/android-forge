@@ -1,0 +1,35 @@
+# 0009. One app module per device type; same-APK surfaces stay in `:app`
+
+Date: ${SCAFFOLD_DATE}
+Status: Accepted
+
+## Context
+
+The app may grow beyond phones, tablets and foldables: Wear OS, Android TV, Android Automotive OS, Android
+Auto, XR headsets and glasses, Googlebook/desktop, Cast, widgets. Each has its own UI toolkit, manifest
+requirements, quality guidelines and (for some) its own Play track.
+
+Alternatives considered:
+- **One APK for every device type** (`:app` branching on the device at runtime) — one module to release, but every
+  device downloads every toolkit (Wear Compose, Compose for TV, Car App Library), manifests conflict (a launcher
+  category for TV, `uses-feature` for a watch), and Wear OS, TV and AAOS have their own Play tracks anyway.
+- **Form-factor UI as feature modules inside `:app`** — shares the app's DI graph and navigation, but the phone
+  UI's dependencies (`:core:designsystem`, Material 3 adaptive, phone features) leak into every device's APK.
+
+## Decision
+
+Following the modularization guide ("if your app targets multiple device types, define an app module for
+each one"):
+- **Own app module, same applicationId, own Play track**: `:wear` (Wear Compose Material 3), `:tv` (Compose
+  for TV), `:automotive` (AAOS, `CarAppActivity` / parked activity).
+- **Inside `:app`** (same APK): adaptive phone/tablet/foldable/desktop layouts, XR headset differentiation
+  (`uses-feature android.software.xr.api.spatial required=false`), Android Auto (via the `:car` library),
+  XR glasses (projected activity, `:glasses` library), Cast sender, Glance widgets (`:widget` library).
+- Form-factor apps share `:core:model`/`:core:domain`/`:core:data`, never the phone UI modules.
+
+## Consequences
+
+- Easier: each device's dependencies stay out of the others' APKs; each module follows its platform's
+  quality tier; shared business logic is written once.
+- Harder: more app modules to sign and release (the release workflow builds them all); a feature may need a
+  form-factor-specific UI module per device.

@@ -1,0 +1,51 @@
+package ${BASE_PACKAGE}.core.datastore
+
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringPreferencesKey
+import ${BASE_PACKAGE}.core.model.ThemeMode
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
+import java.io.IOException
+import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
+
+/**
+ * The user-preferences DataStore. Public because :core:data's repository wraps it; nothing else
+ * may depend on :core:datastore. Reads never throw: an unreadable file reads as the defaults and is
+ * read again a little later — `catch { }` alone would complete the flow, and the theme would stop
+ * following later changes (a corrupt file is replaced by DataStoreModule's corruption handler). Writes
+ * may throw — the repository turns that into a `DomainError`.
+ */
+class UserPreferencesDataSource
+    @Inject
+    constructor(
+        private val dataStore: DataStore<Preferences>,
+    ) {
+        val themeMode: Flow<ThemeMode> =
+            dataStore.data
+                .retryWhen { cause, attempt ->
+                    if (cause is IOException) {
+                        emit(emptyPreferences())
+                        delay((attempt + 1).coerceAtMost(MAX_RETRY_DELAY_SECONDS).seconds) // 1 s, 2 s, … 30 s
+                        true
+                    } else {
+                        false
+                    }
+                }.map { preferences ->
+                    preferences[THEME_MODE]?.let { stored -> ThemeMode.entries.firstOrNull { it.name == stored } } ?: ThemeMode.SYSTEM
+                }
+
+        suspend fun setThemeMode(mode: ThemeMode) {
+            dataStore.edit { it[THEME_MODE] = mode.name }
+        }
+
+        private companion object {
+            val THEME_MODE = stringPreferencesKey("theme_mode")
+            const val MAX_RETRY_DELAY_SECONDS = 30L
+        }
+    }

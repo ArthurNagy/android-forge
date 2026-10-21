@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  :core:ui strings — the messages DomainError.toMessage() shows, plus labels shared composables and
+  every feature use. Resources of all modules merge into one table in the APK, so each module
+  prefixes its keys (`resourcePrefix` in its build file; Lint enforces it). Translations go in
+  values-<locale>/strings.xml. See docs/i18n-a11y.md.
+-->
+<resources>
+    <string name="core_ui_error_connectivity">No connection. Check your connection and try again.</string>
+    <string name="core_ui_error_server">The server ran into a problem. Please try again later.</string>
+    <string name="core_ui_error_request">That request couldn\'t be completed. Please try again.</string>
+    <string name="core_ui_error_not_found">That item is no longer available.</string>
+    <string name="core_ui_error_unknown">Something went wrong. Please try again.</string>
+    <string name="core_ui_navigate_back">Back</string>
+</resources>

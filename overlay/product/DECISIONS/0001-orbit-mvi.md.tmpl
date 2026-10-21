@@ -1,0 +1,35 @@
+# 0001. Use Orbit MVI for state management
+
+Date: ${SCAFFOLD_DATE}
+Status: Accepted
+
+## Context
+
+We need a state-management pattern across all ViewModels with:
+- Explicit MVI shape (intent → reduce → state) for predictability
+- One-shot events (navigation, snackbars) that survive configuration changes and process death and test like any
+  other state — no fire-and-forget event channel that can drop an event while the UI isn't collecting
+- Built-in testability without external mocking
+- Compatibility with Google's UI-layer guidance (screen-level `ViewModel`, unidirectional data flow, events
+  handled in the ViewModel and exposed as state)
+
+Alternatives considered:
+- **Plain Jetpack ViewModel + `StateFlow`** (Google's documented default: `MutableStateFlow` + `update {}` +
+  `stateIn(WhileSubscribed(5_000))`) — no extra dependency and Google's samples use it, but every feature
+  re-invents the intent/reduce plumbing and its tests assert on raw `StateFlow` emissions.
+- **Molecule (cashapp)** / **Circuit (slack)** — Compose-runtime presenters; further from Google's guidance and
+  its Android skills.
+
+## Decision
+
+Use [Orbit MVI](https://orbit-mvi.org/) on every ViewModel. ViewModels are `@HiltViewModel` classes that extend `androidx.lifecycle.ViewModel` and implement `OrbitContainerHost<State, State, Nothing>` (container via `orbitContainer(State.Initial) { load() }` — the on-create block runs once per back-stack entry). State mutations go through `intent { reduce { ... } }`.
+
+**State-only events** — we do NOT use `postSideEffect`. Effect type is always `Nothing`. One-shot events (navigation, toasts, snackbars) are modeled as consumable state slots (`pendingNavigation: NavKey?`, `@StringRes pendingMessage: Int?` — the screen resolves the text) set inside `intent {}` and cleared by paired `onXConsumed()` intents the UI calls after rendering.
+
+**Sub-states via sealed interface** when a flat data class would force boolean spaghetti at the page level (mutually-exclusive `Loading | Loaded | Error`). Default is flat data class; promote only when warranted.
+
+## Consequences
+
+- Easier: consistent MVI shape across features; built-in `test()` harness (`orbit-test`) for unit tests; every piece of UI behavior is observable state — robust across config changes / process death; testing one-shot events is trivial (just assert state slot transitions).
+- Harder: one dependency on top of Jetpack ViewModel to maintain (Google's samples don't use it); new contributors learn the consumable-slot pattern; bookkeeping of `onXConsumed()` intent pairs.
+- Reviewer enforces: no state mutation outside `intent {}`; no `postSideEffect` anywhere; side-effect type `Nothing` only; page-level boolean spaghetti gets promoted to a sealed interface.

@@ -1,0 +1,22 @@
+# android-forge :wear catalog additions — merged into the project's gradle/libs.versions.toml by
+# `apply-overlay.sh patch-libs <project> <this file>` (missing keys appended; a lower existing
+# [versions] value is raised to this floor, never lowered).
+#
+# Wear Compose Material 3 1.7.x needs compileSdk >= 37 and AGP >= 9.1 (AAR metadata) and minSdk >= 25;
+# the :wear module sets minSdk 30 (Wear OS 3) or the project's when higher. Never use the mobile androidx.compose.material3 here.
+
+[versions]
+wearCompose = "1.7.1"
+# --- opt-in (unused until the watch app needs it) ---
+playServicesWearable = "20.0.1"
+
+[libraries]
+androidx-wear-compose-material3 = { module = "androidx.wear.compose:compose-material3", version.ref = "wearCompose" }
+androidx-wear-compose-foundation = { module = "androidx.wear.compose:compose-foundation", version.ref = "wearCompose" }
+# --- opt-ins (unused until the watch app needs them) ---
+# A second screen: Nav 3 with rememberSwipeDismissableSceneStrategy() (wear-compose-m3 skill, Navigation).
+androidx-wear-compose-navigation3 = { module = "androidx.wear.compose:compose-navigation3", version.ref = "wearCompose" }
+# @WearPreviewDevices / @WearPreviewFontScales previews.
+androidx-wear-compose-ui-tooling = { module = "androidx.wear.compose:compose-ui-tooling", version.ref = "wearCompose" }
+# Phone <-> watch Data Layer (DataClient / MessageClient / CapabilityClient) — only for a paired-phone feature.
+play-services-wearable = { module = "com.google.android.gms:play-services-wearable", version.ref = "playServicesWearable" }

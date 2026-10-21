@@ -1,0 +1,38 @@
+plugins {
+    id("android-forge.android.application")
+    id("android-forge.hilt")
+}
+
+android {
+    namespace = "${BASE_PACKAGE}"
+    defaultConfig {
+        applicationId = "${BASE_PACKAGE}"
+        versionCode = 1
+        versionName = "0.1.0"
+    }
+}
+
+dependencies {
+    implementation(project(":core:model"))
+    implementation(project(":core:domain"))
+    implementation(project(":core:data")) // only the app modules depend on :core:data — they assemble the DI graph
+    implementation(project(":core:designsystem"))
+    implementation(project(":core:ui"))
+    implementation(project(":core:navigation"))
+
+    // Features: depending on an impl is all it takes — its entries arrive through Hilt multibinding.
+    // /android-forge-add-feature adds each one above this marker line — keep it.
+    // android-forge:feature-modules
+
+    implementation(libs.androidx.compose.material3) // the phone/tablet Material 3 — :app's own, not the app convention's
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+    implementation(libs.androidx.navigation3.ui)
+    implementation(libs.androidx.compose.material3.adaptive.navigation3)
+    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+    implementation(libs.orbit.viewmodel)
+    implementation(libs.orbit.compose)
+    implementation(libs.timber)
+
+    testImplementation(libs.orbit.test)
+}

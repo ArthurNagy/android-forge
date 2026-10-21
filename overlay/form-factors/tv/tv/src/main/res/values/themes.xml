@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The window behind Compose: dark, no action bar, so launching never flashes white on a TV. Colors and
+         type come from Compose for TV's MaterialTheme in TvTheme. -->
+    <style name="Tv.Theme" parent="@android:style/Theme.Material.NoActionBar" />
+</resources>

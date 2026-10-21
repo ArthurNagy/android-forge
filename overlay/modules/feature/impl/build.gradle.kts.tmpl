@@ -1,0 +1,12 @@
+plugins {
+    id("android-forge.feature.impl")
+}
+
+android {
+    namespace = "${BASE_PACKAGE}.feature.${FEATURE_NAME_PKG}.impl"
+    resourcePrefix = "${FEATURE_NAME_SNAKE}_"
+}
+
+dependencies {
+    api(project(":feature:${FEATURE_NAME}:api"))
+}

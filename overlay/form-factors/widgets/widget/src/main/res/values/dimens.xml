@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sizes of the home widget (widget_home_info.xml): a 2x2 widget that resizes in both directions.
+     Values from the glance-canonical-layouts skill's long-text layout; see the widget sizing guidance. -->
+<resources>
+    <integer name="widget_home_target_cell_width">2</integer>
+    <integer name="widget_home_target_cell_height">2</integer>
+    <dimen name="widget_home_min_width">120dp</dimen>
+    <dimen name="widget_home_min_height">115dp</dimen>
+    <dimen name="widget_home_min_resize_width">120dp</dimen>
+    <dimen name="widget_home_min_resize_height">115dp</dimen>
+    <dimen name="widget_home_max_resize_width">624dp</dimen>
+    <dimen name="widget_home_max_resize_height">276dp</dimen>
+    <dimen name="widget_home_preview_padding">16dp</dimen>
+</resources>

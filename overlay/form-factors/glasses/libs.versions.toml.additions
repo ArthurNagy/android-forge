@@ -1,0 +1,23 @@
+# android-forge catalog additions for display glasses (Jetpack Compose Glimmer + Jetpack Projected) —
+# merged into the project's gradle/libs.versions.toml by `apply-overlay.sh patch-libs`.
+#
+# PRE-RELEASE, PINNED: these are the exact versions the official "Set up the Jetpack XR SDK" /
+# "Create your first activity for audio glasses and display glasses" pages list, which say to use them
+# "even if newer versions of these Jetpack libraries have already been released". Move them only when
+# those pages move (android docs fetch kb://android/develop/xr/jetpack-xr-sdk/set-up-sdk) — not to the
+# newest alpha on Google Maven.
+
+[versions]
+androidxXrRuntime = "1.1.0-alpha01"
+androidxXrGlimmer = "1.0.0-alpha18"
+androidxXrProjected = "1.0.0-alpha09"
+androidxXrArcore = "1.0.0-beta02"
+
+[libraries]
+# Projected pulls runtime 1.0.0-alpha15; the docs raise it explicitly.
+androidx-xr-runtime = { module = "androidx.xr.runtime:runtime", version.ref = "androidxXrRuntime" }
+androidx-xr-glimmer = { module = "androidx.xr.glimmer:glimmer", version.ref = "androidxXrGlimmer" }
+androidx-xr-glimmer-google-fonts = { module = "androidx.xr.glimmer:glimmer-google-fonts", version.ref = "androidxXrGlimmer" }
+androidx-xr-projected = { module = "androidx.xr.projected:projected", version.ref = "androidxXrProjected" }
+# Glasses camera / sensors through a projected context (hardware access guide) — add when used.
+androidx-xr-arcore = { module = "androidx.xr.arcore:arcore", version.ref = "androidxXrArcore" }

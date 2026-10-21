@@ -1,0 +1,13 @@
+package ${BASE_PACKAGE}.core.domain
+
+/**
+ * Marker interface for use cases — a documentation and grep target that lets reviewer tooling tell
+ * use cases from utility classes. Kotlin uses `operator fun invoke`.
+ *
+ * Conventions (see docs/architecture.md § Visibility):
+ * - A use case is a **public** class with a **public `@Inject` constructor**: Hilt builds it in
+ *   production, and feature tests build it directly with a fake repository from :core:testing.
+ * - **Domain entities take no default values.** Construct them explicitly so call sites state full
+ *   intent and every added field is surfaced (DTOs in :core:data may keep wire-format defaults).
+ */
+interface UseCase

@@ -1,0 +1,12 @@
+package ${BASE_PACKAGE}.feature.${FEATURE_NAME_PKG}.api
+
+import androidx.navigation3.runtime.NavKey
+import kotlinx.serialization.Serializable
+
+/**
+ * Navigation 3 key for the ${FEATURE_NAME} feature — the whole public API of :feature:${FEATURE_NAME}:api. Any
+ * feature's impl may depend on this module and push it (`navigator.navigate(${FEATURE_NAME_PASCAL}Key)`);
+ * :feature:${FEATURE_NAME}:impl renders it. Carries IDs, never objects (modularization guide).
+ */
+@Serializable
+data object ${FEATURE_NAME_PASCAL}Key : NavKey

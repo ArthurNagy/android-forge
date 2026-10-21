@@ -1,0 +1,8 @@
+<!--
+  Desktop / Googlebook / Chromebook readiness — paste into app/src/main/AndroidManifest.xml as a direct
+  child of <manifest> (next to <uses-permission>). Without it, Play treats a touchscreen as required
+  and hides the app from non-touch laptops and desktops (mouse/trackpad devices report "faketouch").
+-->
+<uses-feature
+    android:name="android.hardware.touchscreen"
+    android:required="false" />

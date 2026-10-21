@@ -1,0 +1,47 @@
+package ${BASE_PACKAGE}.widget
+
+import android.content.Context
+import android.content.Intent
+import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.testing.unit.hasStartActivityClickAction
+import androidx.glance.appwidget.testing.unit.runGlanceAppWidgetUnitTest
+import androidx.glance.testing.unit.hasContentDescriptionEqualTo
+import androidx.glance.testing.unit.hasNoClickAction
+import androidx.glance.testing.unit.hasTextEqualTo
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Test
+import org.junit.runner.RunWith
+import kotlin.test.assertIs
+
+@RunWith(AndroidJUnit4::class)
+class HomeWidgetTest {
+    private val context: Context = ApplicationProvider.getApplicationContext()
+
+    @Test
+    fun theWidgetShowsTheAppNameAndOpensTheApp() = runGlanceAppWidgetUnitTest {
+        val launchApp = Intent(Intent.ACTION_MAIN).setPackage(context.packageName)
+        setContext(context)
+
+        provideComposable { HomeWidgetContent(openApp = actionStartActivity(launchApp)) }
+
+        onNode(hasTextEqualTo(context.getString(R.string.widget_home_title))).assertExists()
+        onNode(hasTextEqualTo(context.getString(R.string.widget_home_open))).assertExists()
+        onNode(hasContentDescriptionEqualTo(context.getString(R.string.widget_home_open)))
+            .assert(hasStartActivityClickAction(launchApp))
+    }
+
+    @Test
+    fun withoutALauncherActivityTheWidgetIsNotClickable() = runGlanceAppWidgetUnitTest {
+        setContext(context)
+
+        provideComposable { HomeWidgetContent(openApp = null) }
+
+        onNode(hasContentDescriptionEqualTo(context.getString(R.string.widget_home_open))).assert(hasNoClickAction())
+    }
+
+    @Test
+    fun theReceiverRendersTheHomeWidget() {
+        assertIs<HomeWidget>(HomeWidgetReceiver().glanceAppWidget)
+    }
+}

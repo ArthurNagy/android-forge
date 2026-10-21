@@ -1,0 +1,37 @@
+package ${BASE_PACKAGE}.core.navigation
+
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
+
+/**
+ * The app's navigation actions over its one back stack. :app creates it in composition around a
+ * `rememberNavBackStack(...)` (so the stack survives configuration changes and process death) and
+ * hands it to every feature's entry builder. Features push other features' keys from their `:api`
+ * modules — never their screens.
+ *
+ * ViewModels never see the Navigator: a ViewModel sets a consumable `pendingNavigation` slot, and
+ * the screen calls the lambda its entry builder passed in (`onNavigate = navigator::navigate`).
+ */
+class Navigator(
+    private val backStack: NavBackStack<NavKey>,
+) {
+    /** False on the root entry: there is nothing to go back to. */
+    val canGoBack: Boolean get() = backStack.size > 1
+
+    fun navigate(key: NavKey) {
+        backStack.add(key)
+    }
+
+    /** Pops the top entry; never the last one (NavDisplay needs a non-empty back stack). */
+    fun goBack() {
+        if (canGoBack) backStack.removeAt(backStack.lastIndex)
+    }
+
+    /**
+     * The Back action for the entry showing [key] — pass the key the entry's content lambda receives:
+     * `entry<GalleryKey> { key -> GalleryScreen(onNavigateBack = navigator.backOrNull(key)) }`. Null when
+     * [key] is the root (bottom) entry, so that screen shows no Back control — also while a list-detail
+     * scene shows the root list beside its detail, which the back-stack size alone can't tell.
+     */
+    fun backOrNull(key: NavKey): (() -> Unit)? = if (backStack.firstOrNull() == key) null else ::goBack
+}

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  :car's manifest is merged into BOTH :app (Android Auto) and :automotive (Android Automotive OS), so it
+  holds only what both platforms share: the CarAppService and the minimum Car App API level. The
+  platform declarations stay in the app modules:
+    :app        <meta-data android:name="com.google.android.gms.car.application" android:resource="@xml/automotive_app_desc" />
+    :automotive <meta-data android:name="com.android.automotive" … /> + CarAppActivity + the automotive uses-features
+  (AAOS must NOT carry the Android Auto meta-data, which is why it can't live here.)
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <!-- Exported without a permission on purpose: the host can't hold one. createHostValidator()
+             decides which hosts may bind (Car App Library docs: "Declare your CarAppService"). -->
+        <service
+            android:name=".MainCarAppService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.${CAR_APP_CATEGORY}" />
+            </intent-filter>
+        </service>
+
+        <!-- The lowest Car App API level (not Android API level) the screens need: Header on
+             ListTemplate is level 7. Raise it with the newest template API a screen uses
+             (@RequiresCarApi on that API); hosts below it refuse to start the app. -->
+        <meta-data
+            android:name="androidx.car.app.minCarApiLevel"
+            android:value="7" />
+    </application>
+
+</manifest>

@@ -1,0 +1,15 @@
+package ${BASE_PACKAGE}.core.domain
+
+import ${BASE_PACKAGE}.core.model.ThemeMode
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import javax.inject.Inject
+
+/** The theme the app should render in, as it changes. */
+class ObserveThemeModeUseCase
+    @Inject
+    constructor(
+        private val repository: UserPreferencesRepository,
+    ) : UseCase {
+        operator fun invoke(): Flow<ThemeMode> = repository.themeMode.distinctUntilChanged()
+    }

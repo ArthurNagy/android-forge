@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Declares a Car App Library ("template") app. Referenced by :app's com.google.android.gms.car.application
+     meta-data (Android Auto) and :automotive's com.android.automotive meta-data (AAOS). The name is the one
+     Google's docs use, so it keeps it rather than the module's car_ prefix. A messaging app (Android Auto only)
+     also declares <uses name="notification" />: templated messaging builds on messaging notifications. -->
+<automotiveApp xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="ResourceName">
+    <uses name="template" />
+</automotiveApp>

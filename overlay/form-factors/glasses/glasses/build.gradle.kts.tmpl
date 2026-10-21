@@ -1,0 +1,30 @@
+/*
+ * :glasses — the display-glasses experience, linked into :app: a projected activity (GlassesActivity)
+ * that runs in the phone app's process and renders on the glasses, built with Jetpack Compose Glimmer
+ * (never Material — additive displays), plus LaunchOnGlassesButton, the phone-side entry point.
+ *
+ * Pre-release libraries pinned to the official docs (see the catalog additions). Glasses UI shares
+ * :core:domain with the phone (inject use cases into GlassesActivity with Hilt), never :core:designsystem.
+ * Mobile Material 3 is for LaunchOnGlassesButton only — it renders on the phone; the glasses get Glimmer.
+ */
+plugins {
+    id("android-forge.android.library.compose")
+}
+
+android {
+    namespace = "${BASE_PACKAGE}.glasses"
+    resourcePrefix = "glasses_"
+}
+
+dependencies {
+    implementation(libs.androidx.xr.runtime)
+    implementation(libs.androidx.xr.glimmer)
+    implementation(libs.androidx.xr.glimmer.google.fonts)
+    implementation(libs.androidx.xr.projected)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.timber)
+
+    testImplementation(libs.androidx.test.core)
+}

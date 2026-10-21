@@ -1,0 +1,17 @@
+# android-forge catalog additions for the cars form factor (Android Auto + Android Automotive OS) —
+# merged into the project's gradle/libs.versions.toml by `apply-overlay.sh patch-libs` (missing keys
+# appended, a lower [versions] value raised to this floor, never lowered).
+#
+# Car App Library: latest STABLE (Google Maven androidx.car.app:app). Its own Car App API level
+# (androidx.car.app.minCarApiLevel in :car's manifest) is separate from this artifact version.
+
+[versions]
+androidxCarApp = "1.7.0"
+
+[libraries]
+# :car (CarAppService, Session, Screens) — shared by :app (Android Auto) and :automotive
+androidx-car-app = { module = "androidx.car.app:app", version.ref = "androidxCarApp" }
+# :automotive only — CarAppActivity, the AAOS entry point that hosts the templates
+androidx-car-app-automotive = { module = "androidx.car.app:app-automotive", version.ref = "androidxCarApp" }
+# :car tests — TestCarContext, ScreenController, SessionController (Robolectric)
+androidx-car-app-testing = { module = "androidx.car.app:app-testing", version.ref = "androidxCarApp" }

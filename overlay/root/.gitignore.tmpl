@@ -1,0 +1,31 @@
+# --- Build ---
+.gradle/
+build/
+.kotlin/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# --- IDE ---
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Secrets — NEVER commit ---
+*.keystore
+*.jks
+signing.properties
+.env
+.env.local
+.env.*.local
+google-services.json
+play-service-account.json
+
+# --- QA run output (android-qa screenshots and reports) ---
+build/qa/

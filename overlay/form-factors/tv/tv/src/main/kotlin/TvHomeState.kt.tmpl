@@ -1,0 +1,11 @@
+package ${BASE_PACKAGE}.tv
+
+import ${BASE_PACKAGE}.core.model.ThemeMode
+
+internal data class TvHomeState(
+    val themeMode: ThemeMode,
+) {
+    companion object {
+        val Initial = TvHomeState(themeMode = ThemeMode.SYSTEM)
+    }
+}

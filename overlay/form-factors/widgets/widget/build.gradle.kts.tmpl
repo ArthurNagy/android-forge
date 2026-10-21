@@ -1,0 +1,26 @@
+/*
+ * :widget — home-screen widgets built with Jetpack Glance: each GlanceAppWidget, its
+ * GlanceAppWidgetReceiver (declared in this module's manifest, merged into :app) and its
+ * res/xml/widget_<name>_info.xml provider metadata. Glance composables are @Composable (Compose
+ * compiler) but render to RemoteViews: use androidx.glance.* components, never Compose UI/Material.
+ *
+ * Widgets reaching app data use :core:domain use cases through a Hilt @EntryPoint
+ * (EntryPointAccessors.fromApplication) inside provideGlance — apply android-forge.hilt then.
+ */
+plugins {
+    id("android-forge.android.library.compose")
+}
+
+android {
+    namespace = "${BASE_PACKAGE}.widget"
+    resourcePrefix = "widget_"
+}
+
+dependencies {
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.preview)
+    implementation(libs.androidx.glance.appwidget.preview)
+
+    testImplementation(libs.androidx.glance.appwidget.testing)
+    testImplementation(libs.androidx.test.core)
+}

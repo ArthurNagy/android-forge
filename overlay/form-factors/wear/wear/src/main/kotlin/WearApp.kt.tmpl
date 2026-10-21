@@ -1,0 +1,29 @@
+package ${BASE_PACKAGE}.wear
+
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.wear.compose.material3.AppScaffold
+import androidx.wear.compose.material3.ColorScheme
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.TimeText
+import androidx.wear.compose.material3.dynamicColorScheme
+
+/**
+ * The watch UI's root: Wear Material 3 — colors from the watch face on Wear OS 6+ ([dynamicColorScheme]),
+ * the default dark scheme before — around the app's only [AppScaffold], which keeps [timeText] in place
+ * across in-app transitions. Every screen inside brings its own `ScreenScaffold`.
+ *
+ * A second screen: add `androidx-wear-compose-navigation3` and a Nav 3 `NavDisplay` with
+ * `rememberSwipeDismissableSceneStrategy()` inside the AppScaffold (the wear-compose-m3 skill's Navigation section).
+ */
+@Composable
+internal fun WearApp(
+    modifier: Modifier = Modifier,
+    timeText: @Composable () -> Unit = { TimeText() },
+    content: @Composable () -> Unit,
+) {
+    MaterialTheme(colorScheme = dynamicColorScheme(LocalContext.current) ?: ColorScheme()) {
+        AppScaffold(modifier = modifier, timeText = timeText) { content() }
+    }
+}

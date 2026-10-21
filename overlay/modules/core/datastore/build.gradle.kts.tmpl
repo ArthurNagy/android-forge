@@ -1,0 +1,13 @@
+plugins {
+    id("android-forge.android.library")
+    id("android-forge.hilt")
+}
+
+android {
+    namespace = "${BASE_PACKAGE}.core.datastore"
+}
+
+dependencies {
+    implementation(project(":core:model"))
+    api(libs.androidx.datastore.preferences)
+}

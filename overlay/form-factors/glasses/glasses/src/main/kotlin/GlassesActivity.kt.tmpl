@@ -1,0 +1,28 @@
+package ${BASE_PACKAGE}.glasses
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.xr.glimmer.GlimmerTheme
+import androidx.xr.glimmer.googlefonts.createGoogleSansFlexTypography
+
+/**
+ * The projected activity: lives in the phone app's process, renders on display glasses. Started by
+ * [LaunchOnGlassesButton] (ProjectedContext activity options) or by Gemini ("Open <app name>").
+ *
+ * Public only because the manifest names it. Next steps the display-glasses skill covers: check
+ * `ProjectedDeviceController` capabilities (audio-only glasses have no display), follow the display
+ * state with `ProjectedDisplayController`, request glasses hardware permissions with
+ * `ProjectedPermissionsResultContract`, and opt into `ComposeUiFlags.isInitialFocusOnFocusableAvailable`
+ * (process-wide — it affects the phone UI too).
+ */
+class GlassesActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            GlimmerTheme(typography = createGoogleSansFlexTypography()) {
+                GlassesHome(onClose = ::finish)
+            }
+        }
+    }
+}

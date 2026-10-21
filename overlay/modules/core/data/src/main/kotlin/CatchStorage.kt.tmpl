@@ -1,0 +1,22 @@
+package ${BASE_PACKAGE}.core.data
+
+import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.mapError
+import com.github.michaelbull.result.runCatching
+import ${BASE_PACKAGE}.core.domain.DomainError
+import kotlinx.coroutines.CancellationException
+import timber.log.Timber
+
+/**
+ * The storage exception boundary: DataStore, Room and file data sources may throw, repositories run every
+ * write (and every read that isn't a never-throwing Flow) through this and never do. Any failure becomes
+ * [DomainError.Unknown] with the exception message as its log-only cause. Rethrows [CancellationException]
+ * so coroutine cancellation propagates, and any [Error] (OutOfMemoryError, StackOverflowError, …) — not a
+ * storage failure to recover from (kotlin-result's `runCatching` would otherwise swallow both).
+ * Network calls use `catchNetwork { }` from :core:network instead.
+ */
+internal suspend fun <T> catchStorage(block: suspend () -> T): Result<T, DomainError> = runCatching { block() }.mapError { e ->
+    if (e is CancellationException || e is Error) throw e
+    Timber.w(e, "storage operation failed")
+    DomainError.Unknown(e.message)
+}

@@ -1,0 +1,46 @@
+package ${BASE_PACKAGE}.core.network
+
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import javax.inject.Singleton
+
+/**
+ * The app's one HTTP stack: a shared [OkHttpClient] (connection pool, cache; Coil's network fetcher
+ * reuses it) and a [Retrofit] over kotlinx-serialization. Remote data sources in this module declare
+ * a Retrofit service interface and get it with `retrofit.create<FooApi>()`.
+ */
+@Module
+@InstallIn(SingletonComponent::class)
+internal object NetworkModule {
+    @Provides
+    @Singleton
+    fun provideJson(): Json = Json { ignoreUnknownKeys = true }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(): OkHttpClient = OkHttpClient
+        .Builder()
+        .apply {
+            if (BuildConfig.DEBUG) addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC })
+        }.build()
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(
+        json: Json,
+        okHttpClient: OkHttpClient,
+    ): Retrofit = Retrofit
+        .Builder()
+        .baseUrl(BuildConfig.API_BASE_URL)
+        .client(okHttpClient)
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
+}
