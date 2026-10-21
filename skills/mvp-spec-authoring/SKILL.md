@@ -125,7 +125,7 @@ How will you know v1 succeeded? Pick 2–4 specific metrics.
 
 The `/android-forge-spec` command supports:
 
-- **Default (interview)**: walk section-by-section, asking each via `AskUserQuestion`. Push back briefly on vague answers.
+- **Default (interview)**: walk section-by-section, asking each as a plain message (`AskUserQuestion` only for fixed choices, such as the business model). Push back briefly on vague answers.
 - **`--from-dump`**: user pastes a free-form product idea; the command extracts what maps to spec sections and asks follow-ups only on gaps.
 
 Both modes write to `docs/MVP_SPEC.md` using the template at [`overlay/product/MVP_SPEC.md.tmpl`](../../overlay/product/MVP_SPEC.md.tmpl).

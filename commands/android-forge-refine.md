@@ -78,7 +78,7 @@ Make sure the workflow labels exist (idempotent; creates any missing label on Gi
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/issues.sh" labels
 ```
 
-File the chosen drafts **in their listed order** (dependencies first — a parent before its sub-issues). Write each body to a temp file in your scratchpad, replacing every `draft:<j>` / `new:<s>` with the number that draft got. A draft with a `parent:` line is filed as a GitHub **sub-issue** of that parent (`--parent`, gh ≥ 2.94) — the one link from a sub-issue to its parent, which GitHub shows on the parent and a later `/android-forge-refine #<parent>` reads. Never record membership in **Depends on**: the queue skips an issue while anything it depends on is open, and a parent stays open.
+File the chosen drafts **in their listed order** (dependencies first — a parent before its sub-issues). Write each body to a temp file in your scratchpad (the Write tool, or a quoted heredoc `<<'EOF'` — never an inline `--body "…"`: issue text carries backticks and `$` the shell would expand), replacing every `draft:<j>` / `new:<s>` with the number that draft got. A draft with a `parent:` line is filed as a GitHub **sub-issue** of that parent (`--parent`, gh ≥ 2.94) — the one link from a sub-issue to its parent, which GitHub shows on the parent and a later `/android-forge-refine #<parent>` reads. Never record membership in **Depends on**: the queue skips an issue while anything it depends on is open, and a parent stays open.
 
 ```bash
 gh issue create --title "<title>" --label "<labels, comma-separated, without ready>" --body-file "<body file>" \

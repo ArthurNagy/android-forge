@@ -71,8 +71,9 @@ The gate uploads a `reports` artifact even when it fails (Lint HTML, test report
 The CI gate (see `overlay/ci/pr.yml.tmpl`) runs, in order: `spotlessCheck`, `lint`, `coverageVerify -Proborazzi.test.verify=true` (every module's unit tests + screenshot verification + the 85% JaCoCo gate), `assembleDebug`. Mirror it locally with the auto-fix variant before every push:
 
 ```bash
-./gradlew spotlessApply && ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true > "${TMPDIR:-/tmp}/gate.log" 2>&1; rc=$?
-tail -80 "${TMPDIR:-/tmp}/gate.log"; echo "gate exit=${rc}"
+gate_log="${TMPDIR:-/tmp}/gate.log"
+{ ./gradlew spotlessApply && ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true; } > "${gate_log}" 2>&1; rc=$?
+tail -80 "${gate_log}"; echo "gate exit=${rc}"
 ```
 
 Read the exit code, not the tail: piping Gradle straight into `tail` reports `tail`'s status, so a red build looks
@@ -83,7 +84,7 @@ the new goldens.
 
 ## Context discipline
 
-- Pipe every noisy command: `./gradlew ... 2>&1 | tail -80`.
+- Send every noisy command to a log and tail the log, keeping the command's exit code — the gate block above is the pattern. Never pipe Gradle straight into `tail`.
 - `git diff --stat` before `git diff`; prefer reading the specific file a failure names over globbing the module.
 - Fix-read cycles happen where the work is: read the failing test/file, fix, re-run the local mirror, push once.
 

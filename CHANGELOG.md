@@ -12,7 +12,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 First release: the pure-Android sibling of kmp-forge, bootstrapped from kmp-forge v0.6.0 (`4362f52`) — the
 software factory (spec, GitHub-issue backlog with human-only `ready`, product owner and architect, OpenSpec,
 autonomous build loop with spec/code/QA gates and merge-guard, CI, git-cliff, ADRs, release) carried over; the stack,
-modules, templates, build logic, QA and review rebuilt for Android.
+modules, templates, build logic, QA and review rebuilt for Android. The review fixes to the shared-lineage files
+(merge guard v5, the issue queue, parent issues, body files, gitleaks, the git/release skills) are ported back to
+kmp-forge (its `[Unreleased]`).
 
 ### Added
 - **Project creation through Google's Android CLI** — `scripts/android-new.sh` runs `android create empty-activity`
@@ -42,7 +44,8 @@ modules, templates, build logic, QA and review rebuilt for Android.
   build output are skipped.
 - **Merge guard v5** for the autonomous loop: a bash launcher + an embedded python3 shell lexer (stdlib, ≥ 3.8). It
   checks the PR and repository a merge really targets, unwraps wrappers and aliases, denies force pushes in every
-  spelling, protects its own files and `openspec/AUTOLOOP.md` from every Claude caller in the enforce modes, denies
+  spelling, protects its own files and `openspec/AUTOLOOP.md` from every Claude caller in the enforce modes (git
+  pathspecs resolved in git's `-C` directory), denies
   subagent-posted gate verdicts, and in the enforce modes denies any command it can't parse that mentions a merge,
   push, ref, token, guard file or `ready`. The loop posts every review, issue and commit text through quoted-heredoc
   files.
@@ -86,7 +89,7 @@ modules, templates, build logic, QA and review rebuilt for Android.
   - `/android-forge-adopt` on a stock `android create` project (minSdk 24): Phase A, then the `build` layer at minSdk
     29 — configures and `assembleDebug` passes; the remaining compose-rules finding in its UI code is the `a11y`
     layer's.
-  - Merge guard: a hook-JSON harness of 1037 checks (every listed bypass DENY in the enforce modes, the loop's own
+  - Merge guard: a hook-JSON harness of 1109 checks (incl. `git -C` pathspec bypasses found while porting to kmp-forge) (every listed bypass DENY in the enforce modes, the loop's own
     commands ALLOW, `log` never denies) on `/bin/bash` 3.2 + python 3.9, bash 5.3 + python 3.15, and GNU coreutils
     first; the add-autoloop smoke check through the wired `settings.json` command.
 - At the 85% gate, after the PR review fixes: the bare scaffold at 99.1% line coverage (the new `AppThemeTest` covers
