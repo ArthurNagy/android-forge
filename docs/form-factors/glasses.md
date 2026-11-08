@@ -48,8 +48,8 @@ phone), the manifest activity
 (`android:requiredDisplayCategory="android.hardware.display.category.XR_PROJECTED"`, `XR_PROJECTED_LAUNCHER` category for
 voice launch), strings with the `glasses_` prefix, and tests.
 
-Pins (`libs.versions.toml.additions`): `androidx.xr.runtime` 1.1.0-alpha01, `glimmer` + `glimmer-google-fonts`
-1.0.0-alpha18, `projected` 1.0.0-alpha09, `arcore` 1.0.0-beta02 (catalog only). `/android-forge-bump-stack` proposes only
+Pins (`libs.versions.toml.additions`): `androidx.xr.runtime` 1.1.0-alpha02, `glimmer` + `glimmer-google-fonts`
+1.0.0-alpha18, `projected` 1.0.0-alpha13, `arcore` 1.0.0-beta02 (catalog only). `/android-forge-bump-stack` proposes only
 what the current docs pin (`android docs search "glimmer setup"`).
 
 ## Building glasses UI

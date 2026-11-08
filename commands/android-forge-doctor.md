@@ -63,7 +63,7 @@ java -version 2>&1 | head -1
 /usr/libexec/java_home -V 2>&1 | grep -E "17|21" ; ls ~/.gradle/jdks 2>/dev/null
 ```
 
-Expected: a JDK that runs Gradle 9.8 (17+); toolchains **17** (JVM modules compile with it) and **21** (local tests:
+Expected: a JDK that runs Gradle 9.9 (17+); toolchains **17** (JVM modules compile with it) and **21** (local tests:
 Robolectric's SDK 35+ runtimes need it). Missing toolchains are provisioned by Gradle's foojay resolver on the first
 build (network) — ⚠ only offline.
 
@@ -79,7 +79,7 @@ MIN_SDK="$(sed -nE 's/^androidMinSdk *= *"([0-9]+)".*/\1/p' gradle/libs.versions
 echo "minSdk: ${MIN_SDK:-unknown}"
 ```
 
-Expected: Gradle ≥ 9.8.1, AGP ≥ 9.4.1, Kotlin 2.4.x with a matching KSP 2.3.x and Hilt ≥ 2.59.2, compile/target SDK
+Expected: Gradle ≥ 9.9.0, AGP ≥ 9.5.1, Kotlin 2.4.x with a matching KSP 2.3.x and Hilt ≥ 2.59.2, compile/target SDK
 37, build-logic wired, minSdk ≥ 26 — below that ✗ (the conventions refuse to configure: `java.time` without
 desugaring); 26–28 → ⚠, android-forge recommends 29 (raise `androidMinSdk` when the product allows). Remediation:
 `bash "${CLAUDE_PLUGIN_ROOT}/scripts/apply-overlay.sh" pin-toolchain .` (wrapper + heap) and, with `MIN_SDK` set to the
@@ -163,7 +163,7 @@ Per section: ✓ OK / ⚠ Drift (expected vs actual + remediation) / ✗ Missing
 ⚠ Wear OS image missing (android-37.0/android-wear-signed) — bash <plugin>/scripts/avd.sh ensure wear  (~2 GB)
 ✓ Devices: emulator-5554 (medium_phone)
 ✓ JDK toolchains: 17, 21
-✓ Gradle 9.8.1 · AGP 9.4.1 · Kotlin 2.4.21 · KSP 2.3.12 · Hilt 2.60.1 · SDK 37/37/29 · build-logic wired
+✓ Gradle 9.9.0 · AGP 9.5.1 · Kotlin 2.4.21 · KSP 2.3.13 · Hilt 2.60.1 · SDK 37/37/29 · build-logic wired
 ⚠ Android skills: wear-widgets missing — bash <plugin>/scripts/skills.sh install . wear
 ✓ Android Studio: not running (optional)
 ✓ git hooks: pre-commit installed, gitleaks on PATH

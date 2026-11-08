@@ -133,8 +133,8 @@ wherever one exists** — Google's docs, samples and Android skills then apply d
 - **detekt is not used**: detekt < 2.0 forces AGP 9's built-in Kotlin off; revisit at detekt 2.0 stable (ADR 0007).
 
 ### Toolchain
-AGP ≥ 9.4.1 with **built-in Kotlin** (no `org.jetbrains.kotlin.android` plugin) · Kotlin 2.4.x · KSP 2.3.x
-(no kapt) · Gradle ≥ 9.8.1 · compileSdk/targetSdk 37 · minSdk 29 (default and floor; `/android-forge-init`
+AGP ≥ 9.5.1 with **built-in Kotlin** (no `org.jetbrains.kotlin.android` plugin) · Kotlin 2.4.x · KSP 2.3.x
+(no kapt) · Gradle ≥ 9.9.0 · compileSdk/targetSdk 37 · minSdk 29 (default and floor; `/android-forge-init`
 offers 29, 31 or 33) · Java 17 bytecode · a JDK 21 launcher for Android modules' local tests (JVM modules test on
 JDK 17).
 Every plugin comes from `build-logic` (precompiled convention plugins); modules apply them by id —

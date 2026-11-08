@@ -7,6 +7,32 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-08
+
+### Changed
+- **Stack refresh**: AGP 9.5.1 and Gradle 9.9.0 (both are floors), KSP 2.3.13, Navigation 3 1.2.1, kotlinx-serialization
+  1.12.0, DataStore 1.3.0, Roborazzi 1.78.0, Spotless 8.11.0, JaCoCo 0.8.16, OkHttp 5.5.1, UiAutomator 2.4.1; on the XR
+  side the versions Google's set-up page pins today: `runtime` 1.1.0-alpha02, `projected` 1.0.0-alpha13, and for the
+  headset recipe SceneCore 1.1.0-alpha01, XR Compose 1.0.0-beta02, `extensions-xr` 1.4.0.
+- Build logic for AGP 9.5: the coverage wiring looks tasks up by name, so it no longer creates AGP's new Compose Preview
+  tasks (one throws for a variant without unit tests); every Android module constrains `lifecycle-runtime` to the
+  catalog's version, because AGP 9.5's Lint rejects the checks bundled below 2.10.
+
+### Fixed
+- `android-new.sh` removes the sample code of Android CLI 1.1+, which moved to `src/*/kotlin`: it survived into new
+  projects and failed the coverage gate. The target's own files are never touched, and a re-run keeps the overlay's `:app`.
+- The XR headset recipe passes the gate: one movable content slot (`compose:content-slot-reused`) and `extensions-xr`
+  through the catalog (`UseTomlInstead`).
+
+### Upgrading an existing project
+- Before moving to AGP 9.5, copy the three conventions above from `overlay/build-logic/` and add the
+  `androidx-lifecycle-runtime` alias. Roborazzi 1.78 writes opaque screenshots as RGB, so the next record rewrites every
+  such golden once with identical pixels: record on its own commit.
+
+### Known issues
+- `./gradlew tasks` fails on AGP 9.5.1 (`Could not create task …ComposePreviewRunfiles`), an AGP bug. Builds and the gate
+  are unaffected.
+
 ## [0.1.0] - 2026-10-19
 
 First release: the pure-Android sibling of kmp-forge, bootstrapped from kmp-forge v0.6.0 (`4362f52`) — the

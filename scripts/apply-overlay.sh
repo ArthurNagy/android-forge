@@ -72,7 +72,7 @@ CAR_APP_CATEGORIES="POI IOT WEATHER NAVIGATION MESSAGING"
 
 # Toolchain floor applied by pin-toolchain (`android create` may ship an older wrapper).
 # /android-forge-bump-stack moves projects beyond it; bump these when the floor itself should rise.
-MIN_GRADLE="9.8.1"
+MIN_GRADLE="9.9.0"
 MIN_GRADLE_HEAP_MB=4096
 
 require_envsubst() {

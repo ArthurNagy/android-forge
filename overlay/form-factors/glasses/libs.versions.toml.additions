@@ -8,9 +8,9 @@
 # newest alpha on Google Maven.
 
 [versions]
-androidxXrRuntime = "1.1.0-alpha01"
+androidxXrRuntime = "1.1.0-alpha02"
 androidxXrGlimmer = "1.0.0-alpha18"
-androidxXrProjected = "1.0.0-alpha09"
+androidxXrProjected = "1.0.0-alpha13"
 androidxXrArcore = "1.0.0-beta02"
 
 [libraries]

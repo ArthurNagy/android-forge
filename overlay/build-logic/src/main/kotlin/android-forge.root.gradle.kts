@@ -101,6 +101,10 @@ val coverageClasses = objects.fileCollection()
 val coverageExecutionData = objects.fileCollection()
 val coverageSources = objects.fileCollection()
 
+// Matches on names only. `tasks.named { }` realizes every registered task when resolved, and AGP 9.5's
+// generateReleaseComposePreviewRunfiles throws when realized (release has unit tests off).
+fun Project.taskPathsNamed(matches: (String) -> Boolean) = provider { tasks.names.filter(matches).map { "$path:$it" } }
+
 fun registerCoverageInputs(
     module: Project,
     testTask: String,
@@ -109,7 +113,7 @@ fun registerCoverageInputs(
     val inputs = module.tasks.register<CoverageInputs>("coverageInputs") {
         group = "verification"
         description = "Checks this module's classes and JaCoCo execution data for the root coverage gate."
-        dependsOn(module.tasks.named { it == testTask }) // absent in a module with product flavors: the check says so
+        dependsOn(module.taskPathsNamed { it == testTask }) // absent in a module with product flavors: the check says so
         modulePath = module.path
         sources.from(module.fileTree("src/main") { include("**/*.kt", "**/*.java") })
         tests.from(module.fileTree("src/test") { include("**/*.kt", "**/*.java") })
@@ -131,7 +135,7 @@ subprojects {
     val module = this
     listOf("com.android.library", "com.android.application").forEach { androidPlugin ->
         pluginManager.withPlugin(androidPlugin) {
-            unitTests.configure { dependsOn(module.tasks.named { it.startsWith("test") && it.endsWith("DebugUnitTest") }) }
+            unitTests.configure { dependsOn(module.taskPathsNamed { it.startsWith("test") && it.endsWith("DebugUnitTest") }) }
             if (module.path == ":core:testing") return@withPlugin
             val inputs = registerCoverageInputs(module, "testDebugUnitTest") { classes.from(classDirs) }
             val components = module.extensions.getByType(AndroidComponentsExtension::class.java)

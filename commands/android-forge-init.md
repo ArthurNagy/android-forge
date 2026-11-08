@@ -9,7 +9,7 @@ End-to-end scaffold for a new pure-Android app on the android-forge locked stack
 ## Layout (`android create` output → android-forge overlay)
 
 `android create empty-activity` (Google's Android CLI) generates a single **`:app`** module — a
-Compose activity with sample code under `src/*/java`, AGP 9 built-in Kotlin, a version catalog and
+Compose activity with sample code under `src/*/kotlin`, AGP 9 built-in Kotlin, a version catalog and
 a Gradle wrapper. `scripts/android-new.sh` runs it and prepares the output (sample code removed,
 backup rules wired, root build reduced to `id("android-forge.root")`, `includeBuild("build-logic")`).
 The overlay then adds:
@@ -245,10 +245,10 @@ bash "${AO}" patch-settings "${TARGET}" \
     "core:model,core:domain,core:data,core:datastore,core:designsystem,core:ui,core:navigation,core:testing"
 
 # Catalog: append android-forge's entries and raise android create's older pins to the tested floor
-# (AGP 9.4.1, Kotlin 2.4.21, Nav 3 1.2.0, Compose BOM 2026.09.00, …) — never downgrades.
+# (AGP 9.5.1, Kotlin 2.4.21, Nav 3 1.2.1, Compose BOM 2026.09.00, …) — never downgrades.
 bash "${AO}" patch-libs "${TARGET}" "${OVERLAY}/gradle/libs.versions.toml.additions.tmpl"
 
-# Gradle wrapper >= 9.8.1 and a 4 GiB daemon heap (Hilt/KSP + Robolectric).
+# Gradle wrapper >= 9.9.0 and a 4 GiB daemon heap (Hilt/KSP + Robolectric).
 bash "${AO}" pin-toolchain "${TARGET}"
 ```
 

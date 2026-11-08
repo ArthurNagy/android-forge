@@ -93,6 +93,10 @@ roborazzi {
 }
 
 dependencies {
+    // AGP 9.5's Lint rejects the checks bundled in lifecycle-runtime below 2.10 (ObsoleteLintCustomCheck), and a
+    // module that only gets Lifecycle transitively resolves the older version Compose asks for.
+    constraints { "implementation"(lib("androidx-lifecycle-runtime")) }
+
     val composeBom = platform(lib("androidx-compose-bom"))
     "implementation"(composeBom)
     "testImplementation"(composeBom)

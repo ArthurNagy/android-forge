@@ -37,14 +37,14 @@ after it runs), then `./gradlew :core:domain:test assembleDebug`.
 ## build — conventions, AGP 9, KSP, catalog, toolchain
 - Doc: `stack.md` § Toolchain, `ci.md`.
 - **Detect:** AGP < 9 / Kotlin < 2.4 in the catalog; `org.jetbrains.kotlin.android` / `kotlin-kapt` plugins; modules
-  configuring `compileSdk`, Lint, test options by hand; no `build-logic/`; a Gradle wrapper below 9.8.1; minSdk below 29.
+  configuring `compileSdk`, Lint, test options by hand; no `build-logic/`; a Gradle wrapper below 9.9.0; minSdk below 29.
 - **Transform:** AGP 9 upgrade first through the **`agp-9-upgrade`** skill (built-in Kotlin, KAPT → KSP — Hilt and Room
   need KSP). Then `foundations`' block (above) before any module applies a convention: each one puts `:core:testing`
   on its test classpath, so a project without it fails to configure. Then copy `${PLUGIN_ROOT}/overlay/build-logic`
   into the project, `includeBuild("build-logic")` in `pluginManagement`,
   root `plugins { id("android-forge.root") }` (removing root `alias(...) apply false` lines for plugins build-logic
   provides), `patch-libs` with `${PLUGIN_ROOT}/overlay/gradle/libs.versions.toml.additions.tmpl` (`MIN_SDK` = the
-  `min_sdk` the caller passed — `patch-libs` raises `androidMinSdk` to it, a floor), `pin-toolchain` (Gradle ≥ 9.8.1
+  `min_sdk` the caller passed — `patch-libs` raises `androidMinSdk` to it, a floor), `pin-toolchain` (Gradle ≥ 9.9.0
   wrapper, 4 GiB daemon heap for Hilt/KSP + Robolectric), and
   replace each module's hand-written Android config with the matching convention
   (`android-forge.android.application` / `.android.library[.compose]` / `.jvm.library` + `.hilt` once Hilt is in).
@@ -120,7 +120,7 @@ PY
 
 - **Verify:** `./gradlew spotlessApply --continue` (it also reformats the project's own sources to ktlint — expect a
   diff), then `./gradlew assembleDebug` green; the gate tasks exist (`./gradlew help --task coverageVerify`);
-  `gradle/wrapper/gradle-wrapper.properties` on ≥ 9.8.1. `spotlessApply` and `./gradlew lint --continue` still run
+  `gradle/wrapper/gradle-wrapper.properties` on ≥ 9.9.0. `spotlessApply` and `./gradlew lint --continue` still run
   red on findings in the existing UI code that no formatter fixes — compose-rules / compose-lints such as a missing
   `modifier` parameter or a public `@Preview`, hard-coded strings, … — list them in the report: the **`a11y`** layer
   owns them. A finding in a build file, manifest or resource this layer touched is this layer's to fix. No lint
