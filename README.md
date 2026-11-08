@@ -11,7 +11,7 @@ and Google's own tooling.
 ## What it does
 
 `android-forge` creates the base project with **Google's Android CLI** (`android create`), raises it to a tested
-toolchain floor (AGP 9.4 with built-in Kotlin, Gradle 9.8, compile/target SDK 37, minSdk 29), then overlays: convention plugins,
+toolchain floor (AGP 9.5 with built-in Kotlin, Gradle 9.9, compile/target SDK 37, minSdk 29), then overlays: convention plugins,
 the `:core:*` + `:feature:*:{api,impl}` module shape, a working Hilt → DataStore → use case → Orbit slice, the gates
 (Lint + compose-lints, ktlint + compose-rules, JaCoCo 85%, Roborazzi screenshots), CI, product docs and ADRs — and installs Google's
 **Android agent skills** into the project, tiered by the form factors and capabilities it uses. Devices, emulators,
@@ -88,7 +88,7 @@ See [docs/android-cli.md](docs/android-cli.md).
 | i18n | Android resources with per-module prefixes, per-app languages |
 | Testing | JUnit 4 + Robolectric + Orbit test + Turbine + Compose UI Test v2 + Roborazzi (phone + tablet goldens) |
 | Gates | Android Lint + Slack compose-lints (warnings = errors) · Spotless/ktlint + compose-rules · JaCoCo ≥ 85% |
-| Toolchain | AGP ≥ 9.4.1 (built-in Kotlin), Gradle ≥ 9.8.1, Kotlin 2.4, KSP2, compile/target SDK 37, minSdk 29 |
+| Toolchain | AGP ≥ 9.5.1 (built-in Kotlin), Gradle ≥ 9.9.0, Kotlin 2.4, KSP2, compile/target SDK 37, minSdk 29 |
 | Performance (opt-in) | Baseline Profiles + Macrobenchmark (`:benchmarks`) |
 | Crash reporting | Play Vitals by default; Firebase Crashlytics or Sentry Android opt-in |
 | Distribution | GitHub Releases (every app module); Firebase App Distribution / gradle-play-publisher (a Play track per form factor) opt-in |

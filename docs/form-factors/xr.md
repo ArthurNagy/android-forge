@@ -42,23 +42,27 @@ Minimal code path: move the app's UI into a movable, resizable spatial panel whe
 the 2D UI everywhere else.
 
 1. Catalog (pre-release — use the versions `set-up-sdk` lists for immersive experiences at the time; checked
-   2026-10-19, compiled against `:app`):
+   2026-11-08, compiled against `:app`):
    ```toml
    [versions]
-   androidxXrRuntime = "1.1.0-alpha01"     # shared with the glasses form factor
-   androidxXrScenecore = "1.0.0-rc01"
-   androidxXrCompose = "1.0.0-beta01"
+   androidxXrRuntime = "1.1.0-alpha02"     # shared with the glasses form factor
+   androidxXrScenecore = "1.1.0-alpha01"
+   androidxXrCompose = "1.0.0-beta02"
+   androidExtensionsXr = "1.4.0"
    [libraries]
    androidx-xr-runtime = { module = "androidx.xr.runtime:runtime", version.ref = "androidxXrRuntime" }
    androidx-xr-scenecore = { module = "androidx.xr.scenecore:scenecore", version.ref = "androidxXrScenecore" }
    androidx-xr-compose = { module = "androidx.xr.compose:compose", version.ref = "androidxXrCompose" }
+   android-extensions-xr = { module = "com.android.extensions.xr:extensions-xr", version.ref = "androidExtensionsXr" }
    ```
    `:app`: `implementation(libs.androidx.xr.runtime)`, `implementation(libs.androidx.xr.scenecore)`,
    `implementation(libs.androidx.xr.compose)`. Release builds run R8: also
-   `compileOnly("com.android.extensions.xr:extensions-xr:1.3.0")` (docs: required for minified builds; must be
+   `compileOnly(libs.android.extensions.xr)` (docs: required for minified builds; must be
    `compileOnly`). Optional: `androidx.xr.compose.material3:material3` (XR-aware `NavigationSuiteScaffold`).
 2. `:app` — wrap the navigation host:
    ```kotlin
+   import androidx.compose.runtime.movableContentOf
+   import androidx.compose.runtime.remember
    import androidx.xr.compose.platform.LocalSpatialCapabilities
    import androidx.xr.compose.spatial.Subspace
    import androidx.xr.compose.subspace.SpatialPanel
@@ -69,10 +73,12 @@ the 2D UI everywhere else.
    /** In Full Space the app's UI moves into a spatial panel; everywhere else (phones, Home Space) it renders as is. */
    @Composable
    internal fun SpatialAppContent(content: @Composable () -> Unit) {
+       // One slot, moved between the branches: its state survives a Home Space ↔ Full Space switch.
+       val movableContent = remember(content) { movableContentOf(content) }
        if (LocalSpatialCapabilities.current.isSpatialUiEnabled) {
-           Subspace { SpatialPanel(SubspaceModifier.movable().resizable()) { content() } }
+           Subspace { SpatialPanel(SubspaceModifier.movable().resizable()) { movableContent() } }
        } else {
-           content()
+           movableContent()
        }
    }
    // MainActivity: AppTheme(...) { SpatialAppContent { AppNavigation(...) } }

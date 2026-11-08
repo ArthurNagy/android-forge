@@ -59,7 +59,7 @@ If `[wrapper] gradle` is newer than the version in `gradle/wrapper/gradle-wrappe
 ./gradlew wrapper --gradle-version <latest> --distribution-type bin
 ```
 
-Never go below android-forge's floor (Gradle 9.8.1 — `pin-toolchain`; AGP 9.4.1 and the other floors in `${CLAUDE_PLUGIN_ROOT}/overlay/gradle/libs.versions.toml.additions.tmpl`).
+Never go below android-forge's floor (Gradle 9.9.0 — `pin-toolchain`; AGP 9.5.1 and the other floors in `${CLAUDE_PLUGIN_ROOT}/overlay/gradle/libs.versions.toml.additions.tmpl`).
 
 ### 6. Build to verify
 
@@ -96,6 +96,7 @@ User commits when they're ready (don't auto-commit — give them a chance to ame
 - This is the **only** automated dependency-update path in android-forge. No Renovate/Dependabot.
 - Versions are bumped one project at a time. If you have multiple android-forge projects, run this in each.
 - `kotlin`, `ksp` and `hilt` move together (KSP and Dagger must read the Kotlin version's metadata); `androidGradlePlugin` bumps can need a newer Gradle wrapper and convention-plugin changes — surface them clearly.
+- `androidGradlePlugin` 9.5+: a project scaffolded on android-forge 0.1.0 first needs the plugin's current `android-forge.root`, `android-forge.android.library` and `android-forge.android.application` conventions (copy them from `${CLAUDE_PLUGIN_ROOT}/overlay/build-logic/`) and the `androidx-lifecycle-runtime` catalog alias; without them the gate fails with `Could not create task …ComposePreviewRunfiles` or `ObsoleteLintCustomCheck`. `./gradlew tasks` itself fails on AGP 9.5.1 — an AGP bug in that same task, the builds and the gate are unaffected.
 - `robolectric`: a release that supports a newer Android SDK lets you raise `sdk=` in `core/testing/src/main/resources/robolectric.properties` (keep it ≤ the newest SDK Robolectric supports).
 - A Compose BOM / Material bump can change pixels: screenshot verification may fail. Inspect the diffs (`build/outputs/roborazzi`), then re-record only if the change is expected (`./gradlew recordRoborazziDebug`) and say so in the commit.
 - A `androidxCarApp` bump: re-sync `car/src/main/res/values/car_hosts_allowlist.xml` with the library's `hosts_allowlist_sample` (it's private to the library, so android-forge keeps a copy).

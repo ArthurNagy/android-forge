@@ -182,7 +182,7 @@ Invoke **`android-forge:android-reviewer`** in audit mode — one call per modul
 
 1. `build` — AGP 9 + built-in Kotlin + KSP (via the `agp-9-upgrade` skill); the `foundations` modules before any
    convention (`:core:model`/`:core:domain`/`:core:testing` — every convention puts `:core:testing` on the test
-   classpath); `build-logic` conventions, the catalog (`patch-libs`), the toolchain (`pin-toolchain`: Gradle ≥ 9.8.1 wrapper,
+   classpath); `build-logic` conventions, the catalog (`patch-libs`), the toolchain (`pin-toolchain`: Gradle ≥ 9.9.0 wrapper,
    4 GiB heap), minSdk ≥ 29, each app module's `resources.properties`, merged `-vNN` resource folders and wired backup
    rules, `android-forge.root` (gate tasks). Everything after relies on it.
 2. `modules` — `:core:*` + `:feature:*:{api,impl}`; features stop depending on data modules. Per area.

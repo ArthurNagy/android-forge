@@ -9,12 +9,12 @@
 #       files, into "<target-dir>.android-create" and copy over WITHOUT overwriting anything — the
 #       merge is verified before the sibling is deleted), then `prepare` it.
 #       <min-sdk>: android-forge's default is 29; at least 26 (java.time without desugaring).
-#       `android create` also installs platforms/android-36, its template's compileSdk — the CLI has
+#       `android create` also tries to install its template's compileSdk platform — the CLI has
 #       no option to change it; the conventions compile against the catalog's SDK (ensure-sdk).
 #
 #   android-new.sh prepare <target-dir> <min-sdk>
 #       Idempotent post-processing of `android create`'s output — every step the overlay relies on:
-#         - delete the template's sample code (app/src/{main,test,androidTest}/java): android-forge's
+#         - delete the template's sample code (app/src/{main,test,androidTest}/{java,kotlin}): android-forge's
 #           :app overlay replaces it, under src/*/kotlin
 #         - merge res/mipmap-anydpi-v26 into res/mipmap-anydpi when minSdk >= 26 (Lint ObsoleteSdkInt)
 #         - manifest: android:name=".MainApplication" (Hilt's application) and the backup rules the
@@ -79,14 +79,30 @@ cmd_ensure_sdk() {
     android sdk install "platforms/android-${api}.0" || android sdk install "platforms/android-${api}"
 }
 
+# Older Android CLIs generate the sample under src/*/java, 1.1+ under src/*/kotlin — where the overlay's :app
+# lives too, so a project that already has MainApplication.kt (android-forge's, never the template's) keeps it.
+strip_sample_code() {
+    local target="$1" set
+    for set in main test androidTest; do
+        rm -rf "$target/app/src/$set/java"
+    done
+    [[ -z "$(find "$target/app/src/main/kotlin" -name MainApplication.kt 2>/dev/null)" ]] || return 0
+    for set in main test androidTest; do
+        rm -rf "$target/app/src/$set/kotlin"
+    done
+}
+
 cmd_prepare() {
     local target="$1" min_sdk="$2"
     require_min_sdk "$min_sdk"
     [[ -f "$target/settings.gradle.kts" && -d "$target/app" ]] || die "not an android create project: $target"
 
-    for set in main test androidTest; do
-        rm -rf "$target/app/src/$set/java"
-    done
+    strip_sample_code "$target"
+    wire_for_overlay "$target"
+}
+
+wire_for_overlay() {
+    local target="$1"
 
     # minSdk >= 26 always holds (require_min_sdk): the -v26 qualifier is obsolete. A file already in
     # mipmap-anydpi (a re-run) wins over the template's -v26 copy.
@@ -164,13 +180,16 @@ cmd_create() {
         exit 2
     fi
 
+    # Before the merge: only the template's output is stripped, never what the target already holds.
+    strip_sample_code "$out"
+
     if [[ "$out" != "$target" ]]; then
         # Never overwrite what the user already has in the target directory.
         merge_no_clobber "$out" "$target"
         rm -rf "$out"
     fi
 
-    cmd_prepare "$target" "$min_sdk"
+    wire_for_overlay "$target"
 }
 
 main() {

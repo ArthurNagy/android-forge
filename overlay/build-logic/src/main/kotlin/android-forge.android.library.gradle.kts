@@ -73,6 +73,10 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
+    // AGP 9.5's Lint rejects the checks bundled in lifecycle-runtime below 2.10 (ObsoleteLintCustomCheck), and a
+    // module that only gets Lifecycle transitively resolves the older version Compose asks for.
+    constraints { "implementation"(catalog.findLibrary("androidx-lifecycle-runtime").get()) }
+
     // Shared doubles + robolectric.properties (the Robolectric SDK pin) on every module's local tests.
     "testImplementation"(project(":core:testing"))
     "testImplementation"(catalog.findLibrary("junit").get())
